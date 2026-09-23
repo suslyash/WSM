@@ -1,4 +1,4 @@
-# TASK-001F: Integrate Verified Speaker Evidence into the Canonical Manifest Consumer
+# TASK-002A: Define the Reproducible V1 Video Preprocessing and Cache Contract
 
 ## Role
 
@@ -6,167 +6,208 @@ You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.
 
 Required branch:
 
-    codex/task-001f
+    codex/task-002a
 
-Do not begin Stage 2, model development, training, pseudo-labeling, text/description work, or split redesign.
+Do not train a model, run Test evaluation, implement V2/prototypes, or begin Stage 3.
 
 ## Goal
 
-Complete the Stage 1 speaker-evidence integration path created by TASK-001E.
+Start PLAN Stage 2 by implementing the deterministic preprocessing/cache contract for V1 video only.
 
-Current behavior is intentionally incomplete: WSMManifestDataModule raises if speaker_independence_verified=true and cannot consume a valid authoritative speaker map end-to-end.
+V1 is DEPART-like in project terms:
 
-Implement a minimal optional authoritative speaker-map path so that:
+- uniform frame sampling;
+- quality/failure reporting;
+- frozen CLIP-family visual encoder;
+- cached temporal video features;
+- later projection + temporal Transformer + masked pooling + two independent sigmoid heads.
 
-- default behavior with no speaker map remains unchanged: speaker_id=None and speaker_independence_verified=false;
-- when a supplied authoritative map passes TASK-001E audit, each manifest sample receives its authoritative speaker_id;
-- the DataModule exposes speaker_independence_verified=true only after the real/supplied map passes the leakage gate;
-- failing, incomplete, conflicting, or leaking maps are rejected;
-- split assignments, labels, masks, and modality availability remain unchanged.
-
-No real speaker map exists in the repository today, so Stage 1 remains partial after this task unless the dataset owner later supplies one.
+This task covers only input sampling, frozen feature extraction contract, cache fingerprinting, and extraction-failure accounting. Do not implement or train the classifier yet.
 
 ## Required Reading
 
 1. AGENTS.md
-2. docs/PROJECT_REQUIREMENTS.md Sections 2, 9, 10, 11, 13
-3. Stage 1 in docs/PLAN.md
-4. docs/PROGRESS_EN.md through TASK-001E
+2. docs/PROJECT_REQUIREMENTS.md Sections 2–10 and 13–14
+3. Stage 2 in docs/PLAN.md
+4. docs/PROGRESS_EN.md
 5. docs/NEXT_TASK_EN.md
 6. src/common/data/wsm_manifest.py
-7. src/common/data/wsm_speaker_map.py
-8. src/fusion/data/wsm_manifest_datamodule.py
-9. scripts/common/build_wsm_manifest.py
+7. src/fusion/data/wsm_manifest_datamodule.py
+8. src/common/features/wsm_feature_extractor.py
+9. docs/SOTA_REVIEW_EN.md sections relevant to video/DEPART-like baselines
 
 ## Allowed Files
 
-- src/common/data/wsm_speaker_map.py
-- src/fusion/data/wsm_manifest_datamodule.py
-- scripts/common/build_wsm_manifest.py
+- src/video/__init__.py
+- src/video/features/__init__.py
+- src/video/features/clip_video_features.py
+- scripts/video/extract_clip_video_features.py
 - docs/PROGRESS_EN.md
+
+Creating the src/video/features and scripts/video directories is allowed.
 
 No other tracked file may be modified.
 
-## Forbidden Actions
+## Fixed Manager Decisions for V1
 
-- any change under src/audio;
-- changing canonical split assignments;
-- changing disease labels or observed masks;
-- inferring speaker identity;
-- accepting video_id as speaker_id;
-- generating or committing a real/fabricated speaker map;
-- relaxing TASK-001E validation;
-- changing text/description availability;
-- training or Test evaluation;
-- reading Test predictions/performance metrics;
-- Stage 2 work;
-- editing docs/NEXT_TASK_EN.md;
-- pushing to main/master;
-- opening or merging a PR.
+Use one frozen CLIP-family encoder only in this task.
+
+Default extractor contract:
+
+- model revision: openai/clip-vit-base-patch32;
+- sampling: uniform in time over the full segment;
+- default target frames: 32;
+- no diagnosis, corpus identity, task label, observed mask, or split label may enter model inputs;
+- output is temporal frame embeddings plus a validity mask;
+- no learned projection/Transformer/classifier in this task.
+
+If the exact model is unavailable locally without a download during verification, do not install/download silently. The implementation may support the model contract while verification uses a synthetic/mock encoder path.
 
 ## Implementation Requirements
 
-1. Extend src/common/data/wsm_speaker_map.py with a reusable function that, given canonical manifest rows and a supplied speaker-map path:
-   - runs the existing strict audit;
-   - requires stage1_split_gate_passed=true;
-   - returns new rows with speaker_id populated from the validated mapping;
-   - does not mutate the input rows;
-   - fails if any canonical pair is unmapped;
-   - preserves every field except speaker_id.
+### 1. Reusable feature module
 
-2. Update WSMManifestDataModule:
-   - add optional speaker_map_path;
-   - when absent, preserve current unresolved behavior exactly;
-   - when present, validate/apply it before creating train/dev/test datasets;
-   - remove the current hard failure on speaker_independence_verified=true;
-   - set self.speaker_independence_verified from the verified gate result;
-   - expose data.speaker_independence_verified accurately in describe_context;
-   - expose data.stage1_split_gate_passed accurately;
-   - keep DEV/Test separation unchanged.
+Implement src/video/features/clip_video_features.py with:
 
-3. Update scripts/common/build_wsm_manifest.py:
-   - add optional --speaker-map;
-   - when supplied, validate/apply speaker IDs before writing the manifest;
-   - include a speaker_gate object in the audit output;
-   - preserve the current no-map output behavior;
-   - do not silently change the no-map manifest fingerprint/output.
+- deterministic uniform frame-index selection from frame_count and target_frames;
+- clear handling of zero/unreadable frames;
+- RGB conversion;
+- a reusable frozen CLIP extractor class;
+- temporal feature output [T,D];
+- boolean validity mask [T];
+- no fabricated feature for failed extraction: failure must be represented explicitly in result metadata and availability=false.
 
-4. Do not modify src/common/data/wsm_manifest.py.
+### 2. Cache fingerprint
+
+Implement a deterministic cache fingerprint including at least:
+
+- manifest fingerprint;
+- model name/revision;
+- preprocessing implementation version;
+- sampling method;
+- target frame count;
+- image processor/preprocessing identity;
+- source video path/segment_id;
+- relevant package/version strings when available.
+
+Changing any of the above must change the cache key/fingerprint.
+
+### 3. Cache artifact contract
+
+Each successful cached artifact must include:
+
+- segment_id;
+- source path;
+- temporal features;
+- valid mask;
+- model/revision;
+- preprocessing parameters;
+- cache fingerprint.
+
+Each failed extraction must be recorded in a machine-readable report and must not create a fake successful feature artifact.
+
+### 4. CLI
+
+Implement scripts/video/extract_clip_video_features.py.
+
+Required arguments:
+
+    --data-root
+    --cache-root
+    --report-output
+
+Optional:
+
+    --manifest-path
+    --model-name
+    --model-revision
+    --target-frames
+    --device
+    --limit
+    --overwrite
+
+Requirements:
+
+- default to canonical manifest if no manifest path;
+- process only rows with video_available=true;
+- do not modify the source dataset;
+- refuse cache/report outputs inside src/, configs/, or docs/;
+- write a machine-readable extraction report with success/failure counts and manifest/cache fingerprints;
+- --limit is verification/debug only and must be recorded in the report;
+- no Test metrics/predictions are computed; structural processing of test video files is allowed.
+
+### 5. No registry/model yet
+
+This task creates preprocessing/features only. Do not add a Chimera model/config/registry entry yet.
 
 ## Acceptance Criteria
 
-- default no-map path still produces 8622 rows with all speaker_id null and speaker_independence_verified=false;
-- a synthetic complete non-leaking map populates all speaker IDs and yields speaker_independence_verified=true;
-- the same synthetic verified map is accepted by WSMManifestDataModule;
-- leaking/incomplete/conflicting synthetic maps are rejected;
-- train/dev/test remain 6325/933/1364;
-- DEV/Test remain separate;
-- labels, observed masks, modality availability, segment IDs, and split values are byte/semantic-equivalent before vs after speaker enrichment except speaker_id;
-- no real speaker map is committed;
-- no Test predictions/metrics, training, tuning, or model selection;
+- deterministic uniform sampler passes edge cases;
+- cache fingerprint changes when model revision, target_frames, or manifest fingerprint changes;
+- successful mock/synthetic extraction has [T,D] features and [T] bool mask;
+- failed read/extraction returns availability=false and is present in report, with no fake artifact;
+- CLI dry/small-limit structural run can execute without training;
+- no labels/task identity are passed into extractor;
 - src/audio unchanged;
+- no Test predictions/metrics, training, tuning, or model selection;
 - python compilation passes;
 - git diff --check passes;
-- branch codex/task-001f is committed and pushed;
-- diff against origin/main contains only the four allowed paths;
-- Stage 1 remains partial unless a real authoritative speaker map is actually supplied.
+- branch codex/task-002a is committed/pushed;
+- diff against origin/main contains only the five allowed paths.
 
 ## Exact Verification Commands
 
-Run from repository root.
+Run from repository root:
 
-    python3 -m py_compile       src/common/data/wsm_speaker_map.py       src/fusion/data/wsm_manifest_datamodule.py       scripts/common/build_wsm_manifest.py
+    python3 -m py_compile       src/video/__init__.py       src/video/features/__init__.py       src/video/features/clip_video_features.py       scripts/video/extract_clip_video_features.py
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
-    import csv
-    import tempfile
-    from pathlib import Path
+    from video.features.clip_video_features import (
+        uniform_frame_indices,
+        build_cache_fingerprint,
+    )
 
-    from common.data.wsm_manifest import build_manifest
-    from common.data.wsm_speaker_map import apply_verified_speaker_map, SpeakerMapError
-    from fusion.data.wsm_manifest_datamodule import WSMManifestDataModule
+    assert uniform_frame_indices(0, 32) == []
+    assert uniform_frame_indices(1, 32) == [0]
+    ids = uniform_frame_indices(100, 32)
+    assert len(ids) == 32
+    assert ids == sorted(ids)
+    assert ids[0] == 0
+    assert ids[-1] == 99
 
-    rows, _ = build_manifest("/media/maxim/Databases/WSM_NEW")
-    assert len(rows) == 8622
-    assert all(row["speaker_id"] is None for row in rows)
-
-    pairs = {}
-    for row in rows:
-        pairs.setdefault((row["corpus"], row["video_id"]), row["split"])
-
-    with tempfile.TemporaryDirectory() as tmp:
-        path = Path(tmp) / "speaker.csv"
-        with path.open("w", encoding="utf-8", newline="") as f:
-            w = csv.writer(f)
-            w.writerow(["corpus","video_id","speaker_id","source_reference"])
-            for i, ((corpus, video_id), split) in enumerate(sorted(pairs.items())):
-                w.writerow([corpus, video_id, f"{split}_speaker_{i}", "synthetic-contract-test"])
-
-        enriched, gate = apply_verified_speaker_map(rows, path)
-        assert gate["stage1_split_gate_passed"] is True
-        assert gate["speaker_independence_verified"] is True
-        assert all(row["speaker_id"] for row in enriched)
-
-        for before, after in zip(rows, enriched):
-            for key in before:
-                if key != "speaker_id":
-                    assert before[key] == after[key]
-
-        dm = WSMManifestDataModule(
-            data_root="/media/maxim/Databases/WSM_NEW",
-            speaker_map_path=str(path),
-        )
-        assert dm.speaker_independence_verified is True
-        assert len(dm.train_dataset) == 6325
-        assert len(dm.val_dataset) == 933
-        assert len(dm.test_dataset) == 1364
-        assert dm.train_dataset[0]["speaker_id"] is not None
-
-    dm_unresolved = WSMManifestDataModule(data_root="/media/maxim/Databases/WSM_NEW")
-    assert dm_unresolved.speaker_independence_verified is False
-    assert dm_unresolved.train_dataset[0]["speaker_id"] is None
-
-    print("speaker integration smoke passed")
+    a = build_cache_fingerprint(
+        manifest_fingerprint="m1",
+        segment_id="s1",
+        source_path="/tmp/a.mp4",
+        model_name="openai/clip-vit-base-patch32",
+        model_revision="r1",
+        target_frames=32,
+        preprocessing_version="v1",
+        processor_identity="clip",
+    )
+    b = build_cache_fingerprint(
+        manifest_fingerprint="m1",
+        segment_id="s1",
+        source_path="/tmp/a.mp4",
+        model_name="openai/clip-vit-base-patch32",
+        model_revision="r2",
+        target_frames=32,
+        preprocessing_version="v1",
+        processor_identity="clip",
+    )
+    c = build_cache_fingerprint(
+        manifest_fingerprint="m1",
+        segment_id="s1",
+        source_path="/tmp/a.mp4",
+        model_name="openai/clip-vit-base-patch32",
+        model_revision="r1",
+        target_frames=16,
+        preprocessing_version="v1",
+        processor_identity="clip",
+    )
+    assert a != b
+    assert a != c
+    print("video preprocessing contract assertions passed")
     PY
 
     git diff --check
@@ -175,7 +216,7 @@ Run from repository root.
 
 Before committing inspect only:
 
-    git diff --       src/common/data/wsm_speaker_map.py       src/fusion/data/wsm_manifest_datamodule.py       scripts/common/build_wsm_manifest.py       docs/PROGRESS_EN.md
+    git diff --       src/video/__init__.py       src/video/features/__init__.py       src/video/features/clip_video_features.py       scripts/video/extract_clip_video_features.py       docs/PROGRESS_EN.md
 
 After commit/push:
 
@@ -187,7 +228,7 @@ After commit/push:
 
 ## Required PROGRESS_EN Update
 
-Record exact branch, implementation SHA, push result, no-map behavior, synthetic verified integration result, DEV/Test counts/separation, rejection of invalid speaker maps, src/audio unchanged, no Test metrics, no training/model selection, and that Stage 1 remains partial until real authoritative speaker evidence is supplied.
+Record branch/SHA/push, exact preprocessing contract, cache fingerprint fields, sampler checks, failure semantics, verification commands/results, src/audio unchanged, no Test metrics, no training/model selection, and Stage 2 partial status.
 
 ## Required Handoff
 
@@ -200,6 +241,6 @@ Respond in English using exactly:
 5. Blockers and risks
 6. Next atomic step
 
-Explicitly include branch codex/task-001f, implementation SHA, push status, main/master untouched, diff summary, src/audio unchanged, Test metrics not inspected, and whether any real authoritative speaker map was available.
+Explicitly state branch codex/task-002a, implementation SHA, push status, main/master untouched, diff summary, src/audio unchanged, and that no Test predictions/metrics or training occurred.
 
-Stop after this task. Do not begin Stage 2.
+Stop after this task.
