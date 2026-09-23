@@ -689,4 +689,6 @@ Exact verification commands/results:
 
 Metrics/artifacts: no training or cache artifacts were created. Stage 2 remains partial pending later data/model integration tasks.
 
-Recommended next atomic task: manager review of the registered V1 model contract, then implement the next limited video integration task; do not train or run Test evaluation.
+Manager integration: PR #11 merged to main as 78aa592b0f8b068b12a75d1072386656d16dbc9f. The V1 registered model contract is accepted.
+
+Recommended next atomic task: add a strict train/dev split filter to the video cache extractor and build the complete V1 cache for TRAIN+DEV only; Test must remain untouched.
