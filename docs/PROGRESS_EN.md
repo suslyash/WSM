@@ -4,7 +4,7 @@
 
 Plan initialized: 2026-09-23.
 
-Current stage: **Stage 2 ready to start**.
+Current stage: **Stage 2 in progress**.
 
 Final Test authorized: **no**.
 
@@ -438,3 +438,47 @@ Metrics/artifacts: one machine-readable structural report at /tmp/wsm_video_repo
 Deviations/blockers: the structural CLI run did not produce a feature cache because the selected real row failed extraction; this is an explicit failure report, not a successful baseline. No video model comparison was attempted.
 
 Recommended next atomic task: manager review and, if accepted, proceed to the next Stage 2 video task without training or Test evaluation in this task.
+
+### TASK-002B - Integrate the DEPART YOLOv8 body-ROI stage into the V1 temporal CLIP cache
+
+Status: implementation complete; Stage 2 remains partial.
+
+Branch: codex/task-002b.
+Implementation commit: recorded after verification.
+Push result: to be recorded after push.
+
+Changed files:
+
+- src/video/features/yolov8_body_roi.py;
+- src/video/features/clip_video_features.py;
+- src/video/features/__init__.py;
+- scripts/video/extract_clip_video_features.py;
+- pyproject.toml;
+- docs/PROGRESS_EN.md.
+
+Implementation facts:
+
+- Added a local-only YOLOv8 single-human-body adapter. It requires an explicitly supplied local weights file, computes its SHA-256, never downloads weights, and supports injected detector objects for smoke tests.
+- Implemented deterministic detection selection: confidence threshold, highest confidence, larger area, then lexicographic coordinates; boxes are clipped to image bounds and invalid-area boxes are rejected.
+- Changed the V1 default to 60 uniformly sampled temporal positions. Normal CLI execution requires --yolo-weights and uses confidence=0.5, IoU=0.5, imgsz=640. Raw-frame extraction remains explicit --raw-frame-debug only.
+- ROI mode preserves all temporal positions and chronological order. Valid detections are encoded from body crops; invalid positions are zero-padded only after feature dimension is known and receive valid_mask=false. All-missing detections fail with no successful artifact.
+- Cache fingerprints now include detector identity, weights SHA-256, confidence, IoU, image size, and ROI policy version in addition to the existing manifest/model/sampling fields.
+- Successful artifacts include detector metadata, sampled indices, selected boxes/confidences, valid mask, valid detection count, and detection coverage. Reports separate no-body-detected from video/read/model-load failures.
+- Added ultralytics to pyproject.toml as a declared dependency only; no installation was run.
+
+Exact verification commands and results:
+
+- python3 -m py_compile src/video/features/yolov8_body_roi.py src/video/features/clip_video_features.py src/video/features/__init__.py scripts/video/extract_clip_video_features.py - passed.
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python deterministic body-selection smoke - passed; same-confidence larger box selected and sub-threshold detection rejected.
+- .venv/bin/python injected temporal ROI/CLIP smoke - passed; 60 positions, interleaved valid/invalid detections, [60,4] features, bool [60] mask, exact zero padding, 40/60 coverage, all-invalid failure, and no model download.
+- .venv/bin/python fingerprint sensitivity smoke - passed for weights SHA-256, confidence, IoU, image size, target frames, and ROI policy changes.
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python scripts/video/extract_clip_video_features.py --help - passed; required YOLO arguments and 60-frame default exposed.
+- Missing-weights CLI refusal smoke - passed; missing local weights returned a clear FileNotFoundError and no extraction ran.
+- ultralytics runtime was available in .venv; no local detector checkpoint was found and no weights were downloaded.
+- git diff --check - passed.
+- git diff -- src/audio - empty; src/audio remained unchanged.
+- No full-dataset feature extraction, training, model selection, or Test predictions/metrics ran.
+
+Deviations/blockers: real YOLO weights were unavailable, so verification used injected detector/encoder objects only. The implementation is ready for a later manager-authorized cache extraction once a checkpoint path is provisioned.
+
+Recommended next atomic task: manager review/provision of the authoritative YOLOv8 body checkpoint, followed by a limited cache extraction audit; do not run full extraction or model training yet.
