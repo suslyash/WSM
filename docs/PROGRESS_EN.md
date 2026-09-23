@@ -558,8 +558,8 @@ Recommended next atomic task: provision/cache the approved pinned CLIP model rev
 Status: blocked; the pinned model provisioned and loads locally, but the unchanged TASK-002B extractor has a concrete Transformers compatibility blocker and no successful artifact was produced.
 
 Branch: codex/task-002d.
-Implementation commit: recorded after verification.
-Push result: to be recorded after push.
+Implementation commit: 06fbb97.
+Push result: successful; origin/codex/task-002d created and pushed.
 
 Tracked change:
 
