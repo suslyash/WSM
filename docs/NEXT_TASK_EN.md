@@ -1,4 +1,4 @@
-# TASK-002B: Integrate the DEPART YOLOv8 Body-ROI Stage into the V1 Temporal CLIP Cache
+# TASK-002C: Provision the Pinned DEPART YOLOv8 Checkpoint and Run a Limited Real Extraction Audit
 
 ## Role
 
@@ -6,323 +6,295 @@ You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.
 
 Required branch:
 
-    codex/task-002b
+    codex/task-002c
 
-Do not train a video classifier, do not run full-dataset feature extraction, do not implement V2/prototypes, and do not inspect Test predictions or metrics.
+Do not run full-dataset feature extraction, do not train any model, do not implement V2/prototypes, and do not inspect Test predictions or Test metrics.
 
 ## Goal
 
-Extend the accepted TASK-002A temporal CLIP/cache foundation to match the intended DEPART-style visual preprocessing pipeline:
+Provision the exact DEPART-referenced YOLOv8 human-body checkpoint from its pinned upstream source and run a small real-data extraction audit through the accepted TASK-002B pipeline.
 
-    uniformly sampled temporal frames
-        -> YOLOv8 single-class human-body localization
-        -> body ROI crop
-        -> frozen CLIP frame encoding
-        -> ordered temporal feature sequence + validity mask
+This task is the first real end-to-end validation of:
 
-The DEPART paper applies a YOLOv8 detector trained for human-body localization to every sampled frame before visual encoding. Its documented detector inference settings are confidence=0.5, IoU=0.5, imgsz=640, with body ROI cropping before CLIP. For one-minute segments the paper reports practical operation with N=60 frames. Use N=60 as the Stage 2 V1 default.
+    real video
+      -> uniform temporal sampling
+      -> YOLOv8 human-body ROI
+      -> frozen CLIP
+      -> [T,D] temporal cache artifact + validity mask
+      -> machine-readable coverage/failure report
 
-This task integrates and verifies that preprocessing contract only. Full feature-cache extraction is a later manager-approved task.
+The purpose is to verify that the real detector checkpoint, real local videos, CLIP runtime, temporal masking, and cache serialization work together before any full-cache extraction.
+
+## Pinned Detector Source
+
+Use exactly:
+
+- upstream repository: J3lly-Been/YOLOv8-HumanDetection
+- upstream commit containing the checkpoint: ce2aae2e821100aee58ce2e7f75994a7e6c2ab9e
+- file: best.pt
+- Git blob SHA: afa44d4fcd0ff54691912bf8960d4fbb98ae1278
+
+Do not use a different checkpoint and do not use a floating branch as the provenance record.
+
+The checkpoint binary itself must NOT be committed to the WSM repository.
 
 ## Required Reading
 
 1. AGENTS.md
-2. docs/PROJECT_REQUIREMENTS.md Sections 2-10 and 13-14
+2. docs/PROJECT_REQUIREMENTS.md Sections 7-10 and 13-14
 3. Stage 2 in docs/PLAN.md
-4. docs/PROGRESS_EN.md, especially TASK-002A and MANAGER-DECISION-002
+4. docs/PROGRESS_EN.md through TASK-002B
 5. docs/NEXT_TASK_EN.md
-6. src/video/features/clip_video_features.py
-7. scripts/video/extract_clip_video_features.py
-8. src/common/data/wsm_manifest.py
-9. The DEPART body-region and temporal preprocessing description already recorded by the manager
+6. src/video/features/yolov8_body_roi.py
+7. src/video/features/clip_video_features.py
+8. scripts/video/extract_clip_video_features.py
+9. src/common/data/wsm_manifest.py
 
-## Allowed Files
+## Allowed Tracked Files
 
-- src/video/features/clip_video_features.py
-- src/video/features/yolov8_body_roi.py
-- src/video/features/__init__.py
-- scripts/video/extract_clip_video_features.py
-- pyproject.toml
+- scripts/video/audit_depart_real_extraction.py
 - docs/PROGRESS_EN.md
 
 No other tracked file may be modified.
 
-## Manager-Fixed DEPART V1 Contract
+Untracked/local artifacts are allowed only under:
 
-Use:
+    /media/maxim/Programs/Models/WSM/depart_yolov8/
+    /tmp/wsm_depart_002c/
 
-- target_frames default: 60;
-- detector family: YOLOv8;
-- detector semantic class: single human-body class;
-- confidence threshold: 0.5;
-- IoU threshold: 0.5;
-- detector input size: 640;
-- detector weights: external/local checkpoint path supplied explicitly by configuration/CLI;
-- body crop is computed per sampled frame;
-- frozen CLIP visual encoder remains openai/clip-vit-base-patch32 unless a later task explicitly changes it;
-- ordered temporal position must be preserved across all 60 sampled positions.
+Do not commit model weights or cache artifacts.
 
-Do not auto-download detector weights.
+## Explicitly Authorized External Action
 
-The referenced DEPART detector checkpoint comes from the single-class human-detection YOLOv8 line. For reproducibility, the project must treat the local weights file and its SHA-256 as part of the cache contract.
+You are authorized in this task to download the pinned upstream best.pt checkpoint from the repository/commit above to:
 
-## Frame-Level Detection Semantics
+    /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt
 
-Implement the following deterministic policy.
+Do not install dependencies.
 
-For each sampled frame:
+Do not download any other model weights.
 
-1. run the single-class body detector;
-2. discard detections below confidence threshold;
-3. if multiple valid detections remain, choose the highest-confidence detection;
-4. deterministic tie-break order:
-   - larger bounding-box area;
-   - then lexicographic coordinates (x1, y1, x2, y2);
-5. clip the selected box to image bounds;
-6. reject a zero/invalid-area box;
-7. crop that body ROI and pass only that crop to CLIP.
+If the file already exists:
 
-If no valid detection exists for a sampled frame:
-
-- preserve its temporal position;
-- mark valid_mask=false for that position;
-- use a zero tensor only as masked padding after the feature dimension is known;
-- never report that padded position as a successful body detection.
-
-If zero frames in the segment have valid body detections:
-
-- the entire segment extraction is success=false;
-- do not save a successful cache artifact.
-
-Partial detection coverage is allowed and must be reported machine-readably.
+- compute its SHA-256;
+- verify its provenance if possible;
+- do not overwrite it unless it is byte-identical to the pinned source or the task explicitly records why replacement is required.
 
 ## Implementation Requirements
 
-### 1. YOLOv8 body detector adapter
+### 1. Audit helper
 
-Create src/video/features/yolov8_body_roi.py.
+Create scripts/video/audit_depart_real_extraction.py as a small orchestration/audit helper around the accepted extractor.
 
-Provide a reusable adapter that:
+Required arguments:
 
-- lazily imports the runtime detector dependency;
-- loads only an explicitly supplied local weights path;
-- never downloads weights;
-- freezes/eval-like inference behavior as applicable;
-- exposes detector identity and weights SHA-256;
-- accepts RGB frames;
-- returns selected body boxes/confidences with the deterministic policy above;
-- supports injected/mock detector objects for smoke verification without real weights.
+    --data-root
+    --yolo-weights
+    --cache-root
+    --report-output
+    --per-split
 
-If the project uses the Ultralytics YOLO runtime, declare the dependency in pyproject.toml. Do not install it during this task.
+Optional:
 
-### 2. Extend the temporal CLIP extractor
+    --device
+    --model-name
+    --model-revision
+    --target-frames
+    --overwrite
 
-Update ClipVideoFeatureExtractor so it can operate in DEPART ROI mode.
+Defaults:
 
-Requirements:
+    --per-split 3
+    --target-frames 60
+    --model-name openai/clip-vit-base-patch32
+    --model-revision main
 
-- default target_frames becomes 60;
-- accepted TASK-002A uniform temporal sampler remains deterministic;
-- when a body detector is configured, CLIP sees only detected body crops;
-- returned temporal feature tensor has shape [T,D] where T equals sampled temporal positions;
-- returned valid_mask has shape [T];
-- invalid detection positions are zero-padded and mask=false;
-- valid positions preserve chronological order;
-- all-invalid segments fail explicitly and contain no fake features;
-- raw-frame CLIP behavior may remain available only as an explicit compatibility/debug mode, not as the default Stage 2 V1 mode.
+The helper must:
 
-### 3. Cache fingerprint and artifact
+- build the canonical manifest in memory;
+- select a deterministic small structural sample from train and dev only;
+- select exactly N rows per split when enough eligible rows exist;
+- do not use Test rows in this task;
+- preserve deterministic ordering, e.g. sorted by segment_id before taking the first N;
+- call the real TASK-002B extraction pipeline, not a mock;
+- write cache artifacts under the supplied cache root;
+- write one JSON audit report.
 
-Revise the cache fingerprint for ROI mode to include at least:
+### 2. Real extraction sample policy
 
+Use:
+
+- train: 3 real video segments;
+- dev: 3 real video segments;
+- Test: 0.
+
+Total target sample: 6 real segments.
+
+If fewer than 3 eligible rows exist in a split, fail clearly rather than silently changing the sample definition.
+
+No labels, diagnosis values, corpus identity, or task masks may be passed to YOLO or CLIP.
+
+### 3. Checkpoint provenance record
+
+The JSON audit must record:
+
+- upstream repository;
+- upstream commit;
+- upstream file path;
+- Git blob SHA;
+- local checkpoint path;
+- local checkpoint file size;
+- local checkpoint SHA-256;
+- ultralytics package version;
+- CLIP/transformers package version;
+- torch version;
+- WSM git commit SHA/dirty flag if obtainable.
+
+Do not claim the local SHA-256 is authoritative until computed from the downloaded file.
+
+### 4. Real cache validation
+
+For every successful segment artifact verify:
+
+- cache file exists;
+- features is rank 2;
+- valid_mask is bool rank 1;
+- features.shape[0] == valid_mask.shape[0];
+- temporal positions preserve sampled-frame order;
+- invalid masked positions are exactly zero;
+- valid positions are finite;
+- detector weights SHA-256 in artifact equals the local checkpoint SHA-256;
+- detector settings equal conf=0.5, IoU=0.5, imgsz=640;
+- target_frames requested is 60;
+- cache fingerprint exists and is unique among the sampled segments.
+
+Important preflight:
+
+- if any selected source video yields fewer than 60 sampled temporal positions because the current sampler returns frame_count positions for short videos, record this as a blocker and STOP without modifying the extractor in this task;
+- do not silently change sampling semantics here.
+
+### 5. Audit report
+
+The JSON report must contain at least:
+
+- schema/version;
+- pinned checkpoint provenance;
 - manifest fingerprint;
-- segment_id/source path;
-- CLIP model/revision;
-- preprocessing version;
-- sampling method;
-- target_frames;
-- body detector family/implementation identity;
-- detector weights SHA-256;
-- confidence threshold;
-- IoU threshold;
-- detector image size;
-- ROI selection policy/version;
-- processor identity;
-- relevant package versions.
+- deterministic selected segment IDs by split;
+- requested target_frames;
+- per-segment:
+  - split;
+  - success/failure;
+  - failure category/reason;
+  - source frame count;
+  - temporal length;
+  - valid detection count;
+  - detection coverage;
+  - cache path if successful;
+  - cache fingerprint if successful;
+- aggregate:
+  - selected count;
+  - success count;
+  - failure count;
+  - no-body-detected count;
+  - other extraction failure count;
+  - mean/min/max detection coverage over successful segments;
+  - all_temporal_lengths_equal_60;
+- test_usage:
+  - test_rows_processed=false;
+  - model_predictions_inspected=false;
+  - performance_metrics_inspected=false;
+  - selection_or_tuning_performed=false.
 
-A change to detector weights, confidence, IoU, imgsz, target_frames, or ROI policy must change the fingerprint.
+### 6. No full extraction
 
-Successful cache artifacts must additionally contain:
+The helper must be structurally incapable of processing the full manifest by default.
 
-- detector identity;
-- detector weights SHA-256;
-- detection parameters;
-- sampled frame indices;
-- selected boxes or null per temporal position;
-- per-frame detection confidence or null;
-- valid_mask;
-- valid_detection_count;
-- detection_coverage = valid_detection_count / T.
+This task may process only the fixed small train/dev audit sample.
 
-Do not store labels, diagnosis, corpus/task identity, or Test metrics in the feature artifact.
-
-### 4. CLI integration
-
-Update scripts/video/extract_clip_video_features.py.
-
-Add/adjust arguments:
-
-    --yolo-weights PATH
-    --yolo-conf FLOAT          default 0.5
-    --yolo-iou FLOAT           default 0.5
-    --yolo-imgsz INT           default 640
-    --target-frames INT        default 60
-    --raw-frame-debug          explicit opt-in only
-
-Normal/default V1 execution must require --yolo-weights.
-
-Rules:
-
-- refuse a missing weights file clearly;
-- compute weights SHA-256;
-- never download weights;
-- do not run full dataset in verification;
-- preserve --limit;
-- report aggregate detection coverage for successful extractions;
-- report no-body-detected separately from video-read/model-load failures;
-- no Test predictions/metrics.
-
-### 5. Dependency discipline
-
-If ultralytics is required and absent from pyproject.toml:
-
-- add a normal project dependency entry;
-- do not run pip/uv/poetry install;
-- smoke verification must work through injected mock detector/encoder paths when the runtime package or weights are unavailable.
+Do not reuse the generic full extractor with no limit.
 
 ## Acceptance Criteria
 
-- default V1 target_frames is 60;
-- default V1 pipeline requires body ROI detection before CLIP;
-- detector settings default to confidence=0.5, IoU=0.5, imgsz=640;
-- detector weights are explicit/local and fingerprinted;
-- no weight auto-download exists;
-- deterministic multiple-box selection passes smoke tests;
-- temporal ordering is preserved;
-- partial missing detections yield [60,D] plus a correct bool [60] mask;
-- masked positions are zero padding only and never counted as detections;
-- all-missing detections cause extraction failure and cannot be saved as success;
-- cache fingerprint changes with detector weights fingerprint or any detector threshold/size parameter;
-- CLI defaults to 60 and YOLO ROI mode;
-- no full-dataset extraction occurs;
-- no labels/task identity reach YOLO or CLIP;
-- no Test predictions/metrics, training, tuning, or model selection;
+- pinned best.pt is downloaded or already present locally;
+- pinned source repo/commit/path/blob are recorded;
+- local SHA-256 is computed and recorded;
+- real ultralytics detector runs on real videos;
+- real frozen CLIP path runs on real body crops;
+- exactly 3 train + 3 dev rows are attempted;
+- zero Test rows are processed;
+- at least one successful real cache artifact is produced; if zero succeed, task is partial/blocked and must not claim pass;
+- every successful artifact passes structural validation;
+- any short-video T<60 issue is reported as a blocker, not silently fixed;
+- no full-dataset extraction;
+- no training/model selection;
+- no Test predictions/metrics;
 - src/audio unchanged;
 - python compilation passes;
-- smoke checks pass;
 - git diff --check passes;
-- branch codex/task-002b is committed and pushed;
+- branch codex/task-002c is committed and pushed;
 - main/master is untouched by implementing Codex;
-- diff against origin/main contains only the six allowed tracked paths.
+- tracked diff contains only the two allowed paths.
 
 ## Exact Verification Commands
 
 Run from repository root.
 
-    python3 -m py_compile \
-      src/video/features/yolov8_body_roi.py \
-      src/video/features/clip_video_features.py \
-      src/video/features/__init__.py \
-      scripts/video/extract_clip_video_features.py
+    python3 -m py_compile scripts/video/audit_depart_real_extraction.py
 
-Run a deterministic detector-policy smoke without real YOLO weights:
+Provision the pinned checkpoint to:
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
-    import numpy as np
+    /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt
 
-    from video.features.yolov8_body_roi import select_body_detection
+Record:
 
-    frame = np.zeros((100, 200, 3), dtype=np.uint8)
+    sha256sum /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt
 
-    det = select_body_detection(
-        frame,
-        boxes=[
-            [10, 10, 80, 90],
-            [20, 10, 180, 90],
-            [0, 0, 50, 50],
-        ],
-        confidences=[0.8, 0.8, 0.4],
-        confidence_threshold=0.5,
-    )
-    assert det is not None
-    # Same confidence: larger valid box wins.
-    assert det.box == (20, 10, 180, 90)
+Then run only the small real audit:
 
-    assert select_body_detection(
-        frame,
-        boxes=[[0, 0, 50, 50]],
-        confidences=[0.49],
-        confidence_threshold=0.5,
-    ) is None
-
-    print("YOLO body-selection policy smoke passed")
-    PY
-
-Run the temporal ROI + CLIP contract smoke using injected mock detector/encoder objects. It must prove:
-
-- exactly 60 temporal positions;
-- valid and invalid body detections are interleaved without reordering;
-- features shape is [60,D];
-- valid_mask is bool [60];
-- invalid positions are exactly zero;
-- all-invalid detection input returns success=false;
-- no real model download occurs.
-
-Also verify fingerprint sensitivity with synthetic values:
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
-    from video.features.clip_video_features import build_cache_fingerprint
-
-    common = dict(
-        manifest_fingerprint="manifest",
-        segment_id="segment",
-        source_path="/tmp/video.mp4",
-        model_name="openai/clip-vit-base-patch32",
-        model_revision="main",
-        target_frames=60,
-        preprocessing_version="depart-v1-roi",
-        processor_identity="clip",
-        detector_identity="yolov8-human",
-        detector_weights_sha256="a" * 64,
-        detector_confidence=0.5,
-        detector_iou=0.5,
-        detector_imgsz=640,
-        roi_policy_version="depart-body-roi-v1",
-    )
-    base = build_cache_fingerprint(**common)
-    for key, value in [
-        ("detector_weights_sha256", "b" * 64),
-        ("detector_confidence", 0.6),
-        ("detector_iou", 0.6),
-        ("detector_imgsz", 320),
-        ("target_frames", 30),
-        ("roi_policy_version", "depart-body-roi-v2"),
-    ]:
-        changed = dict(common)
-        changed[key] = value
-        assert build_cache_fingerprint(**changed) != base
-
-    print("DEPART ROI fingerprint sensitivity passed")
-    PY
-
-Verify CLI surface:
+    rm -rf /tmp/wsm_depart_002c
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
-      scripts/video/extract_clip_video_features.py --help
+      scripts/video/audit_depart_real_extraction.py \
+      --data-root /media/maxim/Databases/WSM_NEW \
+      --yolo-weights /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt \
+      --cache-root /tmp/wsm_depart_002c/cache \
+      --report-output /tmp/wsm_depart_002c/report.json \
+      --per-split 3 \
+      --target-frames 60 \
+      --device cuda
 
-Do not execute a full extraction command.
+If CUDA is unavailable, rerun with --device cpu and record that deviation.
 
-Finally:
+Validate the report:
+
+    PYTHONDONTWRITEBYTECODE=1 .venv/bin/python - <<'PY'
+    import json
+    from pathlib import Path
+
+    report = json.loads(Path("/tmp/wsm_depart_002c/report.json").read_text(encoding="utf-8"))
+
+    assert report["selected_count"] == 6
+    assert report["selected_by_split"]["train"] == 3
+    assert report["selected_by_split"]["dev"] == 3
+    assert report["test_usage"]["test_rows_processed"] is False
+    assert report["test_usage"]["model_predictions_inspected"] is False
+    assert report["test_usage"]["performance_metrics_inspected"] is False
+    assert report["test_usage"]["selection_or_tuning_performed"] is False
+
+    assert report["checkpoint"]["upstream_repository"] == "J3lly-Been/YOLOv8-HumanDetection"
+    assert report["checkpoint"]["upstream_commit"] == "ce2aae2e821100aee58ce2e7f75994a7e6c2ab9e"
+    assert report["checkpoint"]["upstream_path"] == "best.pt"
+    assert report["checkpoint"]["git_blob_sha"] == "afa44d4fcd0ff54691912bf8960d4fbb98ae1278"
+    assert len(report["checkpoint"]["local_sha256"]) == 64
+
+    if report["success_count"] > 0:
+        assert report["all_success_artifacts_valid"] is True
+
+    print("TASK-002C limited real extraction audit assertions passed")
+    PY
+
+Then:
 
     git diff --check
     git diff -- src/audio
@@ -331,11 +303,7 @@ Finally:
 Before committing inspect only:
 
     git diff -- \
-      src/video/features/clip_video_features.py \
-      src/video/features/yolov8_body_roi.py \
-      src/video/features/__init__.py \
-      scripts/video/extract_clip_video_features.py \
-      pyproject.toml \
+      scripts/video/audit_depart_real_extraction.py \
       docs/PROGRESS_EN.md
 
 After commit/push:
@@ -348,23 +316,26 @@ After commit/push:
 
 ## Required PROGRESS_EN Update
 
-Append TASK-002B facts without erasing TASK-002A evidence.
+Append TASK-002C facts without erasing previous evidence.
 
 Record:
 
-- branch and implementation commit SHA;
+- branch;
+- implementation commit SHA;
 - push result;
-- DEPART ROI pipeline settings;
-- detector runtime/weights availability;
-- whether ultralytics dependency was only declared or already available;
-- deterministic body-selection policy;
-- temporal [60,D] and mask contract;
-- partial/all-missing detection behavior;
-- cache fingerprint additions;
-- exact verification commands/results;
-- confirmation no full-dataset extraction ran;
+- pinned upstream checkpoint repository/commit/path/blob;
+- local checkpoint SHA-256 and file size;
+- whether CUDA or CPU was used;
+- exact six selected train/dev segment IDs;
+- per-segment success/failure and detection coverage;
+- temporal lengths;
+- cache artifact structural validation;
+- whether any T<60 short-video blocker appeared;
+- exact commands/results;
+- confirmation no Test rows were processed;
+- confirmation no full extraction ran;
 - confirmation src/audio unchanged;
-- confirmation no Test predictions/metrics or training/model selection ran;
+- confirmation no training/model selection/Test metrics;
 - Stage 2 remains partial;
 - recommended next atomic step only.
 
@@ -381,14 +352,18 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch codex/task-002b;
+- branch codex/task-002c;
 - implementation commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
 - diff summary against origin/main;
+- local YOLO checkpoint SHA-256;
+- six attempted train/dev segments;
+- success/failure counts;
+- detection coverage summary;
+- whether any short-video T<60 blocker appeared;
 - src/audio unchanged;
-- no full feature extraction;
-- no Test predictions/metrics;
-- whether real YOLO weights/runtime were available.
+- no Test rows/metrics;
+- no full extraction/training.
 
-Stop after this task. Do not start full cache extraction or model training.
+Stop after this task.
