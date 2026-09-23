@@ -650,3 +650,43 @@ Metrics/artifacts: six successful cache artifacts under /tmp/wsm_depart_002e/cac
 Manager integration: PR #10 merged to main as c7b190e73ad2daca9caef75686ee8b75c104cf97. The V1 preprocessing/cache real-data gate is accepted as cleared.
 
 Recommended next atomic task: implement/register the V1 DEPART-like temporal video model contract and verify synthetic forward/loss/backward on [B,60,512] cached-feature-shaped inputs; do not run full extraction or training yet.
+
+### TASK-002F - Implement and register the V1 DEPART-like temporal video model contract
+
+Status: implementation complete; Stage 2 remains partial.
+
+Branch: codex/task-002f.
+Implementation commit: recorded after verification.
+Push result: to be recorded after push.
+
+Changed files:
+
+- src/video/models/depart_v1.py;
+- src/video/models/__init__.py;
+- src/chimera_plugin.py;
+- docs/PROGRESS_EN.md.
+
+Implementation facts:
+
+- Registered model key: wsm_video_depart_v1_model.
+- Implemented the V1 path [B,60,512] -> LayerNorm/Linear/GELU/Dropout projection -> learned positional embeddings -> batch-first, norm-first TransformerEncoder -> LayerNorm -> valid-mask mean pooling -> two independent scalar heads.
+- Outputs are direct logits [B,2] ordered [depression, parkinson]. ModelOutput.aux contains pooled features [B,H] and separate depression/parkinson task logits. No sigmoid, task_id selection, or three-class softmax exists.
+- Context-aware factory uses data.video_feature_dim when supplied, defaults to 512, and rejects data.num_tasks other than 2.
+- Input validation covers rank, floating-point type, dimensions, feature width, sequence length, mask conversion, and all-invalid samples. Masked temporal positions are excluded from Transformer attention and pooling.
+
+Exact verification commands/results:
+
+- python3 -m py_compile src/video/models/__init__.py src/video/models/depart_v1.py src/chimera_plugin.py - passed.
+- Chimera registry smoke with warning capture - passed; wsm_video_depart_v1_model registered and no project-module warning emitted.
+- Required synthetic forward/loss/backward smoke - passed; preds [4,2], pooled features [4,64], task logits [4], finite masked sparse loss 0.6393991708755493, and finite gradients.
+- Mask invariance smoke - passed; changing masked frames to 1e6 did not change eval logits.
+- Partial masks worked; all-invalid sample raised ValueError.
+- Unknown NaN targets remained masked and were accepted by the observed-label-only loss.
+- A benign PyTorch nested-tensor warning was emitted because norm_first=True; it does not affect correctness and no dependency was installed.
+- git diff --check - passed.
+- git diff -- src/audio - empty; src/audio remained unchanged.
+- No cache extraction, training, model selection, Test rows, Test predictions, or Test metrics ran.
+
+Metrics/artifacts: no training or cache artifacts were created. Stage 2 remains partial pending later data/model integration tasks.
+
+Recommended next atomic task: manager review of the registered V1 model contract, then implement the next limited video integration task; do not train or run Test evaluation.
