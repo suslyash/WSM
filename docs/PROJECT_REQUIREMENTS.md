@@ -130,7 +130,7 @@ Segment-level metrics remain primary; video/person aggregation SHOULD be seconda
 ## 10. Data Integrity
 
 - All modalities MUST share one canonical segment manifest.
-- Splits MUST be speaker/video independent and identical across streams.
+- Splits MUST be video independent and identical across streams. For the current WSM_NEW train/dev/test partition, the dataset owner explicitly accepts the provided split assignment as speaker-independent even though no authoritative speaker_id is available. This is an owner-provided dataset assumption, not an empirically verified speaker-identity audit. Do not infer speaker_id or block Stage 1 on a missing speaker map.
 - Save a pre-training audit of counts, ID intersections, missing files, duration, and modality availability.
 - Feature-cache fingerprints MUST include model revision, layer, preprocessing, sampling, and manifest hash.
 - Labels/task identity MUST NOT enter prompts/extraction, except an explicitly studied trainable task token.
