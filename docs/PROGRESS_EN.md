@@ -231,3 +231,53 @@ Exact verification commands and results:
 Stage 1 remains partial because authoritative speaker identity and segment-level text alignment remain unresolved.
 
 Recommended next atomic task: audit and implement the separate DEV/Test manifest-consumer contract or datamodule only after manager approval; do not infer speaker identity or segment text alignment.
+
+
+### TASK-001C - Implement the canonical manifest consumer and separate DEV/Test DataModule
+
+Status: implementation complete; Stage 1 remains partial.
+
+Branch: codex/task-001c.
+Implementation commit SHA: 4128fb6.
+Push result: pending required push to origin.
+
+Changed files:
+
+- src/fusion/data/__init__.py;
+- src/fusion/data/wsm_manifest_datamodule.py;
+- src/chimera_plugin.py;
+- docs/PROGRESS_EN.md.
+
+Implementation facts:
+
+- Added WSMManifestDataset and WSMManifestDataModule consuming the canonical manifest builder or a supplied canonical CSV.
+- Registered the DataModule as wsm_manifest_datamodule and imported it explicitly from src/chimera_plugin.py.
+- train_dataset contains only train rows; val_dataset contains only DEV rows; test_dataset contains only Test rows. Test is never injected into validation and no TEST_NONE/SOFT/HARD filtering exists.
+- Each sample exposes segment/video/speaker/corpus/split metadata, targets [depression, parkinson], observed_mask [depression, parkinson], and modality_available [audio, video, text, description].
+- Unknown targets are represented as NaN in tensor batches and are always paired with observed_mask=false; observed targets are validated as finite 0/1. This prevents unknown disease labels from becoming supervised negatives.
+- Canonical text and description availability remain false. speaker_id remains null and speaker_independence_verified=false.
+- No model, loss, metric, callback, optimizer, training config, feature extraction, or unrelated registry component was added.
+
+Verification results:
+
+- train/dev/test rows: 6325 / 933 / 1364.
+- val_dataset contains only split=dev; test_dataset contains only split=test; no Test object is inserted into validation.
+- Smoke batch shapes: targets [8, 2], observed_mask [8, 2], modality_available [8, 4].
+- Depression samples use mask [true, false]; Parkinson samples use [false, true].
+- Unobserved target positions are NaN, not 0, and observed positions are finite 0/1.
+- Text and description masks are false; speaker_id is null.
+
+Exact verification commands and results:
+
+- python3 -m py_compile src/fusion/data/__init__.py src/fusion/data/wsm_manifest_datamodule.py src/chimera_plugin.py - passed.
+- Required registry command reached an installed Chimera API incompatibility: Registry does not implement Python membership for the requested assertion. The corrected equivalent using DATAMODULES.keys() passed; no project-module warning for fusion.data.wsm_manifest_datamodule was emitted.
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python corrected registry smoke - passed.
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python dataset/collate smoke - passed.
+- git diff --check - passed.
+- git diff -- src/audio - empty.
+- No Test predictions or performance metrics were inspected. No training, tuning, checkpoint selection, threshold selection, or model selection ran.
+- No source manifest files were modified and no later modeling/loss task was started.
+
+Stage 1 remains partial because authoritative speaker identity and segment-level text alignment remain unresolved.
+
+Recommended next atomic task: implement the masked sparse loss/data contract consumer only after manager approval; do not add pseudo-labeling, text alignment, or model training in that task.
