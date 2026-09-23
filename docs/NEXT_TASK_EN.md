@@ -1,4 +1,4 @@
-# TASK-002I: Implement the V1 Video Cache DataModule and Variable-Length Collate Contract
+# TASK-002J: Implement Masked Two-Task DEV Metrics for the V1 Video Pipeline
 
 ## Role
 
@@ -6,339 +6,306 @@ You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.
 
 Required branch:
 
-    codex/task-002i
+    codex/task-002j
 
-Do not process Test cache rows, do not create a training YAML, do not run training, do not implement V2/prototypes, and do not inspect Test predictions or Test metrics.
+Do not create a training YAML, do not run training, do not process Test, and do not modify src/audio.
 
 ## Goal
 
-Implement and register the Stage 2 V1 video cache DataModule for the accepted TRAIN+DEV cache.
+Implement the training-selection metric contract required by PROJECT_REQUIREMENTS for the new two-logit sparse-label video pipeline.
 
-The DataModule must consume only valid V1 cache artifacts and produce Chimera Batch objects compatible with:
+The V1 video model outputs:
 
-- wsm_video_depart_v1_model;
-- wsm_masked_sparse_loss.
+    logits [B,2] ordered [depression, parkinson]
 
-Current accepted cache coverage:
+The batch provides:
 
-- canonical TRAIN rows: 6325;
-- valid TRAIN video artifacts: 6255;
-- unavailable TRAIN rows (no_body_detected): 70;
-- canonical DEV rows: 933;
-- valid DEV video artifacts: 907;
-- unavailable DEV rows (no_body_detected): 26;
-- total valid TRAIN+DEV artifacts: 7162;
-- Test cache rows: 0.
+    targets [B,2]
+    observed_mask [B,2]
 
-The 96 no_body_detected rows must remain explicitly unavailable. Do not fabricate zero-video samples for them.
+Unknown disease labels are NaN and MUST be excluded from metrics exactly as they are excluded from the masked sparse loss.
+
+Required DEV metrics:
+
+For each task t in {depression, parkinson}:
+
+    UAR_t = macro recall over the observed binary labels only
+    MF1_t = macro F1 over the observed binary labels only
+    Score_t = (UAR_t + MF1_t) / 2
+
+Then:
+
+    DEV/Mean_Score = (Score_depression + Score_parkinson) / 2
+
+The exact logged selector key must be:
+
+    dev/mean_score
+
+Checkpointing/early stopping in later training configs will monitor this key in max mode.
+
+This task is metric/callback integration only. No training run is authorized.
 
 ## Required Reading
 
 1. AGENTS.md
-2. docs/PROJECT_REQUIREMENTS.md Sections 2-10, 13-14
+2. docs/PROJECT_REQUIREMENTS.md Sections 2, 8, 9, 11, 13, 14
 3. Stage 2 in docs/PLAN.md
-4. docs/PROGRESS_EN.md through TASK-002H and MANAGER-DECISION-004
+4. docs/PROGRESS_EN.md through TASK-002I
 5. docs/NEXT_TASK_EN.md
-6. src/video/models/depart_v1.py
-7. src/common/loss/wsm_masked_sparse_loss.py
-8. src/fusion/data/wsm_manifest_datamodule.py
-9. src/audio/data/wsm_audio_segment_dataset.py for Chimera Batch/collate conventions only
-10. /media/maxim/Programs/Features/WSM/video_depart_v1/cache/cache_index.jsonl structure as needed
+6. src/common/callbacks/wsm_segment_callback.py
+7. src/common/callbacks/wsm_summary_callback.py
+8. src/common/loss/wsm_masked_sparse_loss.py
+9. src/video/data/wsm_video_cache_datamodule.py
+10. src/video/models/depart_v1.py
+11. src/chimera_plugin.py
 
 ## Allowed Tracked Files
 
-- src/video/data/__init__.py
-- src/video/data/wsm_video_cache_datamodule.py
+- src/common/callbacks/wsm_segment_callback.py
 - src/chimera_plugin.py
 - docs/PROGRESS_EN.md
 
-Creating src/video/data is allowed.
-
 No other tracked file may be modified.
 
-## Fixed Registry Key
+## Fixed Registry Contract
 
-Register:
+Preserve:
 
-    wsm_video_depart_v1_datamodule
+    wsm_segment_metrics_callback
 
-## Data Contract
+Do not create a second competing callback key unless strictly necessary.
 
-### Dataset sample
+The callback must become compatible with BOTH:
 
-Each valid cached sample must expose enough information to construct:
+- existing legacy single-task/split metric use where possible;
+- the new sparse two-task [B,2] + observed_mask contract.
 
-- inputs["video"]: float tensor [T,512], where 1 <= T <= 60;
-- artifact valid_mask: bool [T];
-- targets: float tensor [2] ordered [depression, parkinson];
-- observed_mask: bool tensor [2];
-- metadata:
-  - segment_id;
-  - video_id;
-  - corpus;
-  - split;
-  - cache_path;
-  - cache_fingerprint;
-  - temporal_length;
-  - detection_coverage.
+Do not break existing audio callback registration aliases.
 
-Unknown disease target must remain NaN with observed_mask=false.
+## Required Metric Semantics
 
-### Collate
+### 1. Sparse two-task metric computation
 
-Implement a video-local collate function.
+Add a reusable pure helper in wsm_segment_callback.py that accepts:
 
-Given variable-length samples:
+    logits: Tensor [N,2]
+    targets: Tensor [N,2]
+    observed_mask: Tensor [N,2]
 
-1. batch_max_t = max(real T in batch);
-2. create zero-padded video tensor [B,batch_max_t,512];
-3. create bool video_mask [B,batch_max_t];
-4. copy each artifact feature tensor into [:T];
-5. combine the artifact's own valid_mask with batch padding:
-   - positions beyond T are false;
-   - within T, positions use artifact valid_mask exactly;
-6. padded positions must be exact zero;
-7. return chimera_ml.core.batch.Batch with:
-   - inputs={"video": padded_video};
-   - targets=[B,2];
-   - masks={
-       "video_mask": video_mask,
-       "observed_mask": observed_mask,
-     };
-   - meta containing sample metadata.
+and returns numeric metrics.
 
-Do not replace internal detector-missed positions with true mask values.
+For each task:
 
-### Cache availability policy
+- select only positions where observed_mask[:, task_id] is true;
+- selected target values must be finite 0/1;
+- threshold logits at 0.0, equivalent to sigmoid >= 0.5;
+- compute binary confusion counts;
+- per-class recall:
+    recall_negative = TN / (TN + FP), when denominator > 0;
+    recall_positive = TP / (TP + FN), when denominator > 0;
+- UAR = mean over classes with defined recall;
+- per-class F1:
+    F1_negative and F1_positive from the one-vs-rest binary class view;
+- MF1 = mean over classes with defined F1;
+- Score = (UAR + MF1)/2.
 
-Read the persistent cache index:
+If a DEV task has zero observed samples, raise a clear error. Do not silently report zero.
 
-    /media/maxim/Programs/Features/WSM/video_depart_v1/cache/cache_index.jsonl
+Metrics must include at least:
 
-For requested TRAIN/DEV rows:
+    dev/depression/num_samples
+    dev/depression/uar
+    dev/depression/mf1
+    dev/depression/score
 
-- status extracted/reused with valid artifact -> include in dataset;
-- status failed/no_body_detected -> exclude from unimodal video dataset, count as unavailable;
-- missing index row -> fail clearly;
-- any unexpected failure category -> fail clearly for this accepted cache state;
-- Test index rows must not be selected or loaded.
+    dev/parkinson/num_samples
+    dev/parkinson/uar
+    dev/parkinson/mf1
+    dev/parkinson/score
 
-## DataModule Requirements
+    dev/mean_score
 
-Constructor parameters must include at least:
+Also expose sensible confusion counts for audit if useful.
 
-    data_root
-    cache_root
+### 2. Correct masking
 
-Optional:
+Masked NaN targets MUST NOT enter any metric computation.
 
-    cache_index_path
+Changing values in targets where observed_mask=false must not affect any metric.
 
-Behavior:
+### 3. Callback cache integration
 
-- build/load the canonical manifest contract;
-- use only train and dev rows;
-- do not create or load a Test dataset in this task;
-- join canonical rows to cache index by segment_id;
-- validate every selected cache artifact before dataset use:
-  - features [T,512], 1<=T<=60;
-  - bool valid_mask [T];
-  - finite valid features;
-  - exact-zero invalid features;
-  - matching segment_id/fingerprint;
-  - pinned CLIP identity/revision;
-  - pinned YOLO SHA;
-  - target_frames metadata=60;
-- train_dataset contains only valid TRAIN artifacts;
-- val_dataset contains only valid DEV artifacts;
-- test_dataset must be absent, None, or empty and must not cause any Test cache access.
+Update WSMSegmentMetricsCallback so that when cached DEV outputs contain the sparse two-task contract:
 
-Expected lengths under current accepted cache:
+- concatenate logits and targets;
+- obtain observed_mask from the cached batch/mask data if available in CachedSplitOutputs;
+- compute and inject the exact metrics above into logs;
+- log them to MLflow when present.
 
-    len(train_dataset) == 6255
-    len(val_dataset) == 907
+If the current Chimera cache object does not retain masks directly, implement the smallest compatible callback-side collection mechanism needed to collect DEV logits, targets, and observed_mask during the epoch.
 
-Unavailable counts:
+Do not read Test data.
 
-    train_no_body_unavailable == 70
-    dev_no_body_unavailable == 26
+Do not derive selector metrics from legacy task-split naming when the native sparse two-task cache is available.
 
-## Context Description
+### 4. Existing callback behavior
 
-describe_context must expose at least:
+Preserve existing confusion-matrix/reporting behavior where compatible.
 
-- data.num_tasks = 2;
-- data.task_names = ["depression", "parkinson"];
-- data.video_feature_dim = 512;
-- data.video_sequence_steps = 60;
-- data.video_cache_root;
-- data.video_train_rows = 6255;
-- data.video_dev_rows = 907;
-- data.video_train_unavailable = 70;
-- data.video_dev_unavailable = 26;
-- data.video_cache_success_total = 7162;
-- data.video_cache_failure_total = 96;
-- data.video_cache_variable_length = true;
-- data.test_rows_loaded = 0.
+If the old confusion-matrix drawing cannot represent [N,2] sparse outputs directly, skip only that incompatible panel path for the native two-task cache rather than corrupting metrics.
 
-Do not expose Test metrics.
+Do not remove wsm_audio_metrics_callback alias.
 
-## Chimera Registration
+### 5. Logging names
 
-Update src/chimera_plugin.py with explicit import of the new video data registration module.
+The canonical Stage 2 selector name is exactly:
 
-Project-module import failure must not be hidden as an optional warning.
+    dev/mean_score
+
+Do not use:
+
+- dev/mean_macro_recall as selector;
+- dev/mean_macro_f1 as selector;
+- test metrics;
+- corpus-specific surrogate metrics.
 
 ## Acceptance Criteria
 
-- DATAMODULES contains wsm_video_depart_v1_datamodule;
-- plugin import has no project-module warning for video.data.wsm_video_cache_datamodule;
-- train_dataset length = 6255;
-- val_dataset length = 907;
-- unavailable counts train/dev = 70/26;
-- no Test cache row is loaded;
-- no Test dataset is used for validation;
-- a mixed-length collate produces [B,max_T,512] and bool [B,max_T];
-- batch max_T is real batch maximum, not forcibly 60;
-- padding positions are exact zero and mask=false;
-- detector-missed internal positions preserve artifact mask=false;
-- targets shape [B,2];
-- observed_mask shape [B,2];
-- depression/Parkinson ownership masks remain correct;
-- masked NaN targets remain unknown;
-- V1 model accepts a real cache batch;
-- masked sparse loss accepts that batch;
-- one real-cache forward/loss/backward smoke passes with finite loss/gradients;
-- no training;
+- wsm_segment_metrics_callback remains registered;
+- wsm_audio_metrics_callback remains registered;
+- pure masked two-task helper exists;
+- masked NaNs do not contaminate metrics;
+- both tasks' UAR/MF1/Score are computed from observed labels only;
+- exact key dev/mean_score is produced;
+- DEV mean score equals arithmetic mean of the two task Scores;
+- zero-observation task fails clearly;
+- threshold is fixed at logit 0.0;
+- no Test metric is needed for selector computation;
+- existing project plugin imports without required-module warnings;
+- no training run;
 - no Test processing/metrics;
 - src/audio unchanged;
 - python compilation passes;
-- registry smoke passes;
+- synthetic metric smoke passes;
+- callback smoke with a native sparse two-task DEV cache or equivalent collection path passes;
 - git diff --check passes;
-- branch codex/task-002i committed and pushed;
+- branch codex/task-002j committed and pushed;
 - main/master untouched;
-- tracked diff contains only the four allowed paths.
+- tracked diff contains only the three allowed paths.
 
 ## Exact Verification Commands
-
-Run from repository root.
 
 Compile:
 
     python3 -m py_compile \
-      src/video/data/__init__.py \
-      src/video/data/wsm_video_cache_datamodule.py \
+      src/common/callbacks/wsm_segment_callback.py \
       src/chimera_plugin.py
 
 Registry smoke:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
-    import warnings
-    from chimera_ml.core.registry import DATAMODULES
+    from chimera_ml.core.registry import CALLBACKS
     import chimera_plugin
 
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        chimera_plugin.register()
-
-    project_warnings = [
-        str(item.message)
-        for item in caught
-        if "Failed to import" in str(item.message)
-        and "video.data.wsm_video_cache_datamodule" in str(item.message)
-    ]
-    assert not project_warnings, project_warnings
-    assert "wsm_video_depart_v1_datamodule" in DATAMODULES.keys()
-    print("V1 video datamodule registry smoke passed")
+    chimera_plugin.register()
+    assert "wsm_segment_metrics_callback" in CALLBACKS.keys()
+    assert "wsm_audio_metrics_callback" in CALLBACKS.keys()
+    print("WSM metric callback registry smoke passed")
     PY
 
-Real cache/DataModule smoke:
+Run exact masked-metric smoke:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
     import math
     import torch
 
-    from common.loss.wsm_masked_sparse_loss import WSMMaskedSparseLoss
-    from video.data.wsm_video_cache_datamodule import WSMVideoCacheDataModule
-    from video.models.depart_v1 import WSMVideoDepartV1Model
+    from common.callbacks.wsm_segment_callback import compute_sparse_two_task_metrics
 
-    dm = WSMVideoCacheDataModule(
-        data_root="/media/maxim/Databases/WSM_NEW",
-        cache_root="/media/maxim/Programs/Features/WSM/video_depart_v1/cache",
+    logits = torch.tensor([
+        [ 2.0,  999.0],
+        [-2.0, -999.0],
+        [999.0,  2.0],
+        [-999.0, -2.0],
+        [ 1.0,  999.0],
+        [-1.0, -999.0],
+        [999.0,  1.0],
+        [-999.0, -1.0],
+    ])
+
+    targets = torch.tensor([
+        [1.0, float("nan")],
+        [0.0, float("nan")],
+        [float("nan"), 1.0],
+        [float("nan"), 0.0],
+        [1.0, float("nan")],
+        [0.0, float("nan")],
+        [float("nan"), 1.0],
+        [float("nan"), 0.0],
+    ])
+
+    observed = torch.tensor([
+        [True, False],
+        [True, False],
+        [False, True],
+        [False, True],
+        [True, False],
+        [True, False],
+        [False, True],
+        [False, True],
+    ])
+
+    metrics = compute_sparse_two_task_metrics(
+        logits=logits,
+        targets=targets,
+        observed_mask=observed,
+        prefix="dev",
+        task_names=("depression", "parkinson"),
     )
 
-    assert len(dm.train_dataset) == 6255
-    assert len(dm.val_dataset) == 907
-    assert dm.train_unavailable_count == 70
-    assert dm.dev_unavailable_count == 26
-    assert getattr(dm, "test_dataset", None) in (None, {}, [])
+    assert metrics["dev/depression/num_samples"] == 4
+    assert metrics["dev/parkinson/num_samples"] == 4
+    assert math.isclose(metrics["dev/depression/uar"], 1.0)
+    assert math.isclose(metrics["dev/depression/mf1"], 1.0)
+    assert math.isclose(metrics["dev/depression/score"], 1.0)
+    assert math.isclose(metrics["dev/parkinson/uar"], 1.0)
+    assert math.isclose(metrics["dev/parkinson/mf1"], 1.0)
+    assert math.isclose(metrics["dev/parkinson/score"], 1.0)
+    assert math.isclose(metrics["dev/mean_score"], 1.0)
 
-    # Find at least one short real sequence and one T=60 sequence.
-    short_i = next(i for i in range(len(dm.train_dataset))
-                   if dm.train_dataset[i]["inputs"]["video"].shape[0] < 60)
-    full_i = next(i for i in range(len(dm.train_dataset))
-                  if dm.train_dataset[i]["inputs"]["video"].shape[0] == 60)
-
-    samples = [dm.train_dataset[short_i], dm.train_dataset[full_i]]
-    batch = dm.collate_fn(samples)
-
-    video = batch.inputs["video"]
-    mask = batch.get_masks("video_mask")
-    observed = batch.get_masks("observed_mask")
-
-    assert video.ndim == 3 and video.shape[0] == 2 and video.shape[2] == 512
-    assert video.shape[1] == 60
-    assert mask.dtype == torch.bool and tuple(mask.shape) == tuple(video.shape[:2])
-    assert tuple(batch.targets.shape) == (2, 2)
-    assert tuple(observed.shape) == (2, 2)
-
-    short_t = samples[0]["inputs"]["video"].shape[0]
-    assert not bool(mask[0, short_t:].any())
-    assert torch.equal(video[0, short_t:], torch.zeros_like(video[0, short_t:]))
-
-    # Preserve internal artifact invalid positions exactly.
-    original_mask = samples[0]["video_mask"]
-    assert torch.equal(mask[0, :short_t], original_mask)
-
-    model = WSMVideoDepartV1Model(
-        video_feature_dim=512,
-        hidden_dim=64,
-        num_layers=1,
-        num_heads=4,
-        ff_mult=2,
-        dropout=0.0,
-        sequence_steps=60,
+    # Masked target values are irrelevant.
+    changed = targets.clone()
+    changed[~observed] = 12345.0
+    metrics_changed = compute_sparse_two_task_metrics(
+        logits=logits,
+        targets=changed,
+        observed_mask=observed,
+        prefix="dev",
+        task_names=("depression", "parkinson"),
     )
-    output = model(batch)
-    assert tuple(output.preds.shape) == (2, 2)
+    assert metrics_changed == metrics
 
-    loss = WSMMaskedSparseLoss()(output, batch)
-    assert loss.ndim == 0
-    assert math.isfinite(float(loss.detach()))
-    loss.backward()
+    # A task with zero observed labels must fail.
+    bad = observed.clone()
+    bad[:, 1] = False
+    try:
+        compute_sparse_two_task_metrics(
+            logits=logits,
+            targets=targets,
+            observed_mask=bad,
+            prefix="dev",
+            task_names=("depression", "parkinson"),
+        )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("zero-observation task must fail")
 
-    grads = [p.grad for p in model.parameters() if p.grad is not None]
-    assert grads and all(torch.isfinite(g).all() for g in grads)
-
-    print("V1 video real-cache datamodule/model/loss smoke passed", float(loss.detach()))
+    print("masked sparse DEV metric smoke passed")
     PY
 
-Test-firewall/source audit:
+Add a proportional callback smoke proving that WSMSegmentMetricsCallback injects the same dev/... keys when fed a native sparse two-task DEV epoch/cache path supported by the implementation. Do not invoke Test splits.
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
-    from video.data.wsm_video_cache_datamodule import WSMVideoCacheDataModule
-
-    dm = WSMVideoCacheDataModule(
-        data_root="/media/maxim/Databases/WSM_NEW",
-        cache_root="/media/maxim/Programs/Features/WSM/video_depart_v1/cache",
-    )
-    assert dm.test_rows_loaded == 0
-    assert all(dm.train_dataset[i]["meta"]["split"] == "train" for i in range(min(64, len(dm.train_dataset))))
-    assert all(dm.val_dataset[i]["meta"]["split"] == "dev" for i in range(min(64, len(dm.val_dataset))))
-    print("video datamodule Test firewall assertions passed")
-    PY
-
-Then:
+Finally:
 
     git diff --check
     git diff -- src/audio
@@ -347,8 +314,7 @@ Then:
 Before commit inspect only:
 
     git diff -- \
-      src/video/data/__init__.py \
-      src/video/data/wsm_video_cache_datamodule.py \
+      src/common/callbacks/wsm_segment_callback.py \
       src/chimera_plugin.py \
       docs/PROGRESS_EN.md
 
@@ -367,16 +333,15 @@ Record:
 - branch;
 - implementation commit SHA;
 - push result;
-- registry key;
-- cache root/index used;
-- valid train/dev dataset counts;
-- unavailable train/dev counts;
-- explicit no-fake-feature policy;
-- variable-length padding semantics;
-- real cache batch shapes;
-- forward/loss/backward smoke result;
-- confirmation Test rows loaded=0;
-- confirmation no training/Test metrics;
+- exact metric equations/threshold;
+- exact logged keys;
+- masked-label semantics;
+- callback integration path;
+- synthetic helper result;
+- callback smoke result;
+- explicit selector key dev/mean_score;
+- confirmation no Test data/metrics used;
+- confirmation no training run;
 - src/audio unchanged;
 - Stage 2 remains partial;
 - recommended next atomic step only.
@@ -394,16 +359,15 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch codex/task-002i;
+- branch codex/task-002j;
 - implementation commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
-- train/dev dataset counts;
-- unavailable counts;
-- real-cache collate shapes;
-- forward/loss/backward result;
-- Test rows loaded=0;
-- no training/Test metrics;
+- exact selector key;
+- synthetic metric result;
+- callback integration result;
+- no Test metrics;
+- no training;
 - src/audio unchanged.
 
 Stop after this task.
