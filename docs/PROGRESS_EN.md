@@ -549,4 +549,6 @@ Exact verification commands/results:
 
 Metrics/artifacts: machine-readable report at /tmp/wsm_depart_002c/report.json; zero successful cache artifacts. Stage 2 remains partial.
 
-Recommended next atomic task: provision/cache the approved CLIP model revision through an explicitly authorized dependency/model-provisioning task, then rerun only this fixed six-segment audit; do not start full extraction or training.
+Manager integration: PR #8 merged to main as d73b2aeac6692356d586cd5f33d72774fd0239d0. TASK-002C is accepted as partial/blocked evidence, not as a successful real extraction pass.
+
+Recommended next atomic task: provision/cache the approved pinned CLIP model revision through an explicitly authorized model-provisioning task, then rerun only this fixed six-segment audit; do not start full extraction or training.
