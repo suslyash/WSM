@@ -1,4 +1,4 @@
-# TASK-002H: Recover Short-Video V1 Cache Rows with Variable-Length Temporal Sequences
+# TASK-002I: Implement the V1 Video Cache DataModule and Variable-Length Collate Contract
 
 ## Role
 
@@ -6,247 +6,339 @@ You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.
 
 Required branch:
 
-    codex/task-002h
+    codex/task-002i
 
-Do not process Test rows, do not train a model, do not create a training config, do not implement V2/prototypes, and do not inspect Test predictions or Test metrics.
+Do not process Test cache rows, do not create a training YAML, do not run training, do not implement V2/prototypes, and do not inspect Test predictions or Test metrics.
 
 ## Goal
 
-Apply the manager-approved variable-length V1 cache policy to recover the short-video rows rejected in TASK-002G.
+Implement and register the Stage 2 V1 video cache DataModule for the accepted TRAIN+DEV cache.
 
-Manager decision:
+The DataModule must consume only valid V1 cache artifacts and produce Chimera Batch objects compatible with:
 
-- real sampled sequence length may be any integer 1 <= T <= 60;
-- do not duplicate frames;
-- do not interpolate/synthesize temporal positions;
-- do not change sampling semantics;
-- preserve chronological real frame indices;
-- later batching may pad with video_mask=false, but this task must not implement the DataModule yet.
+- wsm_video_depart_v1_model;
+- wsm_masked_sparse_loss.
 
-The 96 no_body_detected rows remain genuine extraction failures.
+Current accepted cache coverage:
+
+- canonical TRAIN rows: 6325;
+- valid TRAIN video artifacts: 6255;
+- unavailable TRAIN rows (no_body_detected): 70;
+- canonical DEV rows: 933;
+- valid DEV video artifacts: 907;
+- unavailable DEV rows (no_body_detected): 26;
+- total valid TRAIN+DEV artifacts: 7162;
+- Test cache rows: 0.
+
+The 96 no_body_detected rows must remain explicitly unavailable. Do not fabricate zero-video samples for them.
 
 ## Required Reading
 
 1. AGENTS.md
-2. docs/PROJECT_REQUIREMENTS.md Sections 7-10 and 13-14
+2. docs/PROJECT_REQUIREMENTS.md Sections 2-10, 13-14
 3. Stage 2 in docs/PLAN.md
-4. docs/PROGRESS_EN.md through TASK-002G and MANAGER-DECISION-003
+4. docs/PROGRESS_EN.md through TASK-002H and MANAGER-DECISION-004
 5. docs/NEXT_TASK_EN.md
-6. scripts/video/extract_clip_video_features.py
-7. scripts/video/audit_video_cache.py
-8. src/video/features/clip_video_features.py
-9. src/video/models/depart_v1.py
+6. src/video/models/depart_v1.py
+7. src/common/loss/wsm_masked_sparse_loss.py
+8. src/fusion/data/wsm_manifest_datamodule.py
+9. src/audio/data/wsm_audio_segment_dataset.py for Chimera Batch/collate conventions only
+10. /media/maxim/Programs/Features/WSM/video_depart_v1/cache/cache_index.jsonl structure as needed
 
 ## Allowed Tracked Files
 
-- scripts/video/extract_clip_video_features.py
-- scripts/video/audit_video_cache.py
+- src/video/data/__init__.py
+- src/video/data/wsm_video_cache_datamodule.py
+- src/chimera_plugin.py
 - docs/PROGRESS_EN.md
+
+Creating src/video/data is allowed.
 
 No other tracked file may be modified.
 
-Do not modify src/video/features/clip_video_features.py or the V1 model in this task.
+## Fixed Registry Key
 
-## Fixed Runtime Inputs
+Register:
 
-Pinned YOLO:
+    wsm_video_depart_v1_datamodule
 
-- /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt
-- SHA-256:
-  a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43
+## Data Contract
 
-Pinned CLIP:
+### Dataset sample
 
-- openai/clip-vit-base-patch32
-- revision:
-  b97b0100e55e367c057773c2a614676470b0d575
+Each valid cached sample must expose enough information to construct:
 
-Persistent cache root:
+- inputs["video"]: float tensor [T,512], where 1 <= T <= 60;
+- artifact valid_mask: bool [T];
+- targets: float tensor [2] ordered [depression, parkinson];
+- observed_mask: bool tensor [2];
+- metadata:
+  - segment_id;
+  - video_id;
+  - corpus;
+  - split;
+  - cache_path;
+  - cache_fingerprint;
+  - temporal_length;
+  - detection_coverage.
 
-    /media/maxim/Programs/Features/WSM/video_depart_v1/cache
+Unknown disease target must remain NaN with observed_mask=false.
 
-Requested splits:
+### Collate
 
-    train,dev
+Implement a video-local collate function.
 
-Test rows:
+Given variable-length samples:
 
-    forbidden
+1. batch_max_t = max(real T in batch);
+2. create zero-padded video tensor [B,batch_max_t,512];
+3. create bool video_mask [B,batch_max_t];
+4. copy each artifact feature tensor into [:T];
+5. combine the artifact's own valid_mask with batch padding:
+   - positions beyond T are false;
+   - within T, positions use artifact valid_mask exactly;
+6. padded positions must be exact zero;
+7. return chimera_ml.core.batch.Batch with:
+   - inputs={"video": padded_video};
+   - targets=[B,2];
+   - masks={
+       "video_mask": video_mask,
+       "observed_mask": observed_mask,
+     };
+   - meta containing sample metadata.
 
-## Implementation Requirements
+Do not replace internal detector-missed positions with true mask values.
 
-### 1. Relax cache artifact validation to 1 <= T <= 60
+### Cache availability policy
 
-Update both:
+Read the persistent cache index:
 
-- scripts/video/extract_clip_video_features.py
-- scripts/video/audit_video_cache.py
+    /media/maxim/Programs/Features/WSM/video_depart_v1/cache/cache_index.jsonl
 
-Successful artifact validation must require:
+For requested TRAIN/DEV rows:
 
-- features rank 2 [T,512];
-- valid_mask bool [T];
-- 1 <= T <= target_frames;
-- features.shape[0] == valid_mask.shape[0];
-- sampled_frame_indices length == T;
-- sampled_frame_indices strictly chronological/nondecreasing according to the existing sampler contract;
-- valid features finite;
-- invalid positions exact zero;
-- model/revision and detector metadata unchanged.
+- status extracted/reused with valid artifact -> include in dataset;
+- status failed/no_body_detected -> exclude from unimodal video dataset, count as unavailable;
+- missing index row -> fail clearly;
+- any unexpected failure category -> fail clearly for this accepted cache state;
+- Test index rows must not be selected or loaded.
 
-Do not require T == 60 anymore.
+## DataModule Requirements
 
-### 2. Preserve requested target_frames separately
+Constructor parameters must include at least:
 
-The artifact preprocessing metadata must continue to record:
+    data_root
+    cache_root
 
-    target_frames = 60
+Optional:
 
-This means "maximum/requested temporal positions", not a claim that every source contains 60 real frames.
+    cache_index_path
 
-Do not alter cache fingerprints solely because T is shorter. The expected fingerprint is still determined by the extraction contract and source identity.
+Behavior:
 
-### 3. Resume behavior
+- build/load the canonical manifest contract;
+- use only train and dev rows;
+- do not create or load a Test dataset in this task;
+- join canonical rows to cache index by segment_id;
+- validate every selected cache artifact before dataset use:
+  - features [T,512], 1<=T<=60;
+  - bool valid_mask [T];
+  - finite valid features;
+  - exact-zero invalid features;
+  - matching segment_id/fingerprint;
+  - pinned CLIP identity/revision;
+  - pinned YOLO SHA;
+  - target_frames metadata=60;
+- train_dataset contains only valid TRAIN artifacts;
+- val_dataset contains only valid DEV artifacts;
+- test_dataset must be absent, None, or empty and must not cause any Test cache access.
 
-Use the existing resumable extractor.
+Expected lengths under current accepted cache:
 
-When rerun with:
+    len(train_dataset) == 6255
+    len(val_dataset) == 907
 
-    --resume --overwrite
+Unavailable counts:
 
-Behavior must be:
+    train_no_body_unavailable == 70
+    dev_no_body_unavailable == 26
 
-- valid existing 60-frame artifacts are reused;
-- valid existing short artifacts under the new 1<=T<=60 contract are reused;
-- the stale invalid artifact may be overwritten/re-extracted;
-- rows with no existing valid artifact are extracted again;
-- no_body_detected remains an explicit failed record;
-- Test is not touched.
+## Context Description
 
-Do not delete the full cache root.
+describe_context must expose at least:
 
-### 4. Independent audit semantics
+- data.num_tasks = 2;
+- data.task_names = ["depression", "parkinson"];
+- data.video_feature_dim = 512;
+- data.video_sequence_steps = 60;
+- data.video_cache_root;
+- data.video_train_rows = 6255;
+- data.video_dev_rows = 907;
+- data.video_train_unavailable = 70;
+- data.video_dev_unavailable = 26;
+- data.video_cache_success_total = 7162;
+- data.video_cache_failure_total = 96;
+- data.video_cache_variable_length = true;
+- data.test_rows_loaded = 0.
 
-Update audit_video_cache.py so it reports:
+Do not expose Test metrics.
 
-- success counts;
-- failure counts;
-- temporal-length distribution;
-- min/max/mean T among successful artifacts;
-- count of successful artifacts with T < 60;
-- count with T == 60;
-- no_body_detected failures;
-- any other failures;
-- Test indexed/processed = 0.
+## Chimera Registration
 
-Set:
+Update src/chimera_plugin.py with explicit import of the new video data registration module.
 
-    complete_for_requested_splits=true
-
-only when every requested TRAIN+DEV row has exactly one valid success/reused artifact or one explicit failure record.
-
-### 5. Full resume execution
-
-Rerun the complete TRAIN+DEV extractor against the existing persistent cache with:
-
-    --splits train,dev
-    --resume
-    --overwrite
-
-Do not use --limit.
-
-This run is expected to reuse the 7,050 already-valid artifacts, recover the 111 short-video rows if body detection/CLIP succeeds, repair the one stale invalid cache if possible, and retain the 96 no-body rows as failures.
-
-Do not assume the exact final success count in advance; record the measured result.
+Project-module import failure must not be hidden as an optional warning.
 
 ## Acceptance Criteria
 
-Implementation:
-
-- cache validation accepts [T,512] for every 1<=T<=60;
-- bool valid_mask length matches T;
-- exact-zero invalid positions preserved;
-- no duplicated/synthetic frames added;
-- requested target_frames metadata remains 60;
-- audit reports temporal-length statistics;
+- DATAMODULES contains wsm_video_depart_v1_datamodule;
+- plugin import has no project-module warning for video.data.wsm_video_cache_datamodule;
+- train_dataset length = 6255;
+- val_dataset length = 907;
+- unavailable counts train/dev = 70/26;
+- no Test cache row is loaded;
+- no Test dataset is used for validation;
+- a mixed-length collate produces [B,max_T,512] and bool [B,max_T];
+- batch max_T is real batch maximum, not forcibly 60;
+- padding positions are exact zero and mask=false;
+- detector-missed internal positions preserve artifact mask=false;
+- targets shape [B,2];
+- observed_mask shape [B,2];
+- depression/Parkinson ownership masks remain correct;
+- masked NaN targets remain unknown;
+- V1 model accepts a real cache batch;
+- masked sparse loss accepts that batch;
+- one real-cache forward/loss/backward smoke passes with finite loss/gradients;
+- no training;
+- no Test processing/metrics;
+- src/audio unchanged;
 - python compilation passes;
+- registry smoke passes;
 - git diff --check passes;
-- src/audio unchanged.
-
-Execution:
-
-- requested splits exactly train,dev;
-- Test rows processed/indexed=0;
-- all 7,258 rows remain represented in the final index;
-- missing_record_count=0;
-- successful artifacts all pass variable-length validation;
-- fingerprints remain unique;
-- no_body failures remain explicit;
-- recovered short-video successes are reported;
-- stale invalid cache outcome is reported;
-- independent audit passes with complete_for_requested_splits=true;
-- no dependency install;
-- no training/model selection/Test metrics.
-
-Git:
-
-- branch codex/task-002h;
-- implementation committed/pushed;
+- branch codex/task-002i committed and pushed;
 - main/master untouched;
-- tracked diff contains only the three allowed paths.
+- tracked diff contains only the four allowed paths.
 
 ## Exact Verification Commands
 
-Set environment:
-
-    export HF_HOME=/media/maxim/Programs/Models/WSM/huggingface
-    export HF_HUB_CACHE=/media/maxim/Programs/Models/WSM/huggingface/hub
-    export YOLO_AUTOINSTALL=false
+Run from repository root.
 
 Compile:
 
-    python3 -m py_compile       scripts/video/extract_clip_video_features.py       scripts/video/audit_video_cache.py
+    python3 -m py_compile \
+      src/video/data/__init__.py \
+      src/video/data/wsm_video_cache_datamodule.py \
+      src/chimera_plugin.py
 
-Run a synthetic variable-length validator smoke using temporary artifacts of T=17 and T=60, proving both pass and T=0 / T=61 fail.
+Registry smoke:
 
-Then rerun the full TRAIN+DEV cache in place:
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import warnings
+    from chimera_ml.core.registry import DATAMODULES
+    import chimera_plugin
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/video/extract_clip_video_features.py       --data-root /media/maxim/Databases/WSM_NEW       --cache-root /media/maxim/Programs/Features/WSM/video_depart_v1/cache       --report-output /media/maxim/Programs/Features/WSM/video_depart_v1/extraction_report_task002h.json       --splits train,dev       --resume       --overwrite       --yolo-weights /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt       --model-name openai/clip-vit-base-patch32       --model-revision b97b0100e55e367c057773c2a614676470b0d575       --target-frames 60       --device cuda
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        chimera_plugin.register()
 
-If CUDA is unavailable, CPU fallback is allowed only for a pure device/runtime issue and must be recorded.
-
-Run independent audit:
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/video/audit_video_cache.py       --data-root /media/maxim/Databases/WSM_NEW       --cache-root /media/maxim/Programs/Features/WSM/video_depart_v1/cache       --report-output /media/maxim/Programs/Features/WSM/video_depart_v1/cache_audit_task002h.json       --splits train,dev       --model-name openai/clip-vit-base-patch32       --model-revision b97b0100e55e367c057773c2a614676470b0d575       --yolo-weights /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt       --target-frames 60
-
-Validate at least:
-
-    PYTHONDONTWRITEBYTECODE=1 .venv/bin/python - <<'PY'
-    import json
-    from pathlib import Path
-
-    p = Path("/media/maxim/Programs/Features/WSM/video_depart_v1/cache_audit_task002h.json")
-    r = json.loads(p.read_text(encoding="utf-8"))
-
-    assert r["requested_splits"] == ["train", "dev"]
-    assert r["expected_total"] == 7258
-    assert r["missing_record_count"] == 0
-    assert r["test_rows_indexed"] == 0
-    assert r["test_rows_processed"] is False
-    assert r["complete_for_requested_splits"] is True
-    assert r["successful_artifacts_valid"] is True
-    assert r["cache_fingerprints_unique"] is True
-    assert 1 <= r["temporal_length_stats"]["min"] <= 60
-    assert 1 <= r["temporal_length_stats"]["max"] <= 60
-    assert r["temporal_length_stats"]["shorter_than_60_count"] >= 1
-    assert r["test_usage"]["model_predictions_inspected"] is False
-    assert r["test_usage"]["performance_metrics_inspected"] is False
-    assert r["test_usage"]["selection_or_tuning_performed"] is False
-
-    print("TASK-002H variable-length TRAIN+DEV cache audit passed")
+    project_warnings = [
+        str(item.message)
+        for item in caught
+        if "Failed to import" in str(item.message)
+        and "video.data.wsm_video_cache_datamodule" in str(item.message)
+    ]
+    assert not project_warnings, project_warnings
+    assert "wsm_video_depart_v1_datamodule" in DATAMODULES.keys()
+    print("V1 video datamodule registry smoke passed")
     PY
 
-Finally:
+Real cache/DataModule smoke:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import math
+    import torch
+
+    from common.loss.wsm_masked_sparse_loss import WSMMaskedSparseLoss
+    from video.data.wsm_video_cache_datamodule import WSMVideoCacheDataModule
+    from video.models.depart_v1 import WSMVideoDepartV1Model
+
+    dm = WSMVideoCacheDataModule(
+        data_root="/media/maxim/Databases/WSM_NEW",
+        cache_root="/media/maxim/Programs/Features/WSM/video_depart_v1/cache",
+    )
+
+    assert len(dm.train_dataset) == 6255
+    assert len(dm.val_dataset) == 907
+    assert dm.train_unavailable_count == 70
+    assert dm.dev_unavailable_count == 26
+    assert getattr(dm, "test_dataset", None) in (None, {}, [])
+
+    # Find at least one short real sequence and one T=60 sequence.
+    short_i = next(i for i in range(len(dm.train_dataset))
+                   if dm.train_dataset[i]["inputs"]["video"].shape[0] < 60)
+    full_i = next(i for i in range(len(dm.train_dataset))
+                  if dm.train_dataset[i]["inputs"]["video"].shape[0] == 60)
+
+    samples = [dm.train_dataset[short_i], dm.train_dataset[full_i]]
+    batch = dm.collate_fn(samples)
+
+    video = batch.inputs["video"]
+    mask = batch.get_masks("video_mask")
+    observed = batch.get_masks("observed_mask")
+
+    assert video.ndim == 3 and video.shape[0] == 2 and video.shape[2] == 512
+    assert video.shape[1] == 60
+    assert mask.dtype == torch.bool and tuple(mask.shape) == tuple(video.shape[:2])
+    assert tuple(batch.targets.shape) == (2, 2)
+    assert tuple(observed.shape) == (2, 2)
+
+    short_t = samples[0]["inputs"]["video"].shape[0]
+    assert not bool(mask[0, short_t:].any())
+    assert torch.equal(video[0, short_t:], torch.zeros_like(video[0, short_t:]))
+
+    # Preserve internal artifact invalid positions exactly.
+    original_mask = samples[0]["video_mask"]
+    assert torch.equal(mask[0, :short_t], original_mask)
+
+    model = WSMVideoDepartV1Model(
+        video_feature_dim=512,
+        hidden_dim=64,
+        num_layers=1,
+        num_heads=4,
+        ff_mult=2,
+        dropout=0.0,
+        sequence_steps=60,
+    )
+    output = model(batch)
+    assert tuple(output.preds.shape) == (2, 2)
+
+    loss = WSMMaskedSparseLoss()(output, batch)
+    assert loss.ndim == 0
+    assert math.isfinite(float(loss.detach()))
+    loss.backward()
+
+    grads = [p.grad for p in model.parameters() if p.grad is not None]
+    assert grads and all(torch.isfinite(g).all() for g in grads)
+
+    print("V1 video real-cache datamodule/model/loss smoke passed", float(loss.detach()))
+    PY
+
+Test-firewall/source audit:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    from video.data.wsm_video_cache_datamodule import WSMVideoCacheDataModule
+
+    dm = WSMVideoCacheDataModule(
+        data_root="/media/maxim/Databases/WSM_NEW",
+        cache_root="/media/maxim/Programs/Features/WSM/video_depart_v1/cache",
+    )
+    assert dm.test_rows_loaded == 0
+    assert all(dm.train_dataset[i]["meta"]["split"] == "train" for i in range(min(64, len(dm.train_dataset))))
+    assert all(dm.val_dataset[i]["meta"]["split"] == "dev" for i in range(min(64, len(dm.val_dataset))))
+    print("video datamodule Test firewall assertions passed")
+    PY
+
+Then:
 
     git diff --check
     git diff -- src/audio
@@ -254,7 +346,11 @@ Finally:
 
 Before commit inspect only:
 
-    git diff --       scripts/video/extract_clip_video_features.py       scripts/video/audit_video_cache.py       docs/PROGRESS_EN.md
+    git diff -- \
+      src/video/data/__init__.py \
+      src/video/data/wsm_video_cache_datamodule.py \
+      src/chimera_plugin.py \
+      docs/PROGRESS_EN.md
 
 After commit/push:
 
@@ -271,19 +367,16 @@ Record:
 - branch;
 - implementation commit SHA;
 - push result;
-- manager variable-length decision;
-- exact validator changes;
-- extracted/reused/failure counts;
-- recovered short-video count;
-- no_body count;
-- other failure count;
-- stale-cache outcome;
-- temporal-length distribution/stats;
-- final success/failure counts by split;
-- independent audit result;
-- Test rows processed/indexed=0;
-- no dependency install;
-- no training/model selection/Test metrics;
+- registry key;
+- cache root/index used;
+- valid train/dev dataset counts;
+- unavailable train/dev counts;
+- explicit no-fake-feature policy;
+- variable-length padding semantics;
+- real cache batch shapes;
+- forward/loss/backward smoke result;
+- confirmation Test rows loaded=0;
+- confirmation no training/Test metrics;
 - src/audio unchanged;
 - Stage 2 remains partial;
 - recommended next atomic step only.
@@ -301,16 +394,15 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch codex/task-002h;
+- branch codex/task-002i;
 - implementation commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
-- recovered short-video count;
-- final success/failure counts;
-- no_body count;
-- temporal-length stats;
-- cache audit path;
-- Test rows processed/indexed=0;
+- train/dev dataset counts;
+- unavailable counts;
+- real-cache collate shapes;
+- forward/loss/backward result;
+- Test rows loaded=0;
 - no training/Test metrics;
 - src/audio unchanged.
 
