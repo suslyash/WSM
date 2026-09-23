@@ -283,3 +283,45 @@ Exact verification commands and results:
 Stage 1 remains partial because authoritative speaker identity and segment-level text alignment remain unresolved.
 
 Recommended next atomic task: implement the masked sparse loss/data contract consumer only after manager approval; do not add pseudo-labeling, text alignment, or model training in that task.
+
+
+### TASK-001D - Implement the observed-label-only masked sparse loss contract
+
+Status: implementation complete; Stage 1 remains partial.
+
+Branch: codex/task-001d.
+Implementation commit SHA: 02df3e8524964bb88edfa0b438048202e429434c.
+Push result: successful: origin/codex/task-001d created and pushed.
+
+Changed files:
+
+- src/common/loss/__init__.py;
+- src/common/loss/wsm_masked_sparse_loss.py;
+- src/chimera_plugin.py;
+- docs/PROGRESS_EN.md.
+
+Implementation facts:
+
+- Added BaseLoss-compatible wsm_masked_sparse_loss registered in LOSSES.
+- The loss computes independent binary BCE-with-logits only on observed elements:
+  L_obs = sum(mask * BCEWithLogits(logit, target)) / (sum(mask) + eps).
+- Logits, targets, and observed_mask must all have shape [B, 2]. Observed targets are validated as finite binary 0/1.
+- Masked target positions are selected out before target validation and BCE evaluation, so NaN unknown placeholders cannot propagate into the scalar loss.
+- Masked-out logits receive no BCE operation and therefore receive exactly zero gradient; no class weighting, corpus weighting, focal term, smoothing, task balancing, pseudo-labeling, or reliability logic was added.
+- The callable supports both a plain manifest-collate dict and the installed Chimera Batch API, including Batch.get_masks("observed_mask").
+- Zero observed elements raise a clear ValueError rather than returning zero.
+
+Exact verification commands and results:
+
+- python3 -m py_compile src/common/loss/__init__.py src/common/loss/wsm_masked_sparse_loss.py src/chimera_plugin.py - passed.
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python registry smoke - passed; LOSSES.keys() contains wsm_masked_sparse_loss and no project-module warning was emitted.
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python masked loss forward/backward smoke - passed; finite scalar and observed gradients, exactly zero masked gradients, masked-placeholder invariance, observed-target sensitivity, and zero-observed failure.
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python ModelOutput/Batch compatibility smoke - passed.
+- git diff --check - passed.
+- git diff -- src/audio - empty.
+- No Test predictions or performance metrics were inspected. No training, checkpoint selection, threshold selection, or model selection ran.
+- No manifest, datamodule, model, or training configuration was changed.
+
+Stage 1 remains partial because authoritative speaker identity is unresolved and the Stage 1 gate is not manager-closed.
+
+Recommended next atomic task: implement the next manager-approved baseline integration contract only; do not add pseudo-labeling, reliability weighting, or model/training changes in that task.
