@@ -1,0 +1,212 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any, Iterable
+
+import torch
+from torch.utils.data import Dataset
+
+from chimera_ml.core.batch import Batch
+from chimera_ml.core.registry import DATAMODULES
+from chimera_ml.data.datamodule import DataModule
+from common.data.wsm_manifest import build_manifest
+
+MODEL_NAME = 'openai/clip-vit-base-patch32'
+MODEL_REVISION = 'b97b0100e55e367c057773c2a614676470b0d575'
+YOLO_SHA256 = 'a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43'
+TARGET_FRAMES = 60
+FEATURE_DIM = 512
+TASK_NAMES = ('depression', 'parkinson')
+
+
+class VideoCacheDataError(ValueError):
+    pass
+
+
+def _load_index(path: Path) -> dict[str, dict[str, Any]]:
+    if not path.is_file():
+        raise VideoCacheDataError(f'cache index is missing: {path}')
+    records: dict[str, dict[str, Any]] = {}
+    with path.open(encoding='utf-8') as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise VideoCacheDataError(f'invalid cache index JSON at line {line_number}') from exc
+            segment_id = record.get('segment_id')
+            if not isinstance(segment_id, str) or not segment_id:
+                raise VideoCacheDataError(f'cache index line {line_number} has no segment_id')
+            if segment_id in records:
+                raise VideoCacheDataError(f'duplicate cache index segment_id: {segment_id}')
+            records[segment_id] = record
+    return records
+
+
+def _validate_artifact(record: dict[str, Any], row: dict[str, Any]) -> tuple[torch.Tensor, torch.Tensor, dict[str, Any]]:
+    path = Path(record['cache_path'])
+    if not path.is_file():
+        raise VideoCacheDataError(f'cache artifact is missing: {path}')
+    artifact = torch.load(path, map_location='cpu', weights_only=False)
+    if artifact.get('segment_id') != row['segment_id'] or artifact.get('segment_id') != record['segment_id']:
+        raise VideoCacheDataError(f'segment_id mismatch for {row['segment_id']}')
+    if artifact.get('cache_fingerprint') != record.get('cache_fingerprint'):
+        raise VideoCacheDataError(f'cache fingerprint mismatch for {row['segment_id']}')
+    if artifact.get('model_name') != MODEL_NAME or artifact.get('model_revision') != MODEL_REVISION:
+        raise VideoCacheDataError(f'CLIP identity mismatch for {row['segment_id']}')
+    if artifact.get('detector_weights_sha256') != YOLO_SHA256:
+        raise VideoCacheDataError(f'YOLO SHA mismatch for {row['segment_id']}')
+    if artifact.get('detection_parameters') != {'confidence': 0.5, 'iou': 0.5, 'imgsz': 640}:
+        raise VideoCacheDataError(f'detector settings mismatch for {row['segment_id']}')
+    preprocessing = artifact.get('preprocessing')
+    if not isinstance(preprocessing, dict) or preprocessing.get('target_frames') != TARGET_FRAMES:
+        raise VideoCacheDataError(f'target_frames metadata mismatch for {row['segment_id']}')
+    features = artifact.get('features')
+    valid_mask = artifact.get('valid_mask')
+    if not isinstance(features, torch.Tensor) or features.ndim != 2 or features.shape[1] != FEATURE_DIM:
+        raise VideoCacheDataError(f'features must be [T,{FEATURE_DIM}] for {row['segment_id']}')
+    temporal_length = int(features.shape[0])
+    if not 1 <= temporal_length <= TARGET_FRAMES:
+        raise VideoCacheDataError(f'invalid temporal length for {row['segment_id']}: {temporal_length}')
+    if not isinstance(valid_mask, torch.Tensor) or valid_mask.dtype != torch.bool or tuple(valid_mask.shape) != (temporal_length,):
+        raise VideoCacheDataError(f'valid_mask mismatch for {row['segment_id']}')
+    sampled_indices = artifact.get('sampled_frame_indices')
+    if not isinstance(sampled_indices, list) or len(sampled_indices) != temporal_length:
+        raise VideoCacheDataError(f'sampled indices mismatch for {row['segment_id']}')
+    if any(not isinstance(index, int) or index < 0 for index in sampled_indices):
+        raise VideoCacheDataError(f'invalid sampled indices for {row['segment_id']}')
+    if any(left > right for left, right in zip(sampled_indices, sampled_indices[1:])):
+        raise VideoCacheDataError(f'sampled indices are not chronological for {row['segment_id']}')
+    if not bool(torch.isfinite(features[valid_mask]).all()):
+        raise VideoCacheDataError(f'valid features are not finite for {row['segment_id']}')
+    if not torch.equal(features[~valid_mask], torch.zeros_like(features[~valid_mask])):
+        raise VideoCacheDataError(f'invalid features are not exact zero for {row['segment_id']}')
+    metadata = {
+        'segment_id': row['segment_id'],
+        'video_id': row['video_id'],
+        'corpus': row['corpus'],
+        'split': row['split'],
+        'cache_path': str(path),
+        'cache_fingerprint': record['cache_fingerprint'],
+        'temporal_length': temporal_length,
+        'detection_coverage': float(record.get('detection_coverage', artifact.get('detection_coverage', 0.0))),
+    }
+    return features.float(), valid_mask.clone(), metadata
+
+
+def _row_targets(row: dict[str, Any]) -> tuple[torch.Tensor, torch.Tensor]:
+    values = [row['y_depression'], row['y_parkinson']]
+    targets = torch.tensor([float(value) if value is not None else float('nan') for value in values], dtype=torch.float32)
+    observed = torch.tensor([bool(row['observed_depression']), bool(row['observed_parkinson'])], dtype=torch.bool)
+    if any(observed[index] != (values[index] is not None) for index in range(2)):
+        raise VideoCacheDataError(f'target/observed mismatch for {row['segment_id']}')
+    return targets, observed
+
+
+class WSMVideoCacheDataset(Dataset):
+    def __init__(self, samples: Iterable[dict[str, Any]]) -> None:
+        self._samples = list(samples)
+
+    def __len__(self) -> int:
+        return len(self._samples)
+
+    def __getitem__(self, index: int) -> dict[str, Any]:
+        sample = self._samples[index]
+        return {
+            'inputs': {'video': sample['features'].clone()},
+            'targets': sample['targets'].clone(),
+            'observed_mask': sample['observed_mask'].clone(),
+            'video_mask': sample['video_mask'].clone(),
+            'meta': dict(sample['meta']),
+        }
+
+
+def collate_wsm_video_cache(samples: list[dict[str, Any]]) -> Batch:
+    if not samples:
+        raise VideoCacheDataError('cannot collate an empty video cache batch')
+    lengths = [int(sample['inputs']['video'].shape[0]) for sample in samples]
+    batch_max_t = max(lengths)
+    padded_video = torch.zeros(len(samples), batch_max_t, FEATURE_DIM, dtype=torch.float32)
+    video_mask = torch.zeros(len(samples), batch_max_t, dtype=torch.bool)
+    for batch_index, (sample, length) in enumerate(zip(samples, lengths, strict=True)):
+        features = sample['inputs']['video'].float()
+        artifact_mask = sample['video_mask'].to(dtype=torch.bool)
+        if tuple(features.shape) != (length, FEATURE_DIM) or tuple(artifact_mask.shape) != (length,):
+            raise VideoCacheDataError('sample shape does not match its temporal length')
+        padded_video[batch_index, :length] = features
+        video_mask[batch_index, :length] = artifact_mask
+    return Batch(
+        inputs={'video': padded_video},
+        targets=torch.stack([sample['targets'].float() for sample in samples]),
+        masks={
+            'video_mask': video_mask,
+            'observed_mask': torch.stack([sample['observed_mask'].bool() for sample in samples]),
+        },
+        meta={'sample_meta': [sample['meta'] for sample in samples]},
+    )
+
+
+class WSMVideoCacheDataModule(DataModule):
+    def __init__(self, data_root: str = '/media/maxim/Databases/WSM_NEW', cache_root: str = '/media/maxim/Programs/Features/WSM/video_depart_v1/cache', cache_index_path: str | None = None, batch_size: int = 32, num_workers: int = 0, pin_memory: bool = True, shuffle_train: bool = True, drop_last_train: bool = False) -> None:
+        self.data_root = str(Path(data_root).expanduser().resolve())
+        self.cache_root = str(Path(cache_root).expanduser().resolve())
+        self.cache_index_path = str(Path(cache_index_path).expanduser().resolve()) if cache_index_path else str(Path(self.cache_root) / 'cache_index.jsonl')
+        canonical_rows, self.manifest_audit = build_manifest(self.data_root)
+        rows = [row for row in canonical_rows if row['split'] in {'train', 'dev'}]
+        index = _load_index(Path(self.cache_index_path))
+        self.train_unavailable_count = 0
+        self.dev_unavailable_count = 0
+        train_samples: list[dict[str, Any]] = []
+        dev_samples: list[dict[str, Any]] = []
+        for row in rows:
+            record = index.get(row['segment_id'])
+            if record is None:
+                raise VideoCacheDataError(f'missing cache index row for {row['segment_id']}')
+            if record.get('split') != row['split']:
+                raise VideoCacheDataError(f'cache split mismatch for {row['segment_id']}')
+            status = record.get('status')
+            if status == 'failed':
+                if record.get('failure_category') != 'no_body_detected':
+                    raise VideoCacheDataError(f'unexpected cache failure for {row['segment_id']}: {record.get('failure_category')}')
+                if row['split'] == 'train':
+                    self.train_unavailable_count += 1
+                else:
+                    self.dev_unavailable_count += 1
+                continue
+            if status not in {'extracted', 'reused'}:
+                raise VideoCacheDataError(f'unexpected cache status for {row['segment_id']}: {status}')
+            features, valid_mask, metadata = _validate_artifact(record, row)
+            targets, observed_mask = _row_targets(row)
+            sample = {'features': features, 'video_mask': valid_mask, 'targets': targets, 'observed_mask': observed_mask, 'meta': metadata}
+            (train_samples if row['split'] == 'train' else dev_samples).append(sample)
+        self.train_dataset = WSMVideoCacheDataset(train_samples)
+        self.val_dataset = WSMVideoCacheDataset(dev_samples)
+        self.test_dataset = None
+        self.test_rows_loaded = 0
+        self.collate_fn = collate_wsm_video_cache
+        self.video_cache_success_total = len(train_samples) + len(dev_samples)
+        self.video_cache_failure_total = self.train_unavailable_count + self.dev_unavailable_count
+        super().__init__(train_dataset=self.train_dataset, val_dataset=self.val_dataset, test_dataset=None, batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory, shuffle_train=shuffle_train, drop_last_train=drop_last_train, collate_fn=self.collate_fn)
+
+    def describe_context(self, context: Any) -> None:
+        context.set('data.num_tasks', 2)
+        context.set('data.task_names', list(TASK_NAMES))
+        context.set('data.video_feature_dim', FEATURE_DIM)
+        context.set('data.video_sequence_steps', TARGET_FRAMES)
+        context.set('data.video_cache_root', self.cache_root)
+        context.set('data.video_train_rows', len(self.train_dataset))
+        context.set('data.video_dev_rows', len(self.val_dataset))
+        context.set('data.video_train_unavailable', self.train_unavailable_count)
+        context.set('data.video_dev_unavailable', self.dev_unavailable_count)
+        context.set('data.video_cache_success_total', self.video_cache_success_total)
+        context.set('data.video_cache_failure_total', self.video_cache_failure_total)
+        context.set('data.video_cache_variable_length', True)
+        context.set('data.test_rows_loaded', 0)
+
+
+@DATAMODULES.register('wsm_video_depart_v1_datamodule')
+def wsm_video_depart_v1_datamodule(context: Any | None = None, **params: Any) -> WSMVideoCacheDataModule:
+    del context
+    return WSMVideoCacheDataModule(**params)
