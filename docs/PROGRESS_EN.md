@@ -506,8 +506,8 @@ Recommended next atomic task: provision the pinned DEPART-referenced YOLOv8 huma
 Status: partial/blocked; no successful real cache artifact was produced because the frozen CLIP processor/model was unavailable locally and this task did not authorize downloading another model.
 
 Branch: codex/task-002c.
-Implementation commit: recorded after verification.
-Push result: to be recorded after push.
+Implementation commit: 45a0497.
+Push result: successful; origin/codex/task-002c created and pushed.
 
 Changed files:
 
