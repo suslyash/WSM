@@ -327,3 +327,55 @@ Exact verification commands and results:
 Stage 1 remains partial because authoritative speaker identity is unresolved and the Stage 1 gate is not manager-closed.
 
 Recommended next atomic task: implement the next manager-approved baseline integration contract only; do not add pseudo-labeling, reliability weighting, or model/training changes in that task.
+
+
+### TASK-001E - Establish the authoritative speaker-map contract and Stage 1 leakage gate
+
+Status: implementation complete; Stage 1 remains partial/blocked.
+
+Branch: codex/task-001e.
+Implementation commit SHA: fefc24b2c01b5cf95fb80f67a3a6b8a6ccf6aa44.
+Push result: successful: origin/codex/task-001e created and pushed.
+
+Changed files:
+
+- src/common/data/wsm_speaker_map.py;
+- scripts/common/audit_speaker_map.py;
+- docs/PROGRESS_EN.md.
+
+Implementation facts:
+
+- Added strict authoritative speaker-map CSV validation with exactly these columns: corpus, video_id, speaker_id, source_reference.
+- Empty fields, invalid corpus values, duplicate/conflicting (corpus, video_id) pairs, and malformed maps fail clearly.
+- No fallback to video_id or any speaker inference is implemented.
+- The reusable audit reports canonical coverage, unmapped/extra pairs, conflicts, video overlap, speaker overlap, manifest fingerprint, and the combined Stage 1 gate.
+- Without a supplied map, the CLI emits status=unresolved, speaker_independence_verified=false, video_independence_verified=true from the canonical rows, stage1_split_gate_passed=false, and next_required_evidence=authoritative speaker map.
+- A supplied map verifies speaker independence only when coverage is complete, conflicts are zero, speaker overlap is zero, and video overlap remains zero.
+
+Current unresolved gate result:
+
+- Canonical video split independence remains verified with zero train/dev, train/test, and dev/test video overlap.
+- No real authoritative speaker map was available or committed.
+- Current machine-readable gate status: unresolved.
+- speaker_independence_verified=false.
+- stage1_split_gate_passed=false.
+- Synthetic maps were used only for contract tests and are not project evidence.
+
+Exact verification commands and results:
+
+- python3 -m py_compile src/common/data/wsm_speaker_map.py scripts/common/audit_speaker_map.py - passed.
+- rm -f /tmp/wsm_speaker_gate_unresolved.json - passed.
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python scripts/common/audit_speaker_map.py --data-root /media/maxim/Databases/WSM_NEW --output /tmp/wsm_speaker_gate_unresolved.json - passed; emitted unresolved JSON without modifying the dataset.
+- Required unresolved JSON assertions - passed: unresolved status, false speaker gate, true video independence, required schema, next evidence, and all false Test/model-selection flags.
+- Synthetic speaker-map contract smoke - passed:
+  - complete non-leaking synthetic map: status=verified and both independence checks/gate true;
+  - leaking synthetic map: train/dev speaker overlap detected and gate false;
+  - incomplete synthetic map: unmapped pair detected and speaker gate false;
+  - conflicting synthetic map: validator raised SpeakerMapError.
+- git diff --check - passed.
+- git diff -- src/audio - empty.
+- No Test predictions or performance metrics were inspected. No training, tuning, threshold selection, or model selection ran.
+
+Stage 1 remains partial/blocked until a real authoritative speaker map is supplied and passes the leakage gate. The synthetic identities are not authoritative evidence.
+
+Recommended next atomic task: manager review or provision of the authoritative speaker map; do not infer speakers or begin Stage 2.
