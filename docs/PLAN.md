@@ -6,7 +6,7 @@ Stages are sequential. Advance only after the current gate is met and evidence i
 
 Authority: latest user instruction → PROJECT_REQUIREMENTS.md → this plan → BASELINES.md/SOTA_REVIEW_EN.md → existing code.
 
-TEST_NONE/SOFT/HARD MUST NOT influence any decision before final freeze. Sole selection metric:
+TEST_NONE/SOFT/HARD MUST NOT influence any decision before final freeze. Test metrics remain required for non-selective comparative monitoring against other systems and for final reporting, using the same per-task UAR/MF1/Score/Mean_Score definitions as DEV. Sole selection metric:
 
 \[
 \mathrm{DEV/Mean\_Score}
