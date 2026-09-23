@@ -1,4 +1,4 @@
-# TASK-002F: Implement and Register the V1 DEPART-Like Temporal Video Model Contract
+# TASK-002G: Build the Complete Resumable V1 Video Feature Cache for TRAIN+DEV Only
 
 ## Role
 
@@ -6,329 +6,357 @@ You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.
 
 Required branch:
 
-    codex/task-002f
+    codex/task-002g
 
-Do not run full-dataset feature extraction, do not train a model, do not create a training config, do not implement V2/prototypes, and do not inspect Test predictions or Test metrics.
+This task explicitly authorizes a full V1 video feature extraction over TRAIN+DEV only.
+
+Do not process Test rows, do not train a model, do not select a model/checkpoint, do not implement V2/prototypes, and do not inspect Test predictions or Test metrics.
 
 ## Goal
 
-Implement the Stage 2 V1 video classifier contract on top of the accepted cached-feature shape:
+Create the complete reproducible DEPART-like V1 feature cache needed for video-model training:
 
-    [B, 60, 512] frozen CLIP body-ROI features
-      -> learned projection
-      -> temporal Transformer
-      -> masked temporal pooling
-      -> two independent binary logits [B, 2]
+    canonical TRAIN+DEV rows
+      -> deterministic 60-frame sampling
+      -> pinned YOLOv8 body ROI
+      -> pinned frozen CLIP ViT-B/32
+      -> [60,512] temporal features + validity mask
+      -> persistent cache + machine-readable extraction index/report
 
-The two output columns are ordered:
+Expected canonical eligible counts under the currently audited manifest:
 
-    [depression, parkinson]
+- train: 6325
+- dev: 933
+- total TRAIN+DEV: 7258
+- Test processed: 0
 
-The model must directly produce both disease logits for every sample. It must not use task_id selection and must not reduce the problem to a 3-class softmax.
-
-This task is model integration and smoke verification only. No training run is authorized.
+This task must also make the extraction safely resumable so an interrupted long run does not require recomputing already valid artifacts.
 
 ## Required Reading
 
 1. AGENTS.md
-2. docs/PROJECT_REQUIREMENTS.md Sections 2-10 and 13-14
+2. docs/PROJECT_REQUIREMENTS.md Sections 7-10 and 13-14
 3. Stage 2 in docs/PLAN.md
-4. docs/PROGRESS_EN.md through TASK-002E
+4. docs/PROGRESS_EN.md through TASK-002F
 5. docs/NEXT_TASK_EN.md
-6. src/video/features/clip_video_features.py
-7. src/common/loss/wsm_masked_sparse_loss.py
-8. src/audio/models/audio_mamba_segment.py for Chimera model conventions only
-9. src/chimera_plugin.py
+6. scripts/video/extract_clip_video_features.py
+7. scripts/video/audit_depart_real_extraction.py
+8. src/video/features/clip_video_features.py
+9. src/video/features/yolov8_body_roi.py
+10. src/common/data/wsm_manifest.py
 
 ## Allowed Tracked Files
 
-- src/video/models/__init__.py
-- src/video/models/depart_v1.py
-- src/chimera_plugin.py
+- scripts/video/extract_clip_video_features.py
+- scripts/video/audit_video_cache.py
 - docs/PROGRESS_EN.md
-
-Creating src/video/models is allowed.
 
 No other tracked file may be modified.
 
-## Fixed V1 Model Contract
+Untracked/local cache/report artifacts are allowed only under:
 
-Registry key:
+    /media/maxim/Programs/Features/WSM/video_depart_v1/
+    /tmp/wsm_video_002g/
 
-    wsm_video_depart_v1_model
+Do not commit feature artifacts, model weights, or generated reports.
 
-Inputs:
+## Fixed Runtime Inputs
 
-- batch.inputs["video"]: float tensor [B, T, D]
-- batch.get_masks("video_mask"): bool-compatible tensor [B, T]
+Pinned YOLO:
 
-Expected accepted cache contract:
+- path: /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt
+- SHA-256:
+  a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43
 
-- T = 60 for the current V1 cache;
-- D = 512 for pinned CLIP ViT-B/32 features.
+Pinned CLIP:
 
-Outputs:
+- repo: openai/clip-vit-base-patch32
+- revision: b97b0100e55e367c057773c2a614676470b0d575
+- HF_HOME: /media/maxim/Programs/Models/WSM/huggingface
+- HF_HUB_CACHE: /media/maxim/Programs/Models/WSM/huggingface/hub
 
-- ModelOutput.preds: logits [B, 2], ordered [depression, parkinson]
-- ModelOutput.aux["features"]: pooled video representation [B, H]
-- ModelOutput.aux["task_logits"]:
-  - "depression": logits[:, 0]
-  - "parkinson": logits[:, 1]
+Extraction contract:
 
-Do not apply sigmoid inside the model; the registered masked BCE loss expects logits.
+- target_frames=60
+- YOLO confidence=0.5
+- YOLO IoU=0.5
+- YOLO imgsz=640
+- ROI policy unchanged from TASK-002B
+- no labels/task identity passed into YOLO/CLIP
 
-## Architecture Requirements
+## Implementation Requirements
 
-Implement src/video/models/depart_v1.py using only video-local/PyTorch components.
+### 1. Add explicit split filtering
 
-Do not import fusion modules.
+Update scripts/video/extract_clip_video_features.py with:
 
-Required structure:
+    --splits train,dev
 
-1. input validation;
-2. feature projection:
-   - LayerNorm(video_feature_dim)
-   - Linear(video_feature_dim, hidden_dim)
-   - GELU
-   - Dropout
-3. learned positional embeddings for up to sequence_steps=60;
-4. TransformerEncoder with batch_first=true and norm_first=true;
-5. post-encoder LayerNorm;
-6. masked mean pooling across valid temporal positions only;
-7. two independent scalar binary heads, one per disease.
+Requirements:
 
-Recommended defaults for this project contract:
+- parse a comma-separated subset of {train,dev,test};
+- reject unknown split names;
+- filter canonical rows before source-path resolution, video reading, detector inference, or CLIP inference;
+- record requested splits and candidate counts per split in the report;
+- preserve deterministic canonical row order;
+- this task execution must use exactly train,dev;
+- Test rows must never be read or processed in this task.
 
-    video_feature_dim=512
-    hidden_dim=192
-    num_layers=2
-    num_heads=4
-    ff_mult=4
-    dropout=0.2
-    sequence_steps=60
-    num_tasks=2
+Default behavior may remain current all-split behavior for backwards compatibility, but the report must always state the resolved split set.
 
-These are implementation defaults for the initial V1 contract, not a hyperparameter sweep.
+### 2. Add resumable extraction
 
-Each scalar head may be:
+Add:
 
-    LayerNorm(H)
-    Dropout
-    Linear(H, H)
-    GELU
-    Dropout
-    Linear(H, 1)
+    --resume
 
-Stack the two scalar outputs into [B,2].
+When --resume is supplied and a cache artifact for the exact expected fingerprint already exists:
 
-## Mask and Validation Semantics
+- load and validate the artifact structurally;
+- require matching segment_id;
+- require matching cache_fingerprint;
+- require features [60,512] for this task contract;
+- require bool valid_mask [60];
+- require finite valid features and exact-zero invalid features;
+- require pinned detector SHA and extraction settings;
+- require pinned CLIP model/revision;
+- if valid, count it as reused_success and do not rerun YOLO/CLIP;
+- if invalid/corrupt/mismatched, fail clearly for that row or re-extract only if --overwrite is explicitly supplied.
 
-The model must validate:
+Do not count an existing valid artifact as a failure.
 
-- video is rank 3 [B,T,D];
-- mask is rank 2 [B,T];
-- batch/time dimensions match;
-- feature dimension equals configured video_feature_dim;
-- T <= sequence_steps;
-- every sample has at least one valid frame.
+The extraction report must distinguish:
 
-Masked temporal positions:
+- extracted_success_count
+- reused_success_count
+- failure_count
+- no_body_detected_count
+- other_failure_count
 
-- must be excluded from Transformer attention via key-padding mask;
-- must be excluded from temporal pooling;
-- must not influence logits.
+### 3. Persistent cache index
 
-Do not silently turn an all-invalid sample into a valid sample. Raise a clear ValueError.
+Write a machine-readable JSONL or JSON index under the cache root, for example:
 
-The model must work when some but not all of the 60 temporal positions are invalid.
+    cache_index.jsonl
 
-## Chimera Registration
+Each selected TRAIN/DEV segment must have exactly one index record containing at least:
 
-Register:
+- segment_id
+- split
+- source_path
+- status: extracted | reused | failed
+- cache_path or null
+- cache_fingerprint or null
+- temporal_length
+- feature_dim
+- valid_detection_count
+- detection_coverage
+- failure_category/reason when failed
 
-    wsm_video_depart_v1_model
+The index must contain no Test row for this task.
 
-Use BaseModel and return ModelOutput.
+Write atomically or safely enough that an interrupted process does not leave a falsely complete record.
 
-Context-aware factory behavior:
+### 4. Add independent cache audit helper
 
-- if context exists, allow video_feature_dim from data.video_feature_dim;
-- default to 512 if no context value is present;
-- num_tasks must be 2 for this project contract.
+Create scripts/video/audit_video_cache.py.
 
-Update src/chimera_plugin.py with an explicit import of the model registration module.
+It must accept:
 
-A project-module import failure must not be hidden as an optional warning.
+    --data-root
+    --cache-root
+    --report-output
+    --splits train,dev
+    --model-name
+    --model-revision
+    --yolo-weights
+    --target-frames
 
-## No DataModule or Config Yet
+It must not run YOLO/CLIP extraction.
 
-Do not add:
+It must:
 
-- cache dataset/datamodule;
-- YAML training config;
-- callbacks;
-- optimizer;
-- metrics;
-- training/inference scripts.
+- rebuild the canonical manifest;
+- independently compute the expected selected TRAIN+DEV rows;
+- inspect the cache index/artifacts;
+- verify no Test row is indexed;
+- verify each successful/reused artifact contract;
+- verify unique cache fingerprints;
+- report expected/success/failed/missing counts per split;
+- report detection-coverage statistics by split and overall;
+- report failure categories;
+- record manifest fingerprint, YOLO SHA, CLIP revision, git state, and package versions;
+- set complete_for_requested_splits=true only when every selected row has either:
+  - a valid cache artifact, or
+  - an explicit extraction-failure record.
 
-Those are later atomic tasks after this model contract is accepted.
+The audit may report explicit extraction failures; it must not fabricate features for them.
+
+### 5. Full TRAIN+DEV execution
+
+After implementation verification, run the extractor across exactly:
+
+    train,dev
+
+Use persistent cache root:
+
+    /media/maxim/Programs/Features/WSM/video_depart_v1/cache
+
+Use persistent extraction report:
+
+    /media/maxim/Programs/Features/WSM/video_depart_v1/extraction_report.json
+
+Use resume mode.
+
+Do not use --limit.
+
+Do not process Test.
+
+### 6. Failure handling
+
+Extraction failures are allowed and must be preserved as explicit failure records.
+
+Do not silently retry with:
+
+- raw-frame-debug;
+- different YOLO thresholds;
+- different detector weights;
+- different CLIP revision;
+- fewer frames;
+- CPU if CUDA failed for a semantic/model reason.
+
+A CUDA availability/runtime issue MAY be rerun on CPU only if it is purely a device/runtime issue and all model/preprocessing parameters remain identical. Record the deviation.
+
+### 7. No training
+
+Do not create:
+
+- video cache DataModule;
+- training YAML;
+- optimizer/callback changes;
+- model training run.
+
+Those are later tasks after cache coverage is audited.
 
 ## Acceptance Criteria
 
-- MODELS registry contains wsm_video_depart_v1_model;
-- plugin import has no project-module warning for the new model;
-- model accepts [B,60,512] + bool [B,60] mask;
-- output.preds shape is [B,2];
-- outputs are two independent logits, not softmax probabilities;
-- no task_id input/selection exists;
-- masked positions do not affect outputs in eval-mode invariance smoke;
-- partial masks work;
-- all-invalid sample raises ValueError;
-- ModelOutput.aux contains pooled features and separate depression/parkinson logits;
-- masked sparse loss accepts model output and [B,2] partial targets;
-- forward/loss/backward produces finite scalar loss and finite model gradients;
-- unknown targets remain masked NaNs and are not supervised;
-- no cache extraction;
-- no training/model selection;
-- no Test rows/predictions/metrics;
-- src/audio unchanged;
+Implementation:
+
+- --splits exists and filters before any Test source access;
+- --resume validates and reuses exact valid artifacts;
+- valid existing cache is not reported as failure;
+- persistent index exists;
+- independent audit helper exists;
 - python compilation passes;
-- registry smoke passes;
-- forward/loss/backward smoke passes;
 - git diff --check passes;
-- branch codex/task-002f committed and pushed;
+- src/audio unchanged.
+
+Full extraction:
+
+- requested splits exactly train,dev;
+- expected rows train=6325, dev=933, total=7258;
+- Test rows processed/indexed=0;
+- pinned YOLO SHA unchanged;
+- pinned CLIP revision unchanged;
+- target_frames=60;
+- every selected row is represented in the final index as success/reused/failure;
+- successful artifacts validate as [60,512] with bool masks;
+- invalid mask positions are exact zero;
+- valid features are finite;
+- cache fingerprints are unique;
+- failures are explicitly categorized;
+- independent audit completes successfully;
+- complete_for_requested_splits=true;
+- no full Test extraction;
+- no training/model selection;
+- no Test predictions/metrics;
+- no dependency installation.
+
+Git:
+
+- branch codex/task-002g;
+- implementation committed and pushed;
 - main/master untouched;
-- tracked diff contains only the four allowed paths.
+- tracked diff contains only the three allowed paths.
 
 ## Exact Verification Commands
 
-Run from repository root.
+Set environment first:
+
+    export HF_HOME=/media/maxim/Programs/Models/WSM/huggingface
+    export HF_HUB_CACHE=/media/maxim/Programs/Models/WSM/huggingface/hub
+    export YOLO_AUTOINSTALL=false
+
+Verify pinned YOLO:
+
+    sha256sum /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt
+
+Expected:
+
+    a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43
 
 Compile:
 
-    python3 -m py_compile       src/video/models/__init__.py       src/video/models/depart_v1.py       src/chimera_plugin.py
+    python3 -m py_compile       scripts/video/extract_clip_video_features.py       scripts/video/audit_video_cache.py
 
-Registry smoke:
+Check split-filter surface:
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
-    import warnings
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/video/extract_clip_video_features.py --help
 
-    from chimera_ml.core.registry import MODELS
-    import chimera_plugin
+Run a tiny resumability smoke before the full extraction using a temporary cache and train-only limit:
 
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        chimera_plugin.register()
+    rm -rf /tmp/wsm_video_002g
 
-    project_warnings = [
-        str(item.message)
-        for item in caught
-        if "Failed to import" in str(item.message)
-        and "video.models.depart_v1" in str(item.message)
-    ]
-    assert not project_warnings, project_warnings
-    assert "wsm_video_depart_v1_model" in MODELS.keys()
-    print("V1 video model registry smoke passed")
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/video/extract_clip_video_features.py       --data-root /media/maxim/Databases/WSM_NEW       --cache-root /tmp/wsm_video_002g/cache       --report-output /tmp/wsm_video_002g/first.json       --splits train       --limit 2       --resume       --yolo-weights /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt       --model-name openai/clip-vit-base-patch32       --model-revision b97b0100e55e367c057773c2a614676470b0d575       --target-frames 60       --device cuda
+
+Run the identical command again with report-output /tmp/wsm_video_002g/second.json.
+
+Assert the second run reports reused_success_count for valid first-run artifacts and does not process Test.
+
+Then run the authorized complete TRAIN+DEV extraction:
+
+    mkdir -p /media/maxim/Programs/Features/WSM/video_depart_v1
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/video/extract_clip_video_features.py       --data-root /media/maxim/Databases/WSM_NEW       --cache-root /media/maxim/Programs/Features/WSM/video_depart_v1/cache       --report-output /media/maxim/Programs/Features/WSM/video_depart_v1/extraction_report.json       --splits train,dev       --resume       --yolo-weights /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt       --model-name openai/clip-vit-base-patch32       --model-revision b97b0100e55e367c057773c2a614676470b0d575       --target-frames 60       --device cuda
+
+If CUDA is unavailable, CPU fallback is allowed only as described above.
+
+Run the independent audit:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/video/audit_video_cache.py       --data-root /media/maxim/Databases/WSM_NEW       --cache-root /media/maxim/Programs/Features/WSM/video_depart_v1/cache       --report-output /media/maxim/Programs/Features/WSM/video_depart_v1/cache_audit.json       --splits train,dev       --model-name openai/clip-vit-base-patch32       --model-revision b97b0100e55e367c057773c2a614676470b0d575       --yolo-weights /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt       --target-frames 60
+
+Validate the audit:
+
+    PYTHONDONTWRITEBYTECODE=1 .venv/bin/python - <<'PY'
+    import json
+    from pathlib import Path
+
+    p = Path("/media/maxim/Programs/Features/WSM/video_depart_v1/cache_audit.json")
+    r = json.loads(p.read_text(encoding="utf-8"))
+
+    assert r["requested_splits"] == ["train", "dev"]
+    assert r["expected_by_split"]["train"] == 6325
+    assert r["expected_by_split"]["dev"] == 933
+    assert r["expected_total"] == 7258
+    assert r["test_rows_indexed"] == 0
+    assert r["test_rows_processed"] is False
+    assert r["complete_for_requested_splits"] is True
+    assert r["missing_record_count"] == 0
+    assert r["successful_artifacts_valid"] is True
+    assert r["cache_fingerprints_unique"] is True
+    assert r["detector_weights_sha256"] == (
+        "a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43"
+    )
+    assert r["model_revision"] == "b97b0100e55e367c057773c2a614676470b0d575"
+    assert r["target_frames"] == 60
+    assert r["test_usage"]["model_predictions_inspected"] is False
+    assert r["test_usage"]["performance_metrics_inspected"] is False
+    assert r["test_usage"]["selection_or_tuning_performed"] is False
+
+    print("TASK-002G TRAIN+DEV cache audit passed")
     PY
 
-Forward/loss/backward and masking smoke:
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
-    import math
-    import torch
-
-    from common.loss.wsm_masked_sparse_loss import WSMMaskedSparseLoss
-    from video.models.depart_v1 import WSMVideoDepartV1Model
-
-    class FakeBatch:
-        def __init__(self, video, video_mask):
-            self.inputs = {"video": video}
-            self._video_mask = video_mask
-
-        def get_masks(self, name):
-            assert name == "video_mask"
-            return self._video_mask
-
-    torch.manual_seed(7)
-
-    model = WSMVideoDepartV1Model(
-        video_feature_dim=512,
-        hidden_dim=64,
-        num_layers=1,
-        num_heads=4,
-        ff_mult=2,
-        dropout=0.0,
-        sequence_steps=60,
-    )
-    model.eval()
-
-    video = torch.randn(4, 60, 512)
-    mask = torch.ones(4, 60, dtype=torch.bool)
-    mask[0, 55:] = False
-    mask[1, 40:] = False
-
-    batch = FakeBatch(video, mask)
-    output = model(batch)
-
-    assert tuple(output.preds.shape) == (4, 2)
-    assert torch.isfinite(output.preds).all()
-    assert tuple(output.aux["features"].shape) == (4, 64)
-    assert tuple(output.aux["task_logits"]["depression"].shape) == (4,)
-    assert tuple(output.aux["task_logits"]["parkinson"].shape) == (4,)
-
-    # Masked temporal positions must not affect logits.
-    changed = video.clone()
-    changed[~mask] = 1e6
-    output_changed = model(FakeBatch(changed, mask))
-    assert torch.allclose(output.preds, output_changed.preds, atol=1e-5, rtol=1e-5)
-
-    try:
-        bad_mask = mask.clone()
-        bad_mask[0] = False
-        model(FakeBatch(video, bad_mask))
-    except ValueError:
-        pass
-    else:
-        raise AssertionError("all-invalid video sample must fail")
-
-    model.train()
-    output = model(batch)
-
-    targets = torch.tensor(
-        [
-            [1.0, float("nan")],
-            [0.0, float("nan")],
-            [float("nan"), 1.0],
-            [float("nan"), 0.0],
-        ],
-        dtype=torch.float32,
-    )
-    observed = torch.tensor(
-        [
-            [True, False],
-            [True, False],
-            [False, True],
-            [False, True],
-        ],
-        dtype=torch.bool,
-    )
-
-    loss_fn = WSMMaskedSparseLoss()
-    loss = loss_fn.compute_from_tensors(output.preds, targets, observed)
-
-    assert loss.ndim == 0
-    assert math.isfinite(float(loss.detach()))
-
-    loss.backward()
-
-    grads = [p.grad for p in model.parameters() if p.requires_grad and p.grad is not None]
-    assert grads
-    assert all(torch.isfinite(g).all() for g in grads)
-
-    print("V1 video forward/loss/backward smoke passed", float(loss.detach()))
-    PY
-
-Then:
+Finally:
 
     git diff --check
     git diff -- src/audio
@@ -336,7 +364,7 @@ Then:
 
 Before commit inspect only:
 
-    git diff --       src/video/models/__init__.py       src/video/models/depart_v1.py       src/chimera_plugin.py       docs/PROGRESS_EN.md
+    git diff --       scripts/video/extract_clip_video_features.py       scripts/video/audit_video_cache.py       docs/PROGRESS_EN.md
 
 After commit/push:
 
@@ -348,24 +376,26 @@ After commit/push:
 
 ## Required PROGRESS_EN Update
 
-Append TASK-002F facts without erasing prior evidence.
+Append TASK-002G facts without erasing prior evidence.
 
 Record:
 
 - branch;
 - implementation commit SHA;
 - push result;
-- registry key;
-- exact V1 architecture/defaults;
-- explicit confirmation that outputs are [depression, parkinson] logits [B,2];
-- confirmation no task_id selection or 3-class softmax exists;
-- partial-mask and all-invalid behavior;
-- masking invariance smoke result;
-- forward/loss/backward result and shapes;
-- exact commands/results;
-- no cache extraction;
-- zero Test rows/metrics;
-- no training/model selection;
+- split-filter and resume semantics;
+- persistent cache/index/report locations;
+- pinned YOLO SHA and CLIP revision;
+- requested splits;
+- expected counts train/dev/total;
+- extracted/reused/failure counts by split;
+- failure categories;
+- detection coverage stats by split and overall;
+- cache artifact validation;
+- independent audit result;
+- confirmation Test rows processed/indexed=0;
+- confirmation no dependency install;
+- confirmation no training/model selection/Test metrics;
 - src/audio unchanged;
 - Stage 2 remains partial;
 - recommended next atomic step only.
@@ -383,18 +413,18 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch codex/task-002f;
+- branch codex/task-002g;
 - implementation commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
 - diff summary;
-- registry key;
-- model output shape;
-- forward/loss/backward result;
-- mask invariance result;
-- no cache extraction;
-- no Test rows/metrics;
-- no training;
+- expected TRAIN+DEV count;
+- extracted/reused/failure counts;
+- failure category summary;
+- detection coverage summary;
+- cache root and audit report path;
+- Test rows processed/indexed=0;
+- no training/Test metrics;
 - src/audio unchanged.
 
 Stop after this task.
