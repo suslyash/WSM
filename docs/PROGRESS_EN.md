@@ -497,4 +497,6 @@ Exact verification commands and results:
 
 Deviations/blockers: real YOLO weights were unavailable, so verification used injected detector/encoder objects only. The implementation is ready for a later manager-authorized cache extraction once a checkpoint path is provisioned.
 
-Recommended next atomic task: manager review/provision of the authoritative YOLOv8 body checkpoint, followed by a limited cache extraction audit; do not run full extraction or model training yet.
+Manager integration: original PR #6 conflicted after manager-side main updates and was closed unmerged. Accepted TASK-002B was replayed onto current main via manager integration PR #7 and merged as c23df08c46b5ab98c8d530581535d552edd9406f.
+
+Recommended next atomic task: provision the pinned DEPART-referenced YOLOv8 human-body checkpoint and run a limited real cache extraction audit; do not run full extraction or model training yet.
