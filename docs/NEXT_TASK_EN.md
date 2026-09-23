@@ -48,9 +48,9 @@ The exact logged selector key remains:
 
 Checkpointing/early stopping in later training configs will monitor only this key in max mode.
 
-The Test protocol metrics are required for comparative monitoring against baselines/other systems and final reporting, but MUST NOT select epochs, thresholds, hyperparameters, architectures, modalities, or ablations.
+The Test protocol metrics are mandatory epoch-level comparative-monitoring outputs. In later training, the callback/evaluation stack must compute dev, test_none, test_soft, and test_hard on every epoch/validation cycle. Test metrics MUST NOT select epochs, thresholds, hyperparameters, architectures, modalities, or ablations.
 
-This task is metric/callback integration only. No training run or Test evaluation pass is authorized.
+This task is metric/callback integration only. No training run is authorized, but the callback contract must be ready for all four epoch-level evaluation streams.
 
 ## Required Reading
 
@@ -151,7 +151,7 @@ Update WSMSegmentMetricsCallback so that when cached DEV outputs contain the spa
 
 If the current Chimera cache object does not retain masks directly, implement the smallest compatible callback-side collection mechanism needed to collect DEV logits, targets, and observed_mask during the epoch.
 
-Do not read Test data in this task. The callback/helper implementation must nevertheless support test_none/test_soft/test_hard prefixes when those evaluation passes are explicitly run later.
+Do not read real Test data in this task. The callback/helper implementation must nevertheless support test_none/test_soft/test_hard as mandatory epoch-level evaluation prefixes so that later training can compute all four streams every cycle.
 
 Do not derive selector metrics from legacy task-split naming when the native sparse two-task cache is available.
 
@@ -188,7 +188,7 @@ Do not use:
 - each protocol mean_score equals arithmetic mean of the two task Scores;
 - zero-observation task fails clearly;
 - threshold is fixed at logit 0.0;
-- Test metrics are supported for comparative monitoring but are never selector inputs;
+- Test metrics are supported as mandatory epoch-level comparative-monitoring outputs but are never selector inputs;
 - existing project plugin imports without required-module warnings;
 - no training run;
 - no Test processing/metrics;
@@ -351,8 +351,8 @@ Record:
 - callback smoke result;
 - explicit selector key dev/mean_score;
 - confirmation helper/callback metric schema supports dev/test_none/test_soft/test_hard;
-- confirmation Test metrics are comparative-only and not selectors;
-- confirmation no real Test data/metrics were executed in this task;
+- confirmation Test metrics are mandatory every-epoch monitoring outputs but not selectors;
+- confirmation no real Test data/metrics were executed in this implementation-only task;
 - confirmation no training run;
 - src/audio unchanged;
 - Stage 2 remains partial;
