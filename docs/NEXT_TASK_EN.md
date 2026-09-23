@@ -25,7 +25,12 @@ The batch provides:
 
 Unknown disease labels are NaN and MUST be excluded from metrics exactly as they are excluded from the masked sparse loss.
 
-Required DEV metrics:
+Required metrics for every supported protocol prefix:
+
+    dev
+    test_none
+    test_soft
+    test_hard
 
 For each task t in {depression, parkinson}:
 
@@ -33,17 +38,19 @@ For each task t in {depression, parkinson}:
     MF1_t = macro F1 over the observed binary labels only
     Score_t = (UAR_t + MF1_t) / 2
 
-Then:
+Then for each protocol prefix P:
 
-    DEV/Mean_Score = (Score_depression + Score_parkinson) / 2
+    P/mean_score = (P/depression/score + P/parkinson/score) / 2
 
-The exact logged selector key must be:
+The exact logged selector key remains:
 
     dev/mean_score
 
-Checkpointing/early stopping in later training configs will monitor this key in max mode.
+Checkpointing/early stopping in later training configs will monitor only this key in max mode.
 
-This task is metric/callback integration only. No training run is authorized.
+The Test protocol metrics are required for comparative monitoring against baselines/other systems and final reporting, but MUST NOT select epochs, thresholds, hyperparameters, architectures, modalities, or ablations.
+
+This task is metric/callback integration only. No training run or Test evaluation pass is authorized.
 
 ## Required Reading
 
@@ -111,19 +118,19 @@ For each task:
 
 If a DEV task has zero observed samples, raise a clear error. Do not silently report zero.
 
-Metrics must include at least:
+For every prefix P in {dev,test_none,test_soft,test_hard}, metrics must include at least:
 
-    dev/depression/num_samples
-    dev/depression/uar
-    dev/depression/mf1
-    dev/depression/score
+    P/depression/num_samples
+    P/depression/uar
+    P/depression/mf1
+    P/depression/score
 
-    dev/parkinson/num_samples
-    dev/parkinson/uar
-    dev/parkinson/mf1
-    dev/parkinson/score
+    P/parkinson/num_samples
+    P/parkinson/uar
+    P/parkinson/mf1
+    P/parkinson/score
 
-    dev/mean_score
+    P/mean_score
 
 Also expose sensible confusion counts for audit if useful.
 
@@ -144,7 +151,7 @@ Update WSMSegmentMetricsCallback so that when cached DEV outputs contain the spa
 
 If the current Chimera cache object does not retain masks directly, implement the smallest compatible callback-side collection mechanism needed to collect DEV logits, targets, and observed_mask during the epoch.
 
-Do not read Test data.
+Do not read Test data in this task. The callback/helper implementation must nevertheless support test_none/test_soft/test_hard prefixes when those evaluation passes are explicitly run later.
 
 Do not derive selector metrics from legacy task-split naming when the native sparse two-task cache is available.
 
@@ -177,10 +184,11 @@ Do not use:
 - masked NaNs do not contaminate metrics;
 - both tasks' UAR/MF1/Score are computed from observed labels only;
 - exact key dev/mean_score is produced;
-- DEV mean score equals arithmetic mean of the two task Scores;
+- helper supports dev, test_none, test_soft, and test_hard prefixes with identical masked-label semantics;
+- each protocol mean_score equals arithmetic mean of the two task Scores;
 - zero-observation task fails clearly;
 - threshold is fixed at logit 0.0;
-- no Test metric is needed for selector computation;
+- Test metrics are supported for comparative monitoring but are never selector inputs;
 - existing project plugin imports without required-module warnings;
 - no training run;
 - no Test processing/metrics;
@@ -303,7 +311,9 @@ Run exact masked-metric smoke:
     print("masked sparse DEV metric smoke passed")
     PY
 
-Add a proportional callback smoke proving that WSMSegmentMetricsCallback injects the same dev/... keys when fed a native sparse two-task DEV epoch/cache path supported by the implementation. Do not invoke Test splits.
+Add a proportional callback smoke proving that WSMSegmentMetricsCallback injects the same dev/... keys when fed a native sparse two-task DEV epoch/cache path supported by the implementation.
+
+Also run the pure helper with prefixes test_none, test_soft, and test_hard using synthetic tensors and assert the same key schema/values. Do not invoke real Test data in this task.
 
 Finally:
 
@@ -340,7 +350,9 @@ Record:
 - synthetic helper result;
 - callback smoke result;
 - explicit selector key dev/mean_score;
-- confirmation no Test data/metrics used;
+- confirmation helper/callback metric schema supports dev/test_none/test_soft/test_hard;
+- confirmation Test metrics are comparative-only and not selectors;
+- confirmation no real Test data/metrics were executed in this task;
 - confirmation no training run;
 - src/audio unchanged;
 - Stage 2 remains partial;
