@@ -195,7 +195,7 @@ Gate: no video split leakage; current train/dev/test speaker independence is acc
 
 ### Stage 2 — At most two video families
 
-V1: DEPART-like uniform frames, quality filter, frozen CLIP, projection, temporal Transformer, masked pooling, two sigmoid heads.
+V1: DEPART-like uniform temporal sequence, YOLOv8 single-class human-body ROI detection/cropping per sampled frame, frozen CLIP frame encoding, projection, temporal Transformer, masked pooling, two sigmoid heads.
 
 V2: V1 plus task-specific class prototypes, classwise prototype/MLP gating, and controlled contrastive ablation.
 
