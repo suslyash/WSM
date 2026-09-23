@@ -15,7 +15,7 @@ Final Test authorized: **no**.
 | Paper/project analysis | complete | Baselines, structure, requirements, plan | BASELINES.md, PROJECT_INIT_STRUCTURE.md, PROJECT_REQUIREMENTS.md, PLAN.md |
 | 0. Reproducible base | complete | Canonical frozen audio config validates and registry/smoke gates pass | Verification records TASK-000-A and TASK-000B below |
 | 1. Manifest/partial-label contract | complete | Canonical manifest, separate DEV/Test consumer, masked sparse loss, zero video leakage, and owner-accepted speaker-independent split contract | TASK-001A through TASK-001E plus manager decision below |
-| 2. Video | not started | At most two families; DEV winner | None |
+| 2. Video | partial | Deterministic V1 preprocessing/cache contract implemented; no model winner selected | TASK-002A |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | not started | Comparable F0/F1/F2 | None |
 | 5. RAMPS | not started | Direct reliable missing-head gradient | None |
@@ -397,3 +397,44 @@ Status: accepted.
 - Final Test remains locked.
 
 Recommended next atomic task: begin Stage 2 with reproducible video input/preprocessing and cache-contract audit only; do not train or compare video models yet.
+
+### TASK-002A - Define the reproducible V1 video preprocessing and cache contract
+
+Status: implementation complete; no training or Test evaluation ran.
+
+Changed files:
+
+- src/video/__init__.py;
+- src/video/features/__init__.py;
+- src/video/features/clip_video_features.py;
+- scripts/video/extract_clip_video_features.py;
+- docs/PROGRESS_EN.md.
+
+Implementation facts:
+
+- Added deterministic uniform full-segment sampling with inclusive endpoints and default target_frames=32.
+- Added frozen, eval-mode CLIP extraction with default openai/clip-vit-base-patch32 and revision main; model loading is local-files-only by default and failures are reported rather than silently downloaded or converted into fake features.
+- The extractor accepts RGB frames only at the processor boundary, returns temporal features [T,D] and a boolean valid_mask [T], and has explicit zero/unreadable-frame failure results.
+- Cache fingerprints include manifest fingerprint, segment identity, source path, model/revision, preprocessing version, sampling method, processor identity, target frame count, and available package versions.
+- Cache artifacts contain segment_id, source_path, features, valid_mask, model/revision, preprocessing metadata, and cache_fingerprint. Failed extractions cannot be serialized as successful artifacts.
+- The CLI defaults to building the canonical manifest from data-root when --manifest-path is omitted, processes only video_available rows, records the limit and fingerprints, refuses protected src/configs/docs output locations, and emits machine-readable success/failure reports.
+- No registry, model config, training, label, split, corpus, diagnosis, or task metadata is passed to the encoder.
+
+Exact verification commands and results:
+
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m py_compile src/video/features/clip_video_features.py scripts/video/extract_clip_video_features.py - passed.
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 deterministic helper smoke - passed for 1-frame input, 100-to-32 sampling, endpoint coverage, and fingerprint sensitivity.
+- .venv/bin/python synthetic extractor smoke - passed; synthetic forward produced [32,5] features and boolean [32] validity, and unreadable input returned failure with no features or mask.
+- .venv/bin/python scripts/video/extract_clip_video_features.py --data-root /media/maxim/Databases/WSM_NEW --manifest-path /tmp/wsm_stage1_manifest.csv --cache-root /tmp/wsm_video_cache_002a --report-output /tmp/wsm_video_report_002a.json --limit 1 - passed structurally; report recorded limit=1, success_count=0, failure_count=1 because the real extraction path was unavailable, with no fake artifact created.
+- CLI --help exposed all required arguments.
+- Protected-output refusal smoke - passed.
+- git diff --check - passed.
+- git diff -- src/audio - empty; src/audio remained unchanged.
+- No training, checkpoint selection, or Test predictions/metrics were run or inspected.
+- Ruff was unavailable at .venv/bin/ruff; no dependency was installed.
+
+Metrics/artifacts: one machine-readable structural report at /tmp/wsm_video_report_002a.json; no cache artifact was written for the failed extraction. The canonical manifest fingerprint recorded by the CLI was e236e534eae3049b41ab134ebee7379c87a47bb8136102cf36d3c6df5c6c99bc.
+
+Deviations/blockers: the structural CLI run did not produce a feature cache because the selected real row failed extraction; this is an explicit failure report, not a successful baseline. No video model comparison was attempted.
+
+Recommended next atomic task: manager review and, if accepted, proceed to the next Stage 2 video task without training or Test evaluation in this task.
