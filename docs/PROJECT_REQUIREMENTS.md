@@ -126,7 +126,7 @@ Test metrics:
 - MUST explicitly identify uncleaned/soft/hard protocols;
 - MUST use the same task-wise masked-label semantics as DEV metrics.
 
-New datamodules SHOULD separate DEV and Test. Running Test every validation epoch is forbidden for new methods.
+New datamodules MUST separate DEV and Test. For the WSM evaluation protocol, a training/evaluation DataModule MUST support distinct test_none, test_soft, and test_hard evaluation datasets or an equivalent explicit protocol selector. These Test datasets MUST NOT be merged into val_dataset and MUST NOT run every validation epoch. They are invoked only by a separate non-selective evaluation pass for comparative monitoring/final reporting.
 
 Segment-level metrics remain primary; video/person aggregation SHOULD be secondary. Ablations SHOULD use at least 3 seeds. Final methods MUST use at least 5 seeds and report mean, standard deviation, and confidence interval or a pre-justified alternative. Use paired comparison where samples match.
 
