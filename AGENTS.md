@@ -1,0 +1,142 @@
+# WSM Codex Operating Contract
+
+These rules apply to the entire repository. They are intended for an implementing Codex controlled by a manager agent.
+
+## 1. Required reading before every task
+
+Read these files in order before editing:
+
+1. docs/PROJECT_REQUIREMENTS.md
+2. docs/PLAN.md
+3. docs/PROGRESS_EN.md
+4. docs/NEXT_TASK_EN.md
+5. the files explicitly named by docs/NEXT_TASK_EN.md
+
+Also inspect git status before changes. Existing user changes are not disposable.
+
+If docs/NEXT_TASK_EN.md is absent, contains more than one unrelated goal, or conflicts with docs/PROJECT_REQUIREMENTS.md, do not make implementation changes. Report the conflict to the manager.
+
+## 2. Scope discipline
+
+- Execute exactly one atomic task from docs/NEXT_TASK_EN.md.
+- Modify only paths listed as allowed in that task, plus docs/PROGRESS_EN.md.
+- Do not begin the next PLAN stage after completing the current task.
+- Do not broaden a refactor because adjacent code could be improved.
+- Do not change BASELINES, SOTA_REVIEW_EN, PROJECT_REQUIREMENTS, or PLAN unless the task explicitly requests a documentation revision.
+- Do not commit, push, delete data, start a large training run, or install a dependency unless the task explicitly authorizes it.
+- Do not delegate to another agent unless the current user or NEXT_TASK_EN explicitly asks for delegation.
+
+Repository authority order:
+
+1. current explicit user/manager instruction;
+2. docs/PROJECT_REQUIREMENTS.md;
+3. docs/NEXT_TASK_EN.md;
+4. docs/PLAN.md;
+5. existing implementation conventions.
+
+NEXT_TASK_EN cannot waive a project invariant unless the manager explicitly identifies and approves the exact requirement being changed.
+
+## 3. Non-negotiable project invariants
+
+### Frozen audio
+
+- Never edit a file under src/audio.
+- Use the existing audio method as the frozen baseline.
+- Before and after every implementation task, check git diff for src/audio.
+- If src/audio is already dirty, stop and report exact paths unless the task explicitly defines preservation.
+
+### Task semantics
+
+- The final target is two independent binary labels: depression and Parkinson.
+- Unknown labels are masked, never converted to negative.
+- A healthy/depression/Parkinson softmax may exist only as a reproduced paper baseline, never as the final formulation.
+- Observed ground truth always overrides a pseudo-label.
+
+### Layout
+
+- Put unimodal reusable code in src/audio, src/video, src/text, or src/description; src/audio remains frozen.
+- Put multimodal model/data/loss code in src/fusion.
+- Put modality-independent callbacks, losses, metrics, masks, and blocks in src/common.
+- Put executable preprocessing/reporting code in scripts/<modality> or scripts/common, never in src.
+- Put configs under configs/<experiment_name>/<modality-or-ablations>.
+- Use experiment_name wsm_mm_pd_dep_v1 until PLAN explicitly starts another programme.
+
+### Chimera ML
+
+- Use Chimera ML abstractions and current src/audio style.
+- Register every config-selectable model, loss, metric, callback, datamodule, collate, and inference step.
+- Update src/chimera_plugin.py when a new registration module is introduced.
+- Never hide a missing required project module as an optional-dependency warning.
+
+### Required instrumentation
+
+Every training config must include checkpoint_callback, snapshot_callback, early_stopping_callback, console_file_logger, mlflow_logger, wsm_summary_callback, and wsm_segment_metrics_callback or a documented compatible successor.
+
+Checkpointing and early stopping use dev/mean_score in max mode.
+
+### Evaluation firewall
+
+- Select only by DEV/Mean_Score defined in PROJECT_REQUIREMENTS.
+- Never use TEST_NONE/SOFT/HARD to choose an epoch, threshold, hyperparameter, architecture, modality, or ablation.
+- New training datamodules must not run Test in every validation epoch.
+- Run final Test only when NEXT_TASK_EN declares a freeze and explicitly authorizes it.
+
+### Experiment limits
+
+- Do not tune the audio architecture.
+- Use at most the two planned video families and two planned text/description families.
+- Do not create a broad grid unless the manager explicitly changes PLAN.
+- Preserve failed and negative results in PROGRESS_EN.
+
+## 4. Implementation routine
+
+For every task:
+
+1. Restate the boundary from NEXT_TASK_EN.
+2. Inspect relevant code and dirty changes.
+3. Make the smallest coherent change.
+4. Register new selectable components.
+5. Run required verification.
+6. Add proportional checks for clear risks.
+7. Check the full diff, especially src/audio and out-of-scope paths.
+8. Update docs/PROGRESS_EN.md with facts, commands, results, and blockers.
+9. Stop; do not execute a proposed next task.
+
+Unit tests are optional, but registry/config validation and a forward/loss/backward smoke check are mandatory when relevant.
+
+## 5. Research integrity
+
+- Keep corpus/task identity and labels out of generation prompts unless an approved ablation studies a task token.
+- Version manifests, prompts, model revisions, and feature caches.
+- Log pseudo-label coverage, class balance, calibration, and uncertainty.
+- Treat novelty claims as hypotheses until literature and ablations verify them.
+- Without a dual-annotated audit subset, do not claim verified recovery of the truly missing disease label or comorbidity.
+- Do not claim that dynamic RA-STCH inherits fixed-weight STCH theory without a new proof.
+
+## 6. PROGRESS_EN update format
+
+Do not erase previous evidence. Update the status table and append:
+
+- task identifier;
+- complete, partial, or blocked outcome;
+- changed files;
+- exact commands;
+- concise verification results;
+- metrics/artifacts;
+- deviations;
+- blockers and recommended next atomic task.
+
+Only the manager edits docs/NEXT_TASK_EN.md unless the current task explicitly transfers ownership.
+
+## 7. Required manager handoff
+
+Respond in English with exactly:
+
+1. Outcome
+2. Changed files
+3. Verification
+4. Plan status
+5. Blockers and risks
+6. Next atomic step
+
+Give exact commands/results and clickable paths where useful. State whether src/audio stayed unchanged and whether any Test metrics were inspected.
