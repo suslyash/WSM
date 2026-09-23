@@ -14,7 +14,7 @@ Final Test authorized: **no**.
 |---|---|---|---|
 | Paper/project analysis | complete | Baselines, structure, requirements, plan | BASELINES.md, PROJECT_INIT_STRUCTURE.md, PROJECT_REQUIREMENTS.md, PLAN.md |
 | 0. Reproducible base | complete | Canonical frozen audio config validates and registry/smoke gates pass | Verification records TASK-000-A and TASK-000B below |
-| 1. Manifest/partial-label contract | partial | Canonical manifest implemented; manifest consumer/datamodule and speaker-independence evidence remain | TASK-001A and TASK-001B below |
+| 1. Manifest/partial-label contract | partial | Canonical manifest and separate DEV/Test consumer implemented; masked sparse loss contract and speaker-independence evidence remain | TASK-001A, TASK-001B, and TASK-001C below |
 | 2. Video | not started | At most two families; DEV winner | None |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | not started | Comparable F0/F1/F2 | None |
@@ -41,7 +41,7 @@ Historical Test values came from an existing summary; they were not used for a n
 2. The AV YAML also lacks snapshot_callback and early_stopping_callback and monitors dev/mean_macro_f1 instead of dev/mean_score.
 3. The current audio datamodule still includes Test loaders in each validation epoch; this task did not change it.
 4. Authoritative speaker identity remains unresolved, so speaker-independence is not yet verified.
-5. No new canonical-manifest consumer/datamodule yet enforces separate DEV/Test loading for Stage 1+ methods.
+5. Canonical DEV/Test separation is implemented for Stage 1+ methods; the next missing contract is observed-label-only masked loss.
 
 ## 5. Execution Log
 
@@ -239,7 +239,9 @@ Status: implementation complete; Stage 1 remains partial.
 
 Branch: codex/task-001c.
 Implementation commit SHA: 22d31c682bb49747c806eb99366908a82ad7c39c.
+Final branch HEAD: 7aea0afad9df047a1050c81f7b0d1a48a2b318a8.
 Push result: successful: origin/codex/task-001c created and pushed.
+Manager integration: PR #2 merged to main as c4b00f78987c010442fd08a0c1771f174a3c762a.
 
 Changed files:
 
