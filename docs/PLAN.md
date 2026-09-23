@@ -191,7 +191,7 @@ Create one manifest with:
 
 Add audit reports, cache fingerprints, unified split identity, and separate DEV/Test dataloaders.
 
-Gate: no speaker/video split leakage; unknown never maps to zero; counts/missing streams saved machine-readably; Test absent from fit validation.
+Gate: no video split leakage; current train/dev/test speaker independence is accepted from the dataset-owner split contract despite unavailable speaker_id and must be recorded as an assumption rather than a measured identity audit; unknown never maps to zero; counts/missing streams saved machine-readably; Test absent from fit validation.
 
 ### Stage 2 — At most two video families
 
