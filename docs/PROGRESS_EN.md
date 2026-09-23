@@ -928,3 +928,14 @@ Status: accepted before TASK-002J implementation.
 - test_none/test_soft/test_hard metrics are required for comparative monitoring against baselines/other systems and for final reporting only.
 - Test metrics must never select epochs, thresholds, hyperparameters, architectures, modalities, or ablations.
 - TASK-002J is superseded in-place by the updated NEXT_TASK_EN wording before implementation.
+
+
+### MANAGER-DECISION-007 — Video DataModule must expose separate Test protocols
+
+Status: accepted before training integration.
+
+- The V1 video DataModule must ultimately support explicit test_none, test_soft, and test_hard evaluation datasets/protocols in addition to train and dev.
+- DEV remains the only validation/model-selection split and the only source of the selector dev/mean_score.
+- Test datasets must not be merged into val_dataset and must not execute every validation epoch.
+- Test evaluation is a separate non-selective pass used for comparative monitoring against other systems and final reporting.
+- The already accepted TASK-002I train/dev DataModule remains valid as the training-side foundation; Test protocol support will be added in a separate atomic task after TASK-002J metrics support is complete.
