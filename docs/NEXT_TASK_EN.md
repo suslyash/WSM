@@ -1,122 +1,237 @@
-# TASK-001A: Audit Manifest Sources and Freeze the Stage 1 Data Contract
+# TASK-001B: Build the Canonical Partial-Label Segment Manifest
 
 ## Role
 
-You are the implementing Codex. Execute only this task, update PROGRESS_EN.md, then stop. Follow AGENTS.md. Do not begin manifest implementation or any later Stage 1 task in the same cycle.
+You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.md, commit the implementation on the required task branch, push that branch to origin, then stop. Follow AGENTS.md.
+
+The required branch is:
+
+    codex/task-001b
+
+Do not implement a datamodule, masked loss, text alignment, description extraction, or any later Stage 1 task in this cycle.
 
 ## Goal
 
-Start PLAN Stage 1 with a reproducible source audit for the canonical segment manifest. Determine the authoritative raw source for each required manifest field and the structural split-identity evidence before any production manifest or new datamodule is implemented.
+Implement the reproducible canonical Stage 1 segment-manifest builder using the source contract established by TASK-001A.
 
-This task is an audit/contract task only. It must not guess a speaker identity, fabricate modality availability, or change training behavior.
+The manifest must represent the two disease targets honestly:
+
+- observed disease label = raw 0/1 target;
+- unobserved disease label = null/unknown, never 0;
+- observed_depression / observed_parkinson explicitly define supervision;
+- no pseudo-labels.
+
+This task creates the canonical manifest contract and builder only. Stage 1 remains partial because authoritative speaker identity is unresolved and no segment-level text alignment exists.
+
+## Manager Decisions for Unresolved TASK-001A Findings
+
+These decisions are authoritative for this task:
+
+1. speaker_id:
+   - keep the required speaker_id column;
+   - set it to null for every row because no authoritative source was found;
+   - never substitute video_id or infer speaker identity;
+   - record speaker_independence_verified=false in the audit;
+   - do not claim the Stage 1 split gate is complete.
+
+2. text_available:
+   - the video-level .txt source discovered in TASK-001A is not sufficient evidence of segment-level text availability;
+   - set text_available=false for every canonical segment until a later task establishes segment alignment;
+   - retain video-level transcript coverage only in the audit metadata, not as true segment availability.
+
+3. description_available:
+   - set description_available=false for every row until an authoritative generated/cached description source exists.
+
+4. audio_available and video_available:
+   - derive them only from the file-existence rules audited in TASK-001A.
+
+5. split:
+   - preserve the existing deterministic video-level priority rule test > dev > train;
+   - do not create a new split;
+   - do not use Test labels, predictions, or metrics for any model/selection decision.
 
 ## Required Reading
 
-Read these files before editing:
+Read before editing:
 
-1. docs/PROJECT_REQUIREMENTS.md, especially Sections 2, 9, 10, and 13;
-2. Stage 1 in docs/PLAN.md;
-3. docs/PROGRESS_EN.md;
-4. docs/PROJECT_INIT_STRUCTURE.md, especially the segment-index and datamodule audit;
-5. src/common/utils/segment_index.py;
-6. src/audio/data/wsm_audio_segment_datamodule.py.
-
-Inspect the actual local dataset metadata under /media/maxim/Databases/WSM_NEW only as needed for this structural audit.
+1. AGENTS.md;
+2. docs/PROJECT_REQUIREMENTS.md, especially Sections 2, 9, 10, 11, and 13;
+3. Stage 1 in docs/PLAN.md;
+4. docs/PROGRESS_EN.md, especially TASK-001A;
+5. docs/NEXT_TASK_EN.md;
+6. scripts/common/audit_manifest_sources.py;
+7. src/common/utils/segment_index.py.
 
 ## Allowed Files
 
-- scripts/common/audit_manifest_sources.py;
+- src/common/data/__init__.py;
+- src/common/data/wsm_manifest.py;
+- scripts/common/build_wsm_manifest.py;
 - docs/PROGRESS_EN.md.
 
-Creating the scripts/common directory is allowed if it does not exist.
+Creating src/common/data is allowed if it does not exist.
 
 No other tracked file may be modified.
+
+Generated manifest/audit outputs are verification artifacts and MUST NOT be committed.
 
 ## Forbidden Actions
 
 - any change under src/audio;
-- any change under src/common, src/fusion, src/video, src/text, or src/description;
-- creating the production canonical manifest;
-- creating or modifying a Chimera datamodule, dataset, loss, model, metric, callback, config, or registry entry;
-- changing existing split assignments;
-- treating an unknown disease label as 0/negative;
-- inferring speaker_id from video_id, path text, row order, corpus, or any other heuristic;
-- fabricating audio/video/text/description availability when no real file/source exists;
+- modifying src/common/utils/segment_index.py;
+- modifying any existing audio datamodule;
+- creating a new Chimera datamodule in this task;
+- changing labels, diagnosis values, BAD_SEGMENTS, or split priority;
+- replacing unknown disease labels with 0 or any numeric sentinel that could be interpreted as negative;
+- inferring speaker_id;
+- marking text_available=true from video-level transcript existence alone;
+- creating descriptions or semantic features;
+- pseudo-labeling;
 - training, tuning, checkpoint selection, threshold selection, or Test evaluation;
-- reading or reporting Test model predictions or Test performance metrics;
-- repairing the legacy audio Test-in-validation behavior in this task;
-- broad refactors or cleanup outside this audit.
-
-Structural inspection of Test metadata is allowed only for schema, IDs, split-overlap detection, filenames, and file-existence auditing. It must not be used for model or hyperparameter decisions.
+- inspecting Test predictions or Test performance metrics;
+- video/text/description/fusion model development;
+- dependency installation;
+- broad refactors;
+- editing docs/NEXT_TASK_EN.md;
+- pushing implementation directly to main/master;
+- opening or merging a PR.
 
 ## Implementation Requirements
 
-Implement scripts/common/audit_manifest_sources.py as a deterministic, read-only audit utility.
+### 1. Reusable manifest builder
 
-The audit must:
+Implement src/common/data/wsm_manifest.py with a deterministic reusable builder for the canonical segment manifest.
 
-1. inspect the raw metadata used by the existing depression and Parkinson segment indexes for train/dev/test;
-2. record the exact source files and exact raw column names found for each corpus/split;
-3. report row counts and unique video_id counts per corpus/split without changing any split;
-4. determine whether an explicit authoritative speaker identifier exists in the raw metadata or an adjacent documented metadata source;
-5. if an authoritative speaker identifier is not available, report speaker_id as unresolved and do not substitute video_id or invent a mapping;
-6. verify whether the deterministic candidate segment identity (corpus + video_id + segment_file) is unique, and report any collisions;
-7. report video_id overlap across train/dev/test after the existing split rules and, only if an authoritative speaker identifier exists, speaker_id overlap across train/dev/test;
-8. identify the real observable source/path rule, if any, for each availability field:
-   - audio_available;
-   - video_available;
-   - text_available;
-   - description_available.
-   If a modality has no existing authoritative source yet, report it as unavailable/unresolved rather than synthesizing one;
-9. emit a machine-readable JSON audit to a user-specified --output path;
-10. include in that JSON a proposed raw-to-canonical field mapping for exactly these required manifest columns:
+The canonical output columns, in this exact order, are:
 
-       segment_id, video_id, speaker_id, corpus, split,
-       y_depression, y_parkinson,
-       observed_depression, observed_parkinson,
-       audio_available, video_available,
-       text_available, description_available
+    segment_id
+    video_id
+    speaker_id
+    corpus
+    split
+    y_depression
+    y_parkinson
+    observed_depression
+    observed_parkinson
+    audio_available
+    video_available
+    text_available
+    description_available
 
-11. encode the label contract in the audit mapping:
-    - depression-corpus rows: observed_depression=true and observed_parkinson=false;
-    - Parkinson-corpus rows: observed_depression=false and observed_parkinson=true;
-    - the unobserved disease target is unknown/null, never 0;
-    - no pseudo-label is created;
-12. make no writes under the dataset root;
-13. fail clearly on malformed or contradictory metadata instead of silently repairing it.
+Requirements:
 
-Do not claim the Stage 1 gate is complete. This task establishes source evidence for the later manifest implementation.
+- use the same raw source CSVs, delimiters, BAD_SEGMENTS exclusions, and existing test > dev > train video-level priority semantics audited in TASK-001A;
+- fail on missing/malformed required metadata instead of silently repairing it;
+- corpus values are exactly depression or parkinson;
+- split values are exactly train, dev, or test;
+- segment_id is deterministic and collision-free from the audited composite corpus + video_id + segment_file; use one documented stable string encoding and assert uniqueness;
+- speaker_id must be a null value for every row in this task;
+- depression rows:
+  - y_depression = raw diagnosis 0/1;
+  - y_parkinson = null;
+  - observed_depression = true;
+  - observed_parkinson = false;
+- Parkinson rows:
+  - y_depression = null;
+  - y_parkinson = raw diagnosis 0/1;
+  - observed_depression = false;
+  - observed_parkinson = true;
+- audio_available is true only when the audited segment WAV exists and is non-empty;
+- video_available is true only when the audited segment video exists and is non-empty;
+- text_available is false for every row in this task;
+- description_available is false for every row in this task.
+
+Use nullable data representation that preserves unknown disease labels through CSV round-trip without converting them to 0.
+
+### 2. Manifest audit
+
+The reusable module must also produce a machine-readable audit containing at least:
+
+- schema/version identifier;
+- row counts per corpus/split;
+- observed positive/negative counts per disease and split;
+- unknown count per disease and split;
+- null speaker_id count;
+- speaker_independence_verified=false with the TASK-001A reason;
+- segment_id uniqueness/collision count;
+- video_id pairwise split-overlap counts after the existing split rule;
+- audio/video availability counts;
+- text_available count = 0 plus the TASK-001A video-level transcript source coverage 8549/8622 as source-only evidence;
+- description_available count = 0;
+- canonical manifest SHA-256 fingerprint over stable serialized manifest content;
+- flags confirming no pseudo-labels, no Test predictions inspected, no Test metrics inspected, and no model selection performed.
+
+### 3. CLI
+
+Implement scripts/common/build_wsm_manifest.py as a thin CLI around the reusable module.
+
+It must accept:
+
+    --data-root
+    --manifest-output
+    --audit-output
+
+It must refuse to overwrite either output unless an explicit --overwrite flag is supplied.
+
+It must refuse to write output inside src/, configs/, or docs/.
+
+It must not modify the dataset source files.
+
+### 4. No Chimera registration yet
+
+This task does not add a config-selectable component, so no registry/plugin change is required.
+
+Do not implement a datamodule here.
 
 ## Acceptance Criteria
 
-- scripts/common/audit_manifest_sources.py exists and is read-only with respect to the dataset;
-- the audit runs successfully on /media/maxim/Databases/WSM_NEW, or reports a concrete source blocker without guessing;
-- generated JSON contains corpus/split source files, raw columns, row/video counts, segment-identity uniqueness, split-overlap results, speaker-source status, modality-source status, and the full proposed canonical field mapping;
-- the proposed label mapping explicitly preserves the unknown disease target as null/unknown with observed_* false;
-- speaker_id is supported by an explicit source or is explicitly marked unresolved; video_id is never silently reused as speaker_id;
-- no Test prediction/performance metric is inspected or reported;
-- no production manifest or datamodule is created;
+- canonical builder and CLI exist only in the allowed paths;
+- builder produces exactly the 13 required columns in the required order;
+- retained manifest has exactly 8622 rows under the currently audited dataset state;
+- row counts are train=6325, dev=933, test=1364;
+- segment_id is unique for all 8622 retained rows;
+- post-rule video_id overlap is zero across train/dev/test;
+- all speaker_id values are null and audit explicitly says speaker_independence_verified=false;
+- depression rows never contain a known y_parkinson value;
+- Parkinson rows never contain a known y_depression value;
+- unknown labels survive a CSV write/read round-trip as missing/null and are never 0-filled;
+- observed_* masks exactly match corpus ownership;
+- audio_available and video_available match real audited file existence;
+- text_available is false for all rows;
+- description_available is false for all rows;
+- audit contains a deterministic SHA-256 manifest fingerprint;
+- no Test predictions/performance metrics are inspected;
+- no training/model selection occurs;
+- no datamodule is created;
 - python compilation passes;
+- manifest verification assertions pass;
 - git diff --check passes;
 - git diff -- src/audio is empty;
-- the final tracked diff contains only scripts/common/audit_manifest_sources.py and docs/PROGRESS_EN.md;
-- docs/PROGRESS_EN.md records exact commands, results, discovered source mappings, unresolved fields/blockers, and the recommended next atomic step;
-- Stage 1 remains partial/not complete after this task.
+- task branch is codex/task-001b;
+- implementation commit is pushed to origin;
+- main/master is not modified by implementing Codex;
+- diff against origin/main contains only the four allowed tracked paths.
 
 ## Exact Verification Commands
 
-Run exactly these checks from the repository root:
+Run from repository root after creating the task branch.
 
-    python3 -m py_compile scripts/common/audit_manifest_sources.py
+    python3 -m py_compile       src/common/data/__init__.py       src/common/data/wsm_manifest.py       scripts/common/build_wsm_manifest.py
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/common/audit_manifest_sources.py       --data-root /media/maxim/Databases/WSM_NEW       --output /tmp/wsm_stage1_manifest_source_audit.json
+    rm -f /tmp/wsm_stage1_manifest.csv /tmp/wsm_stage1_manifest_audit.json
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/common/build_wsm_manifest.py       --data-root /media/maxim/Databases/WSM_NEW       --manifest-output /tmp/wsm_stage1_manifest.csv       --audit-output /tmp/wsm_stage1_manifest_audit.json
 
     PYTHONDONTWRITEBYTECODE=1 .venv/bin/python - <<'PY'
     import json
     from pathlib import Path
+    import pandas as pd
 
-    path = Path("/tmp/wsm_stage1_manifest_source_audit.json")
-    data = json.loads(path.read_text(encoding="utf-8"))
+    manifest_path = Path("/tmp/wsm_stage1_manifest.csv")
+    audit_path = Path("/tmp/wsm_stage1_manifest_audit.json")
+
+    df = pd.read_csv(manifest_path)
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
 
     required = [
         "segment_id", "video_id", "speaker_id", "corpus", "split",
@@ -126,25 +241,45 @@ Run exactly these checks from the repository root:
         "text_available", "description_available",
     ]
 
-    mapping = data["canonical_field_mapping"]
-    assert list(mapping) == required or set(mapping) == set(required)
+    assert list(df.columns) == required
+    assert len(df) == 8622
+    assert df["segment_id"].is_unique
+    assert df["speaker_id"].isna().all()
 
-    label_contract = data["label_contract"]
-    assert label_contract["depression"]["observed_depression"] is True
-    assert label_contract["depression"]["observed_parkinson"] is False
-    assert label_contract["parkinson"]["observed_depression"] is False
-    assert label_contract["parkinson"]["observed_parkinson"] is True
-    assert label_contract["depression"]["y_parkinson"] is None
-    assert label_contract["parkinson"]["y_depression"] is None
+    assert df.groupby("split").size().to_dict() == {
+        "dev": 933,
+        "test": 1364,
+        "train": 6325,
+    }
 
-    speaker = data["speaker_source"]
-    assert speaker["status"] in {"resolved", "unresolved"}
-    if speaker["status"] == "unresolved":
-        assert not speaker.get("fallback_to_video_id", False)
+    dep = df["corpus"] == "depression"
+    par = df["corpus"] == "parkinson"
 
-    assert data["test_usage"]["model_predictions_inspected"] is False
-    assert data["test_usage"]["performance_metrics_inspected"] is False
-    print("manifest source audit assertions passed")
+    assert df.loc[dep, "y_depression"].notna().all()
+    assert df.loc[dep, "y_parkinson"].isna().all()
+    assert df.loc[par, "y_depression"].isna().all()
+    assert df.loc[par, "y_parkinson"].notna().all()
+
+    assert df.loc[dep, "observed_depression"].astype(bool).all()
+    assert (~df.loc[dep, "observed_parkinson"].astype(bool)).all()
+    assert (~df.loc[par, "observed_depression"].astype(bool)).all()
+    assert df.loc[par, "observed_parkinson"].astype(bool).all()
+
+    assert not df["text_available"].astype(bool).any()
+    assert not df["description_available"].astype(bool).any()
+
+    assert audit["speaker_independence_verified"] is False
+    assert audit["segment_identity"]["collision_count"] == 0
+    assert audit["split_overlap"]["any_video_overlap"] is False
+    assert audit["manifest_fingerprint"]["algorithm"] == "sha256"
+    assert len(audit["manifest_fingerprint"]["value"]) == 64
+
+    assert audit["test_usage"]["model_predictions_inspected"] is False
+    assert audit["test_usage"]["performance_metrics_inspected"] is False
+    assert audit["test_usage"]["selection_or_tuning_performed"] is False
+    assert audit["pseudo_labels_created"] is False
+
+    print("canonical manifest assertions passed")
     PY
 
     git diff --check
@@ -153,11 +288,59 @@ Run exactly these checks from the repository root:
 
     git status --short
 
+Before committing, inspect:
+
+    git diff --       src/common/data/__init__.py       src/common/data/wsm_manifest.py       scripts/common/build_wsm_manifest.py       docs/PROGRESS_EN.md
+
+Then commit and push according to AGENTS.md.
+
+After commit and push, verify:
+
+    git status --short
+
+    git rev-parse --abbrev-ref HEAD
+
+    git rev-parse HEAD
+
+    git diff --stat origin/main...HEAD
+
+    git diff --name-only origin/main...HEAD
+
+The final diff name list must contain only:
+
+    src/common/data/__init__.py
+    src/common/data/wsm_manifest.py
+    scripts/common/build_wsm_manifest.py
+    docs/PROGRESS_EN.md
+
+## Required PROGRESS_EN Update
+
+Append TASK-001B facts without erasing prior evidence.
+
+Record:
+
+- exact branch name;
+- implementation commit SHA;
+- push result;
+- manifest row/split counts;
+- segment-id uniqueness;
+- video split-overlap result;
+- speaker_id null/unresolved status and speaker_independence_verified=false;
+- disease observed/unknown counts;
+- modality availability counts;
+- manifest fingerprint;
+- exact verification commands/results;
+- confirmation that unknown disease labels remained null and were never mapped to negative;
+- confirmation src/audio stayed unchanged;
+- confirmation no Test predictions/metrics were inspected;
+- confirmation no training/model selection ran;
+- confirmation no datamodule was created;
+- Stage 1 remains partial;
+- recommended next atomic step only.
+
 ## Required Handoff
 
-Update docs/PROGRESS_EN.md without erasing prior evidence.
-
-Respond in English using exactly the AGENTS.md manager-handoff headings:
+Respond in English using exactly these headings:
 
 1. Outcome
 2. Changed files
@@ -166,16 +349,14 @@ Respond in English using exactly the AGENTS.md manager-handoff headings:
 5. Blockers and risks
 6. Next atomic step
 
-Include:
+In the handoff explicitly state:
 
-- exact commands and concise results;
-- the resolved/unresolved source for speaker_id;
-- the resolved/unresolved source for each modality availability field;
-- whether segment identity was unique;
-- video and, if available, speaker split-overlap findings;
-- confirmation that unknown disease labels were not mapped to negative;
-- confirmation that src/audio stayed unchanged;
-- confirmation that no Test predictions/metrics were inspected;
-- confirmation that no production manifest/datamodule was created.
+- branch: codex/task-001b;
+- implementation commit SHA;
+- whether the branch was pushed to origin;
+- that implementing Codex did not modify main/master;
+- diff summary against origin/main;
+- src/audio unchanged;
+- Test predictions/metrics not inspected.
 
-Stop after this task. Do not implement the canonical manifest or any following Stage 1 task.
+Stop after this task. Do not implement the next Stage 1 task.
