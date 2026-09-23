@@ -903,3 +903,17 @@ Exact verification commands/results:
 Deviation/blocker: the 96 no_body_detected rows remain explicitly unavailable as required. Later batching pads variable-length sequences, but no training DataModule integration or training configuration was created.
 
 Recommended next atomic task: manager review, then implement the next V1 video training/integration gate without processing Test.
+
+
+### MANAGER-DECISION-005 — Accept TASK-002I DataModule and require masked DEV metrics before training
+
+Status: accepted.
+
+- TASK-002I is integrated through PR #14 as 066eab49f80280ef5f51c03560e737ab0a1fcbb7.
+- The registered wsm_video_depart_v1_datamodule is accepted with train=6255, dev=907, unavailable train/dev=70/26, and test_rows_loaded=0.
+- Variable-length collate semantics are accepted: pad to batch maximum T, padding mask=false, preserve artifact-internal valid_mask, and keep padded features exact zero.
+- Real-cache V1 model plus wsm_masked_sparse_loss forward/loss/backward is accepted.
+- Before any training YAML is authorized, the native sparse two-task DEV metrics must compute UAR/MF1/Score from observed labels only and expose the sole selector key dev/mean_score.
+- Test remains locked and must not participate in metric selection.
+
+Recommended next atomic task: implement masked two-task DEV metrics/callback integration for [B,2] logits and observed_mask, with exact selector dev/mean_score; no training config or training run yet.
