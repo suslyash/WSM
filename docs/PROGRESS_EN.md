@@ -647,4 +647,6 @@ Exact verification commands/results:
 
 Metrics/artifacts: six successful cache artifacts under /tmp/wsm_depart_002e/cache and machine-readable report at /tmp/wsm_depart_002e/report.json. These are external audit artifacts and are not committed.
 
-Recommended next atomic task: manager review of the cleared V1 preprocessing gate, then define the next limited Stage 2 video-model integration task; do not start full extraction or training in this task.
+Manager integration: PR #10 merged to main as c7b190e73ad2daca9caef75686ee8b75c104cf97. The V1 preprocessing/cache real-data gate is accepted as cleared.
+
+Recommended next atomic task: implement/register the V1 DEPART-like temporal video model contract and verify synthetic forward/loss/backward on [B,60,512] cached-feature-shaped inputs; do not run full extraction or training yet.
