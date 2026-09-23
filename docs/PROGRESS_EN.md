@@ -992,3 +992,17 @@ Selector and evaluation policy: dev/mean_score is the sole future checkpoint/ear
 Deviation/blocker: the current Chimera CachedSplitOutputs type does not retain masks as a first-class field, so the callback uses its smallest compatible metadata/ownership fallback; future caches may provide observed_mask directly. Stage 2 remains partial.
 
 Recommended next atomic task: manager review, then integrate the metric callback with the V1 training/evaluation streams without running Test or selecting from Test metrics.
+
+
+### MANAGER-DECISION-009 — Accept TASK-002J masked four-protocol metric contract
+
+Status: accepted.
+
+- TASK-002J is integrated through PR #15 as 65c6003c917eb0323f965d19adaff1c17f10aacf.
+- The callback helper supports dev, test_none, test_soft, and test_hard with identical observed-label-only UAR/MF1/Score/Mean_Score semantics.
+- dev/mean_score remains the sole automatic checkpoint/early-stopping/model-selection key.
+- The current blocker for real epoch-level Test monitoring is data-path availability: the V1 video cache currently contains TRAIN+DEV only and the accepted video DataModule exposes no Test datasets.
+- Legacy WSM Test protocol semantics are fixed by the frozen audio/index path: test_none = all canonical test rows; test_soft = canonical test rows with soft_filter=1; test_hard = canonical test rows with hard_filter=1.
+- The canonical manifest schema must not be changed merely to carry soft/hard membership, because changing the canonical serialization/fingerprint would invalidate the already accepted cache contract. Test protocol membership should be joined from the existing raw test metadata/segment index by canonical segment identity.
+
+Recommended next atomic task: build and independently audit the full canonical Test video cache, correct Test extraction/audit telemetry, and extend the video DataModule with separate test_none/test_soft/test_hard datasets using the established raw soft_filter/hard_filter semantics. Do not train yet.
