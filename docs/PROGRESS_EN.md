@@ -785,7 +785,7 @@ Recommended next atomic task: relax only cache structural validation to accept r
 Status: complete; Stage 2 remains partial pending later video data/model integration.
 
 Branch: codex/task-002h.
-Implementation commit: to be recorded after final commit; branch push result follows.
+Implementation commit: e6d516a36e65bb80125b9f06622ab5bea8444316.
 
 Changed files:
 
