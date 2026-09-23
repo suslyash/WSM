@@ -437,4 +437,19 @@ Metrics/artifacts: one machine-readable structural report at /tmp/wsm_video_repo
 
 Deviations/blockers: the structural CLI run did not produce a feature cache because the selected real row failed extraction; this is an explicit failure report, not a successful baseline. No video model comparison was attempted.
 
-Recommended next atomic task: manager review and, if accepted, proceed to the next Stage 2 video task without training or Test evaluation in this task.
+Manager integration: PR #5 merged to main as fb93b31527bc4f1be5dac35c5194a1f266bb6aec.
+
+Recommended next atomic task: integrate the DEPART YOLOv8 single-class human-body ROI stage into the temporal CLIP preprocessing/cache pipeline before any full-cache extraction or video-model training.
+
+
+### MANAGER-DECISION-002 — Align Stage 2 V1 with the DEPART body-ROI pipeline
+
+Status: accepted after TASK-002A completed under its original scope.
+
+- TASK-002A is accepted as the reusable deterministic raw-frame temporal CLIP/cache foundation that was originally assigned.
+- The dataset owner clarified during TASK-002A execution that the intended DEPART-like V1 must include YOLO-based human-body region extraction before CLIP, while preserving the ordered frame sequence for temporal modeling.
+- The DEPART article specifies a YOLOv8 single-class human-body detector applied per sampled frame, followed by body-region cropping/resizing before CLIP visual encoding and Transformer temporal modeling.
+- This clarification is not treated as a retroactive TASK-002A failure.
+- The next atomic task must add the YOLOv8 body-ROI stage and revise cache fingerprints/artifacts/reporting accordingly before full-dataset feature extraction.
+- No full-dataset video cache extraction is authorized yet.
+- Final Test remains locked.
