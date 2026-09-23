@@ -99,8 +99,8 @@ Checkpointing and early stopping use dev/mean_score in max mode.
 
 - Select only by DEV/Mean_Score defined in PROJECT_REQUIREMENTS.
 - Never use TEST_NONE/SOFT/HARD to choose an epoch, threshold, hyperparameter, architecture, modality, or ablation.
-- New training datamodules must not run Test in every validation epoch.
-- Run final Test only when NEXT_TASK_EN declares a freeze and explicitly authorizes it.
+- New training datamodules must expose DEV, TEST_NONE, TEST_SOFT, and TEST_HARD as separate evaluation streams and report all four every epoch/validation cycle.
+- DEV/Mean_Score is the only automatic selector/checkpoint/early-stopping signal; Test protocol metrics are monitoring outputs and must not drive automatic selection.
 
 ### Experiment limits
 
