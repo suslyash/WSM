@@ -173,3 +173,58 @@ Exact verification commands and results:
 - No model predictions or performance metrics were inspected. No production manifest or datamodule was created.
 
 Recommended next atomic task: implement the canonical Stage 1 manifest from this audited source contract only after manager review of the unresolved speaker_id and segment-level text/description availability decisions.
+
+
+### TASK-001B - Build the canonical partial-label segment manifest
+
+Status: implementation complete; Stage 1 remains partial.
+
+Branch: codex/task-001b.
+Implementation commit SHA: aef4004.
+Push result: successful: origin/codex/task-001b created and pushed.
+
+Changed files:
+
+- src/common/data/__init__.py;
+- src/common/data/wsm_manifest.py;
+- scripts/common/build_wsm_manifest.py;
+- docs/PROGRESS_EN.md.
+
+Implementation facts:
+
+- Reusable builder uses the audited CSV sources, delimiters, BAD_SEGMENTS exclusions, and unchanged test > dev > train video-level priority rule.
+- Canonical output has exactly 13 columns in the required order.
+- segment_id is a deterministic JSON-array encoding of [corpus, video_id, segment_file], with uniqueness asserted.
+- speaker_id is null for every row; speaker_independence_verified=false; video_id is never used as a speaker fallback.
+- Depression rows have only y_depression observed; Parkinson rows have only y_parkinson observed. Unobserved disease values are blank/null in CSV, never 0; no pseudo-labels are created.
+- audio_available and video_available use only non-empty audited segment WAV/MP4 files.
+- text_available and description_available are false for every row. Video-level transcript coverage is retained only as audit evidence.
+- CLI refuses existing outputs without --overwrite and refuses writes inside the dataset root, src/, configs/, or docs/.
+- No datamodule, registry entry, or plugin change was made.
+
+Manifest and audit results:
+
+- 8622 total rows; train=6325, dev=933, test=1364.
+- Candidate segment identity is unique: 8622 unique IDs, zero collisions.
+- Post-rule video split overlap is zero for train/dev, train/test, and dev/test.
+- speaker_id null count is 8622; speaker_independence_verified=false.
+- Audio availability: 8622 true, 0 false.
+- Video availability: 8622 true, 0 false.
+- Text availability: 0 true, 8622 false; video-level transcript source-only coverage is 8549/8622.
+- Description availability: 0 true, 8622 false.
+- Disease counts by corpus/split are recorded in the machine-readable audit. Observed depression counts are depression train 1431 positive / 2229 negative, dev 315 / 306, test 335 / 492. Observed Parkinson counts are Parkinson train 1058 positive / 1607 negative, dev 105 / 207, test 133 / 404. Unknown counts are Parkinson target 3660 / 621 / 827 on depression train/dev/test and depression target 2665 / 312 / 537 on Parkinson train/dev/test.
+- Manifest SHA-256: e236e534eae3049b41ab134ebee7379c87a47bb8136102cf36d3c6df5c6c99bc.
+
+Exact verification commands and results:
+
+- python3 -m py_compile src/common/data/__init__.py src/common/data/wsm_manifest.py scripts/common/build_wsm_manifest.py - passed.
+- rm -f /tmp/wsm_stage1_manifest.csv /tmp/wsm_stage1_manifest_audit.json - passed.
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python scripts/common/build_wsm_manifest.py --data-root /media/maxim/Databases/WSM_NEW --manifest-output /tmp/wsm_stage1_manifest.csv --audit-output /tmp/wsm_stage1_manifest_audit.json - passed; wrote 8622 rows and audit JSON.
+- Required pandas/JSON manifest assertions - passed, including CSV null round-trip, schema/order, row/split counts, masks, availability, fingerprint, and no Test/model-selection flags.
+- git diff --check - passed.
+- git diff -- src/audio - empty.
+- No Test predictions or performance metrics were inspected. No training or model selection ran. No datamodule was created. Dataset source files were not modified.
+
+Stage 1 remains partial because authoritative speaker identity and segment-level text alignment remain unresolved.
+
+Recommended next atomic task: audit and implement the separate DEV/Test manifest-consumer contract or datamodule only after manager approval; do not infer speaker identity or segment text alignment.
