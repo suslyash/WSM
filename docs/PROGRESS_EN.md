@@ -14,7 +14,7 @@ Final Test authorized: **no**.
 |---|---|---|---|
 | Paper/project analysis | complete | Baselines, structure, requirements, plan | BASELINES.md, PROJECT_INIT_STRUCTURE.md, PROJECT_REQUIREMENTS.md, PLAN.md |
 | 0. Reproducible base | complete | Canonical frozen audio config validates and registry/smoke gates pass | Verification records TASK-000-A and TASK-000B below |
-| 1. Manifest/partial-label contract | partial | Source audit complete; production manifest not started | TASK-001A below |
+| 1. Manifest/partial-label contract | partial | Canonical manifest implemented; manifest consumer/datamodule and speaker-independence evidence remain | TASK-001A and TASK-001B below |
 | 2. Video | not started | At most two families; DEV winner | None |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | not started | Comparable F0/F1/F2 | None |
@@ -40,7 +40,8 @@ Historical Test values came from an existing summary; they were not used for a n
 1. The existing AV YAML is legacy/non-runnable: wsm_segment_datamodule and wsm_avsync_loss are absent from the registry.
 2. The AV YAML also lacks snapshot_callback and early_stopping_callback and monitors dev/mean_macro_f1 instead of dev/mean_score.
 3. The current audio datamodule still includes Test loaders in each validation epoch; this task did not change it.
-4. No global multilabel manifest/observed-task mask exists.
+4. Authoritative speaker identity remains unresolved, so speaker-independence is not yet verified.
+5. No new canonical-manifest consumer/datamodule yet enforces separate DEV/Test loading for Stage 1+ methods.
 
 ## 5. Execution Log
 
@@ -180,8 +181,10 @@ Recommended next atomic task: implement the canonical Stage 1 manifest from this
 Status: implementation complete; Stage 1 remains partial.
 
 Branch: codex/task-001b.
-Implementation commit SHA: aef4004.
+Implementation commit SHA: 598e154809a893df9c64e56c6f2dd936801a2f4c.
+Final branch HEAD: 15bf749e00c63063af49cd6a2bb6eb548313b2a8.
 Push result: successful: origin/codex/task-001b created and pushed.
+Manager integration: PR #1 merged to main as a2f20fb9b7b9658ae0a402533058563abc11bffb.
 
 Changed files:
 
