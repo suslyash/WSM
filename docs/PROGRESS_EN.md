@@ -939,3 +939,16 @@ Status: accepted before training integration.
 - Test datasets must not be merged into val_dataset and must not execute every validation epoch.
 - Test evaluation is a separate non-selective pass used for comparative monitoring against other systems and final reporting.
 - The already accepted TASK-002I train/dev DataModule remains valid as the training-side foundation; Test protocol support will be added in a separate atomic task after TASK-002J metrics support is complete.
+
+
+### MANAGER-DECISION-008 — Mandatory epoch-level DEV and Test monitoring
+
+Status: accepted; supersedes prior wording that deferred Test evaluation.
+
+- Every epoch/validation cycle must report dev, test_none, test_soft, and test_hard metrics.
+- All four protocols use the same masked two-task UAR/MF1/Score/Mean_Score definitions.
+- dev/mean_score remains the only automatic checkpoint/early-stopping/model-selection signal.
+- test_none/test_soft/test_hard are mandatory comparative-monitoring outputs every epoch and must be logged alongside DEV.
+- Test metrics must not be consumed by checkpoint_callback, early_stopping_callback, threshold search, or automatic hyperparameter/model-selection logic.
+- The video DataModule must expose test_none/test_soft/test_hard as separate named evaluation streams; they must not be merged into val_dataset.
+- TASK-002J is updated in place to implement metric/callback support for all four epoch-level streams.
