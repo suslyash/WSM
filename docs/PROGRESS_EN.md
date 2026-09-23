@@ -917,3 +917,14 @@ Status: accepted.
 - Test remains locked and must not participate in metric selection.
 
 Recommended next atomic task: implement masked two-task DEV metrics/callback integration for [B,2] logits and observed_mask, with exact selector dev/mean_score; no training config or training run yet.
+
+
+### MANAGER-DECISION-006 — Metric parity across DEV and Test protocols
+
+Status: accepted before TASK-002J implementation.
+
+- The metric/reporting implementation must support identical masked two-task UAR/MF1/Score/Mean_Score semantics for dev, test_none, test_soft, and test_hard.
+- dev/mean_score remains the sole model-selection/checkpoint/early-stopping signal.
+- test_none/test_soft/test_hard metrics are required for comparative monitoring against baselines/other systems and for final reporting only.
+- Test metrics must never select epochs, thresholds, hyperparameters, architectures, modalities, or ablations.
+- TASK-002J is superseded in-place by the updated NEXT_TASK_EN wording before implementation.
