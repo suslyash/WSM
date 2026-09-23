@@ -1,4 +1,4 @@
-# TASK-001B: Build the Canonical Partial-Label Segment Manifest
+# TASK-001C: Implement the Canonical Manifest Consumer and Separate DEV/Test DataModule
 
 ## Role
 
@@ -6,89 +6,63 @@ You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.
 
 The required branch is:
 
-    codex/task-001b
+    codex/task-001c
 
-Do not implement a datamodule, masked loss, text alignment, description extraction, or any later Stage 1 task in this cycle.
+Do not begin video/text/description modeling, masked-loss implementation, training, or any later Stage 1/2 task in this cycle.
 
 ## Goal
 
-Implement the reproducible canonical Stage 1 segment-manifest builder using the source contract established by TASK-001A.
+Implement the first Chimera-compatible consumer of the canonical Stage 1 manifest.
 
-The manifest must represent the two disease targets honestly:
+The new datamodule must:
 
-- observed disease label = raw 0/1 target;
-- unobserved disease label = null/unknown, never 0;
-- observed_depression / observed_parkinson explicitly define supervision;
-- no pseudo-labels.
+- consume the canonical partial-label manifest contract from src/common/data/wsm_manifest.py;
+- expose train, DEV, and Test as separate datasets;
+- never inject Test into validation;
+- preserve two independent disease targets with explicit observed-task masks;
+- expose modality-availability masks without fabricating unavailable text/description streams;
+- remain data/contract-only: no model, loss, training config, or feature extraction in this task.
 
-This task creates the canonical manifest contract and builder only. Stage 1 remains partial because authoritative speaker identity is unresolved and no segment-level text alignment exists.
-
-## Manager Decisions for Unresolved TASK-001A Findings
-
-These decisions are authoritative for this task:
-
-1. speaker_id:
-   - keep the required speaker_id column;
-   - set it to null for every row because no authoritative source was found;
-   - never substitute video_id or infer speaker identity;
-   - record speaker_independence_verified=false in the audit;
-   - do not claim the Stage 1 split gate is complete.
-
-2. text_available:
-   - the video-level .txt source discovered in TASK-001A is not sufficient evidence of segment-level text availability;
-   - set text_available=false for every canonical segment until a later task establishes segment alignment;
-   - retain video-level transcript coverage only in the audit metadata, not as true segment availability.
-
-3. description_available:
-   - set description_available=false for every row until an authoritative generated/cached description source exists.
-
-4. audio_available and video_available:
-   - derive them only from the file-existence rules audited in TASK-001A.
-
-5. split:
-   - preserve the existing deterministic video-level priority rule test > dev > train;
-   - do not create a new split;
-   - do not use Test labels, predictions, or metrics for any model/selection decision.
+Stage 1 must remain partial after this task because authoritative speaker identity is still unresolved.
 
 ## Required Reading
 
 Read before editing:
 
 1. AGENTS.md;
-2. docs/PROJECT_REQUIREMENTS.md, especially Sections 2, 9, 10, 11, and 13;
+2. docs/PROJECT_REQUIREMENTS.md, especially Sections 2, 3, 4, 9, 10, 11, and 13;
 3. Stage 1 in docs/PLAN.md;
-4. docs/PROGRESS_EN.md, especially TASK-001A;
+4. docs/PROGRESS_EN.md, especially TASK-001A and TASK-001B;
 5. docs/NEXT_TASK_EN.md;
-6. scripts/common/audit_manifest_sources.py;
-7. src/common/utils/segment_index.py.
+6. src/common/data/wsm_manifest.py;
+7. src/audio/data/wsm_audio_segment_datamodule.py, for Chimera DataModule conventions only;
+8. src/chimera_plugin.py.
 
 ## Allowed Files
 
-- src/common/data/__init__.py;
-- src/common/data/wsm_manifest.py;
-- scripts/common/build_wsm_manifest.py;
+- src/fusion/data/__init__.py;
+- src/fusion/data/wsm_manifest_datamodule.py;
+- src/chimera_plugin.py;
 - docs/PROGRESS_EN.md.
 
-Creating src/common/data is allowed if it does not exist.
+Creating src/fusion/data is allowed if it does not exist.
 
 No other tracked file may be modified.
-
-Generated manifest/audit outputs are verification artifacts and MUST NOT be committed.
 
 ## Forbidden Actions
 
 - any change under src/audio;
-- modifying src/common/utils/segment_index.py;
-- modifying any existing audio datamodule;
-- creating a new Chimera datamodule in this task;
-- changing labels, diagnosis values, BAD_SEGMENTS, or split priority;
-- replacing unknown disease labels with 0 or any numeric sentinel that could be interpreted as negative;
-- inferring speaker_id;
-- marking text_available=true from video-level transcript existence alone;
-- creating descriptions or semantic features;
-- pseudo-labeling;
-- training, tuning, checkpoint selection, threshold selection, or Test evaluation;
-- inspecting Test predictions or Test performance metrics;
+- changing src/common/data/wsm_manifest.py;
+- changing source labels, BAD_SEGMENTS, split priority, or manifest semantics;
+- inferring speaker_id or claiming speaker independence is verified;
+- treating an unknown disease label as 0/negative;
+- creating pseudo-labels;
+- making Test part of val_dataset or any validation loader;
+- reading Test predictions or Test performance metrics;
+- training, tuning, checkpoint selection, threshold selection, or model selection;
+- adding model, loss, metric, callback, optimizer, or training config code;
+- feature extraction or cache generation;
+- enabling text_available or description_available beyond the canonical manifest;
 - video/text/description/fusion model development;
 - dependency installation;
 - broad refactors;
@@ -98,188 +72,180 @@ Generated manifest/audit outputs are verification artifacts and MUST NOT be comm
 
 ## Implementation Requirements
 
-### 1. Reusable manifest builder
+### 1. Canonical manifest dataset
 
-Implement src/common/data/wsm_manifest.py with a deterministic reusable builder for the canonical segment manifest.
+Implement a lightweight dataset in src/fusion/data/wsm_manifest_datamodule.py that consumes canonical manifest rows only.
 
-The canonical output columns, in this exact order, are:
+Each sample must expose, at minimum:
 
-    segment_id
-    video_id
-    speaker_id
-    corpus
-    split
-    y_depression
-    y_parkinson
-    observed_depression
-    observed_parkinson
-    audio_available
-    video_available
-    text_available
-    description_available
+- segment_id;
+- video_id;
+- speaker_id;
+- corpus;
+- split;
+- targets: float tensor/array of shape [2] ordered [depression, parkinson];
+- observed_mask: bool tensor/array of shape [2] ordered [depression, parkinson];
+- modality_available: bool tensor/array of shape [4] ordered [audio, video, text, description].
 
-Requirements:
+Unknown targets must remain semantically unknown. For tensor batching, it is acceptable to use a neutral numeric placeholder only if and only if observed_mask=false for that element and the implementation explicitly prevents interpreting the placeholder as supervision. Prefer NaN if compatible with the collate/batch contract.
 
-- use the same raw source CSVs, delimiters, BAD_SEGMENTS exclusions, and existing test > dev > train video-level priority semantics audited in TASK-001A;
-- fail on missing/malformed required metadata instead of silently repairing it;
-- corpus values are exactly depression or parkinson;
-- split values are exactly train, dev, or test;
-- segment_id is deterministic and collision-free from the audited composite corpus + video_id + segment_file; use one documented stable string encoding and assert uniqueness;
-- speaker_id must be a null value for every row in this task;
-- depression rows:
-  - y_depression = raw diagnosis 0/1;
-  - y_parkinson = null;
-  - observed_depression = true;
-  - observed_parkinson = false;
-- Parkinson rows:
-  - y_depression = null;
-  - y_parkinson = raw diagnosis 0/1;
-  - observed_depression = false;
-  - observed_parkinson = true;
-- audio_available is true only when the audited segment WAV exists and is non-empty;
-- video_available is true only when the audited segment video exists and is non-empty;
-- text_available is false for every row in this task;
-- description_available is false for every row in this task.
+The dataset must assert:
 
-Use nullable data representation that preserves unknown disease labels through CSV round-trip without converting them to 0.
+- observed labels are 0/1;
+- unobserved labels are missing in the canonical row;
+- observed_mask exactly matches non-null target ownership;
+- no sample has both observed_mask values false;
+- modality availability comes directly from the canonical manifest.
 
-### 2. Manifest audit
+### 2. Chimera DataModule
 
-The reusable module must also produce a machine-readable audit containing at least:
+Implement a DataModule registered as:
 
-- schema/version identifier;
-- row counts per corpus/split;
-- observed positive/negative counts per disease and split;
-- unknown count per disease and split;
-- null speaker_id count;
-- speaker_independence_verified=false with the TASK-001A reason;
-- segment_id uniqueness/collision count;
-- video_id pairwise split-overlap counts after the existing split rule;
-- audio/video availability counts;
-- text_available count = 0 plus the TASK-001A video-level transcript source coverage 8549/8622 as source-only evidence;
-- description_available count = 0;
-- canonical manifest SHA-256 fingerprint over stable serialized manifest content;
-- flags confirming no pseudo-labels, no Test predictions inspected, no Test metrics inspected, and no model selection performed.
+    wsm_manifest_datamodule
 
-### 3. CLI
+It must accept at least:
 
-Implement scripts/common/build_wsm_manifest.py as a thin CLI around the reusable module.
+- data_root;
+- optional manifest_path;
+- optional manifest_audit_path.
 
-It must accept:
+Behavior:
 
-    --data-root
-    --manifest-output
-    --audit-output
+- if manifest_path is supplied, load and validate that canonical CSV;
+- otherwise build the canonical manifest in memory with build_manifest(data_root);
+- train_dataset contains only split=train;
+- val_dataset contains DEV only;
+- test_dataset contains Test only;
+- Test MUST NOT be inserted into val_dataset;
+- no TEST_NONE/SOFT/HARD filtering in this new datamodule;
+- no Test label-derived selection behavior.
 
-It must refuse to overwrite either output unless an explicit --overwrite flag is supplied.
+Use the project's existing DataModule style, but do not copy the legacy audio Test-in-validation behavior.
 
-It must refuse to write output inside src/, configs/, or docs/.
+### 3. Collation
 
-It must not modify the dataset source files.
+Provide a deterministic collate function suitable for a smoke batch.
 
-### 4. No Chimera registration yet
+The batch must contain:
 
-This task does not add a config-selectable component, so no registry/plugin change is required.
+- metadata lists for IDs/corpus/split;
+- targets with shape [B, 2];
+- observed_mask with shape [B, 2];
+- modality_available with shape [B, 4].
 
-Do not implement a datamodule here.
+The collate function does not need its own registry key unless it is config-selectable.
+
+### 4. Context description
+
+describe_context must expose at least:
+
+- data.num_tasks = 2;
+- data.task_names = ["depression", "parkinson"];
+- data.modality_names = ["audio", "video", "text", "description"];
+- data.manifest_schema/version when available;
+- data.speaker_independence_verified = false;
+- train/dev/test row counts.
+
+Do not expose any Test performance value.
+
+### 5. Plugin registration
+
+Update src/chimera_plugin.py to import the new registration module explicitly.
+
+A missing required project module must not be hidden as an optional dependency warning.
+
+Do not alter unrelated plugin registrations.
 
 ## Acceptance Criteria
 
-- canonical builder and CLI exist only in the allowed paths;
-- builder produces exactly the 13 required columns in the required order;
-- retained manifest has exactly 8622 rows under the currently audited dataset state;
-- row counts are train=6325, dev=933, test=1364;
-- segment_id is unique for all 8622 retained rows;
-- post-rule video_id overlap is zero across train/dev/test;
-- all speaker_id values are null and audit explicitly says speaker_independence_verified=false;
-- depression rows never contain a known y_parkinson value;
-- Parkinson rows never contain a known y_depression value;
-- unknown labels survive a CSV write/read round-trip as missing/null and are never 0-filled;
-- observed_* masks exactly match corpus ownership;
-- audio_available and video_available match real audited file existence;
-- text_available is false for all rows;
-- description_available is false for all rows;
-- audit contains a deterministic SHA-256 manifest fingerprint;
+- DATAMODULES contains wsm_manifest_datamodule after plugin registration;
+- plugin import emits no project-module warning;
+- train/dev/test row counts are exactly 6325 / 933 / 1364 under the current audited dataset state;
+- val_dataset contains DEV only;
+- test_dataset contains Test only;
+- no Test dataset/key/object is present in val_dataset;
+- one train smoke batch has targets shape [B,2], observed_mask [B,2], modality_available [B,4];
+- every observed target in the smoke batch is finite and 0/1;
+- unobserved positions are never treated as supervised negatives;
+- depression-corpus samples have mask [true,false];
+- Parkinson-corpus samples have mask [false,true];
+- text and description availability remain false under the current manifest;
+- speaker_id remains unresolved/null and speaker_independence_verified=false;
 - no Test predictions/performance metrics are inspected;
 - no training/model selection occurs;
-- no datamodule is created;
+- no src/audio change;
 - python compilation passes;
-- manifest verification assertions pass;
+- registry smoke passes;
+- dataset/collate smoke passes;
 - git diff --check passes;
-- git diff -- src/audio is empty;
-- task branch is codex/task-001b;
-- implementation commit is pushed to origin;
+- task branch is codex/task-001c;
+- implementation is committed and pushed to origin;
 - main/master is not modified by implementing Codex;
 - diff against origin/main contains only the four allowed tracked paths.
 
 ## Exact Verification Commands
 
-Run from repository root after creating the task branch.
+Run from repository root after creating codex/task-001c from the current origin/main.
 
-    python3 -m py_compile       src/common/data/__init__.py       src/common/data/wsm_manifest.py       scripts/common/build_wsm_manifest.py
+    python3 -m py_compile       src/fusion/data/__init__.py       src/fusion/data/wsm_manifest_datamodule.py       src/chimera_plugin.py
 
-    rm -f /tmp/wsm_stage1_manifest.csv /tmp/wsm_stage1_manifest_audit.json
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import warnings
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/common/build_wsm_manifest.py       --data-root /media/maxim/Databases/WSM_NEW       --manifest-output /tmp/wsm_stage1_manifest.csv       --audit-output /tmp/wsm_stage1_manifest_audit.json
+    from chimera_ml.core.registry import DATAMODULES
+    import chimera_plugin
 
-    PYTHONDONTWRITEBYTECODE=1 .venv/bin/python - <<'PY'
-    import json
-    from pathlib import Path
-    import pandas as pd
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        chimera_plugin.register()
 
-    manifest_path = Path("/tmp/wsm_stage1_manifest.csv")
-    audit_path = Path("/tmp/wsm_stage1_manifest_audit.json")
-
-    df = pd.read_csv(manifest_path)
-    audit = json.loads(audit_path.read_text(encoding="utf-8"))
-
-    required = [
-        "segment_id", "video_id", "speaker_id", "corpus", "split",
-        "y_depression", "y_parkinson",
-        "observed_depression", "observed_parkinson",
-        "audio_available", "video_available",
-        "text_available", "description_available",
+    project_warnings = [
+        str(item.message)
+        for item in caught
+        if "Failed to import" in str(item.message)
+        and "fusion.data.wsm_manifest_datamodule" in str(item.message)
     ]
+    assert not project_warnings, project_warnings
+    assert "wsm_manifest_datamodule" in DATAMODULES
+    print("registry assertions passed")
+    PY
 
-    assert list(df.columns) == required
-    assert len(df) == 8622
-    assert df["segment_id"].is_unique
-    assert df["speaker_id"].isna().all()
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import math
 
-    assert df.groupby("split").size().to_dict() == {
-        "dev": 933,
-        "test": 1364,
-        "train": 6325,
-    }
+    import torch
 
-    dep = df["corpus"] == "depression"
-    par = df["corpus"] == "parkinson"
+    from fusion.data.wsm_manifest_datamodule import WSMManifestDataModule
 
-    assert df.loc[dep, "y_depression"].notna().all()
-    assert df.loc[dep, "y_parkinson"].isna().all()
-    assert df.loc[par, "y_depression"].isna().all()
-    assert df.loc[par, "y_parkinson"].notna().all()
+    dm = WSMManifestDataModule(data_root="/media/maxim/Databases/WSM_NEW")
 
-    assert df.loc[dep, "observed_depression"].astype(bool).all()
-    assert (~df.loc[dep, "observed_parkinson"].astype(bool)).all()
-    assert (~df.loc[par, "observed_depression"].astype(bool)).all()
-    assert df.loc[par, "observed_parkinson"].astype(bool).all()
+    assert len(dm.train_dataset) == 6325
+    assert len(dm.val_dataset) == 933
+    assert len(dm.test_dataset) == 1364
 
-    assert not df["text_available"].astype(bool).any()
-    assert not df["description_available"].astype(bool).any()
+    assert all(dm.val_dataset[i]["split"] == "dev" for i in range(min(32, len(dm.val_dataset))))
+    assert all(dm.test_dataset[i]["split"] == "test" for i in range(min(32, len(dm.test_dataset))))
 
-    assert audit["speaker_independence_verified"] is False
-    assert audit["segment_identity"]["collision_count"] == 0
-    assert audit["split_overlap"]["any_video_overlap"] is False
-    assert audit["manifest_fingerprint"]["algorithm"] == "sha256"
-    assert len(audit["manifest_fingerprint"]["value"]) == 64
+    batch = dm.collate_fn([dm.train_dataset[i] for i in range(8)])
+    assert tuple(batch["targets"].shape) == (8, 2)
+    assert tuple(batch["observed_mask"].shape) == (8, 2)
+    assert tuple(batch["modality_available"].shape) == (8, 4)
 
-    assert audit["test_usage"]["model_predictions_inspected"] is False
-    assert audit["test_usage"]["performance_metrics_inspected"] is False
-    assert audit["test_usage"]["selection_or_tuning_performed"] is False
-    assert audit["pseudo_labels_created"] is False
+    for target, mask in zip(batch["targets"], batch["observed_mask"]):
+        assert bool(mask.any())
+        for value, observed in zip(target.tolist(), mask.tolist()):
+            if observed:
+                assert value in (0.0, 1.0)
+                assert math.isfinite(value)
 
-    print("canonical manifest assertions passed")
+    for sample in [dm.train_dataset[i] for i in range(min(128, len(dm.train_dataset)))]:
+        expected = [True, False] if sample["corpus"] == "depression" else [False, True]
+        assert sample["observed_mask"].tolist() == expected
+        assert sample["modality_available"].tolist()[2:] == [False, False]
+        assert sample["speaker_id"] is None
+
+    assert dm.speaker_independence_verified is False
+    print("manifest datamodule smoke passed")
     PY
 
     git diff --check
@@ -290,7 +256,7 @@ Run from repository root after creating the task branch.
 
 Before committing, inspect:
 
-    git diff --       src/common/data/__init__.py       src/common/data/wsm_manifest.py       scripts/common/build_wsm_manifest.py       docs/PROGRESS_EN.md
+    git diff --       src/fusion/data/__init__.py       src/fusion/data/wsm_manifest_datamodule.py       src/chimera_plugin.py       docs/PROGRESS_EN.md
 
 Then commit and push according to AGENTS.md.
 
@@ -308,33 +274,30 @@ After commit and push, verify:
 
 The final diff name list must contain only:
 
-    src/common/data/__init__.py
-    src/common/data/wsm_manifest.py
-    scripts/common/build_wsm_manifest.py
+    src/fusion/data/__init__.py
+    src/fusion/data/wsm_manifest_datamodule.py
+    src/chimera_plugin.py
     docs/PROGRESS_EN.md
 
 ## Required PROGRESS_EN Update
 
-Append TASK-001B facts without erasing prior evidence.
+Append TASK-001C facts without erasing prior evidence.
 
 Record:
 
 - exact branch name;
 - implementation commit SHA;
 - push result;
-- manifest row/split counts;
-- segment-id uniqueness;
-- video split-overlap result;
-- speaker_id null/unresolved status and speaker_independence_verified=false;
-- disease observed/unknown counts;
-- modality availability counts;
-- manifest fingerprint;
+- registration key;
+- train/dev/test counts;
+- proof that val contains DEV only and Test is separate;
+- batch target/mask/modality shapes;
+- exact unknown-target representation and why it cannot become supervised negative;
+- speaker_id unresolved/null and speaker_independence_verified=false;
 - exact verification commands/results;
-- confirmation that unknown disease labels remained null and were never mapped to negative;
 - confirmation src/audio stayed unchanged;
 - confirmation no Test predictions/metrics were inspected;
 - confirmation no training/model selection ran;
-- confirmation no datamodule was created;
 - Stage 1 remains partial;
 - recommended next atomic step only.
 
@@ -349,9 +312,9 @@ Respond in English using exactly these headings:
 5. Blockers and risks
 6. Next atomic step
 
-In the handoff explicitly state:
+Explicitly state:
 
-- branch: codex/task-001b;
+- branch: codex/task-001c;
 - implementation commit SHA;
 - whether the branch was pushed to origin;
 - that implementing Codex did not modify main/master;
@@ -359,4 +322,4 @@ In the handoff explicitly state:
 - src/audio unchanged;
 - Test predictions/metrics not inspected.
 
-Stop after this task. Do not implement the next Stage 1 task.
+Stop after this task. Do not implement a loss, training config, or later Stage 1/2 task.
