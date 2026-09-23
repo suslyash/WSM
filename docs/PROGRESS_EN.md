@@ -692,3 +692,73 @@ Metrics/artifacts: no training or cache artifacts were created. Stage 2 remains 
 Manager integration: PR #11 merged to main as 78aa592b0f8b068b12a75d1072386656d16dbc9f. The V1 registered model contract is accepted.
 
 Recommended next atomic task: add a strict train/dev split filter to the video cache extractor and build the complete V1 cache for TRAIN+DEV only; Test must remain untouched.
+
+### TASK-002G - Build the complete resumable V1 video feature cache for TRAIN+DEV only
+
+Status: implementation complete; Stage 2 remains partial pending video training/integration.
+
+Branch: codex/task-002g.
+Implementation commit: final task-branch HEAD; verify with git rev-parse HEAD.
+Push result: successful; origin/codex/task-002g created and pushed.
+
+Changed files:
+
+- scripts/video/extract_clip_video_features.py;
+- scripts/video/audit_video_cache.py;
+- docs/PROGRESS_EN.md.
+
+Implementation facts:
+
+- Added strict --splits parsing/filtering before source-path resolution or model inference. The authorized run used exactly train,dev; Test rows were never read, processed, or indexed.
+- Added --resume with exact fingerprint/artifact validation for segment identity, [60,512] features, bool [60] masks, finite valid features, exact-zero invalid features, pinned YOLO SHA, detector settings, and pinned CLIP identity.
+- Added atomic cache_index.jsonl updates after each row. Every selected row has exactly one extracted, reused, or failed record.
+- Added independent scripts/video/audit_video_cache.py; it performs no YOLO/CLIP extraction and independently validates selected rows, artifacts, fingerprints, failures, coverage, and Test exclusion.
+
+Persistent artifacts:
+
+- cache root: /media/maxim/Programs/Features/WSM/video_depart_v1/cache;
+- extraction report: /media/maxim/Programs/Features/WSM/video_depart_v1/extraction_report.json;
+- cache index: /media/maxim/Programs/Features/WSM/video_depart_v1/cache/cache_index.jsonl;
+- independent audit: /media/maxim/Programs/Features/WSM/video_depart_v1/cache_audit.json.
+
+Full TRAIN+DEV execution results:
+
+- requested splits: train,dev;
+- expected counts: train=6325, dev=933, total=7258;
+- extracted successes=6999;
+- reused successes=51;
+- failures=208;
+- no-body-detected=96;
+- other failures=112: invalid_cache=1 and invalid_extraction_contract=111;
+- Test rows processed/indexed=0;
+- pinned YOLO SHA-256: a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43;
+- pinned CLIP revision: b97b0100e55e367c057773c2a614676470b0d575;
+- target_frames=60 and detector settings remained confidence=0.5, IoU=0.5, imgsz=640.
+
+Independent audit results:
+
+- complete_for_requested_splits=true;
+- missing_record_count=0;
+- successful_artifacts_valid=true;
+- cache_fingerprints_unique=true;
+- success counts: train=6160, dev=890;
+- explicit failures: train=165, dev=43;
+- valid-artifact coverage: train count=6160, mean=0.8919561688, min=0.0166666667, max=1.0; dev count=890, mean=0.9023970037, min=0.0333333333, max=1.0; overall count=7050, mean=0.8932742317, min=0.0166666667, max=1.0;
+- all successful artifacts validated as [60,512] with bool masks, exact-zero invalid positions, finite valid positions, correct detector/CLIP metadata, chronological sampling, and unique fingerprints.
+
+Exact verification commands/results:
+
+- python3 -m py_compile scripts/video/extract_clip_video_features.py scripts/video/audit_video_cache.py - passed.
+- CLI --help showed --splits and --resume.
+- Two-row train-only resumability smoke - passed: first run extracted 2; identical second run reused 2 with no Test processing.
+- Full authorized TRAIN+DEV extractor with --splits train,dev --resume and no --limit - completed; final report selected_count=7258.
+- Independent audit helper - passed with exit code 0 and complete=true.
+- Required report assertions - passed for expected counts, zero Test rows, complete audit, valid artifacts, unique fingerprints, pinned YOLO SHA, pinned CLIP revision, target_frames, and Test firewall flags.
+- No dependency installation occurred; YOLO_AUTOINSTALL=false was set.
+- git diff --check - passed.
+- git diff -- src/audio - empty; src/audio remained unchanged.
+- No training, model selection, Test rows, Test predictions, or Test metrics ran.
+
+Deviation: 111 rows were recorded as invalid_extraction_contract because the existing sampler returns fewer than 60 temporal positions for short videos; the extractor preserved that established sampling semantics and recorded explicit failures. One stale invalid artifact from the interrupted first attempt was recorded as invalid_cache. No fake features were counted as successful.
+
+Recommended next atomic task: manager review of the complete TRAIN+DEV cache and explicit short-video coverage decision; then implement the next video data/model integration task without processing Test.
