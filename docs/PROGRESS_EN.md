@@ -839,3 +839,19 @@ Exact verification commands/results:
 Deviation/blocker: the 96 no_body_detected rows remain genuine extraction failures as required. The recovered short rows use their real sampled lengths, including the measured minimum T=3; later padding belongs to the future DataModule and was not implemented here.
 
 Recommended next atomic task: manager review of the variable-length cache and then implement the V1 video cache DataModule/collate contract with padding masks, without processing Test.
+
+
+### MANAGER-DECISION-004 — Accept TASK-002H variable-length cache recovery
+
+Status: accepted.
+
+- TASK-002H is integrated through PR #13 as 1374e0a759f3befc498d10a70b279ba72a926d7f.
+- Final TRAIN+DEV cache coverage is 7162 successful artifacts and 96 explicit no_body_detected failures.
+- Success counts are train=6255 and dev=907; failures are train=70 and dev=26.
+- Successful temporal lengths range from T=3 to T=60 with mean 59.5914549009; 112 successful artifacts are shorter than 60.
+- The 96 no_body_detected rows remain unavailable for unimodal video training and must not be represented by fake zero videos.
+- The next video DataModule must train/validate only on valid cached video artifacts while exposing explicit cache-coverage/unavailable counts in context/metadata.
+- Collation must pad real variable-length sequences only at batch time and combine padding with each artifact's existing valid_mask.
+- Test remains untouched and locked.
+
+Recommended next atomic task: implement/register the V1 video cache DataModule and collate contract for TRAIN+DEV only, with variable-length padding masks and masked sparse targets; do not create a training config or run training yet.
