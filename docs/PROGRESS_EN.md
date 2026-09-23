@@ -14,7 +14,7 @@ Final Test authorized: **no**.
 |---|---|---|---|
 | Paper/project analysis | complete | Baselines, structure, requirements, plan | BASELINES.md, PROJECT_INIT_STRUCTURE.md, PROJECT_REQUIREMENTS.md, PLAN.md |
 | 0. Reproducible base | complete | Canonical frozen audio config validates and registry/smoke gates pass | Verification records TASK-000-A and TASK-000B below |
-| 1. Manifest/partial-label contract | partial | Canonical manifest and separate DEV/Test consumer implemented; masked sparse loss contract and speaker-independence evidence remain | TASK-001A, TASK-001B, and TASK-001C below |
+| 1. Manifest/partial-label contract | partial | Canonical manifest, separate DEV/Test consumer, and observed-label masked loss implemented; speaker-independence evidence remains | TASK-001A through TASK-001D below |
 | 2. Video | not started | At most two families; DEV winner | None |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | not started | Comparable F0/F1/F2 | None |
@@ -41,7 +41,7 @@ Historical Test values came from an existing summary; they were not used for a n
 2. The AV YAML also lacks snapshot_callback and early_stopping_callback and monitors dev/mean_macro_f1 instead of dev/mean_score.
 3. The current audio datamodule still includes Test loaders in each validation epoch; this task did not change it.
 4. Authoritative speaker identity remains unresolved, so speaker-independence is not yet verified.
-5. Canonical DEV/Test separation is implemented for Stage 1+ methods; the next missing contract is observed-label-only masked loss.
+5. Canonical DEV/Test separation and observed-label-only masked loss are implemented. Stage 1 remains blocked on authoritative speaker identity / speaker-independence evidence.
 
 ## 5. Execution Log
 
@@ -291,7 +291,9 @@ Status: implementation complete; Stage 1 remains partial.
 
 Branch: codex/task-001d.
 Implementation commit SHA: 02df3e8524964bb88edfa0b438048202e429434c.
+Final branch HEAD: 90094215b3a6aafe98b5a6dceb24623f1a9de2b9.
 Push result: successful: origin/codex/task-001d created and pushed.
+Manager integration: PR #3 merged to main as d5bc6c5b128a5ca99070b04744dd1adc30a34390.
 
 Changed files:
 
