@@ -952,3 +952,43 @@ Status: accepted; supersedes prior wording that deferred Test evaluation.
 - Test metrics must not be consumed by checkpoint_callback, early_stopping_callback, threshold search, or automatic hyperparameter/model-selection logic.
 - The video DataModule must expose test_none/test_soft/test_hard as separate named evaluation streams; they must not be merged into val_dataset.
 - TASK-002J is updated in place to implement metric/callback support for all four epoch-level streams.
+
+
+### TASK-002J - Implement masked two-task DEV metrics for the V1 video pipeline
+
+Status: complete; Stage 2 remains partial pending video training/integration.
+
+Branch: codex/task-002j.
+Implementation commit: 52bf2f35b01714cf96d13330d53a4094fb40c627.
+Push result: successful; origin/codex/task-002j created and pushed.
+
+Changed files:
+
+- src/common/callbacks/wsm_segment_callback.py;
+- src/chimera_plugin.py;
+- docs/PROGRESS_EN.md.
+
+Implementation facts:
+
+- Preserved both wsm_segment_metrics_callback and wsm_audio_metrics_callback registry keys.
+- Added compute_sparse_two_task_metrics(logits, targets, observed_mask, prefix, task_names), using only observed finite binary targets, fixed logit threshold 0.0, binary confusion counts, class-defined UAR and MF1, Score=(UAR+MF1)/2, and prefix/mean_score as the arithmetic mean of the two task Scores.
+- The helper supports dev, test_none, test_soft, and test_hard with identical masked-label semantics and raises clearly for zero observed samples.
+- Canonical keys include P/depression/{num_samples,uar,mf1,score}, P/parkinson/{num_samples,uar,mf1,score}, P/mean_score, plus TN/FP/FN/TP audit counts. The exact selector key is dev/mean_score.
+- Native sparse CachedSplitOutputs are detected from [N,2] predictions/targets. The callback obtains observed_mask from cached mask fields when available, or from native sample metadata/corpus ownership for the current Chimera cache contract. Incompatible native two-task confusion panels are skipped; legacy panels and legacy metric aliases remain supported.
+- Native and legacy callback metrics are injected into logs and sent to MLflow when present. Test protocol keys are supported as mandatory future epoch-level comparative-monitoring outputs and are never used for selection.
+
+Exact verification commands/results:
+
+- python3 -m py_compile src/common/callbacks/wsm_segment_callback.py src/chimera_plugin.py — passed.
+- Callback registry smoke — passed: wsm_segment_metrics_callback and wsm_audio_metrics_callback registered.
+- Exact masked metric smoke — passed: both tasks UAR/MF1/Score and dev/mean_score equal 1.0; changing masked target values did not change metrics; zero-observation task raised ValueError.
+- Prefix smoke — passed for test_none, test_soft, and test_hard with the same key schema and values.
+- Native sparse callback smoke — passed: cached [N,2] logits/targets plus corpus metadata produced dev/depression/num_samples, dev/parkinson/score, and dev/mean_score=1.0.
+- git diff --check — passed; git diff -- src/audio — empty; src/audio remained unchanged.
+- No real Test data, Test metrics, or training run was executed in this implementation-only task.
+
+Selector and evaluation policy: dev/mean_score is the sole future checkpoint/early-stopping/model-selection key. TEST_NONE, TEST_SOFT, and TEST_HARD metrics are supported for every later epoch-level monitoring cycle but are comparative outputs only and cannot drive selection, thresholding, tuning, or architecture decisions.
+
+Deviation/blocker: the current Chimera CachedSplitOutputs type does not retain masks as a first-class field, so the callback uses its smallest compatible metadata/ownership fallback; future caches may provide observed_mask directly. Stage 2 remains partial.
+
+Recommended next atomic task: manager review, then integrate the metric callback with the V1 training/evaluation streams without running Test or selecting from Test metrics.
