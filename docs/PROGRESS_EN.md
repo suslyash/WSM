@@ -4,7 +4,7 @@
 
 Plan initialized: 2026-09-23.
 
-Current stage: **Stage 1 partially complete**.
+Current stage: **Stage 2 ready to start**.
 
 Final Test authorized: **no**.
 
@@ -14,7 +14,7 @@ Final Test authorized: **no**.
 |---|---|---|---|
 | Paper/project analysis | complete | Baselines, structure, requirements, plan | BASELINES.md, PROJECT_INIT_STRUCTURE.md, PROJECT_REQUIREMENTS.md, PLAN.md |
 | 0. Reproducible base | complete | Canonical frozen audio config validates and registry/smoke gates pass | Verification records TASK-000-A and TASK-000B below |
-| 1. Manifest/partial-label contract | partial | Canonical manifest, separate DEV/Test consumer, and observed-label masked loss implemented; speaker-independence evidence remains | TASK-001A through TASK-001D below |
+| 1. Manifest/partial-label contract | complete | Canonical manifest, separate DEV/Test consumer, masked sparse loss, zero video leakage, and owner-accepted speaker-independent split contract | TASK-001A through TASK-001E plus manager decision below |
 | 2. Video | not started | At most two families; DEV winner | None |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | not started | Comparable F0/F1/F2 | None |
@@ -40,8 +40,8 @@ Historical Test values came from an existing summary; they were not used for a n
 1. The existing AV YAML is legacy/non-runnable: wsm_segment_datamodule and wsm_avsync_loss are absent from the registry.
 2. The AV YAML also lacks snapshot_callback and early_stopping_callback and monitors dev/mean_macro_f1 instead of dev/mean_score.
 3. The current audio datamodule still includes Test loaders in each validation epoch; this task did not change it.
-4. Authoritative speaker identity remains unresolved, so speaker-independence is not yet verified.
-5. Canonical DEV/Test separation and observed-label-only masked loss are implemented. Stage 1 remains blocked on authoritative speaker identity / speaker-independence evidence.
+4. Authoritative speaker_id remains unavailable. The dataset owner explicitly accepts the existing train/dev/test partition as speaker-independent; this is an owner-provided assumption, not a measured identity audit.
+5. Canonical DEV/Test separation and observed-label-only masked loss are implemented. Stage 1 is closed under the owner-provided split assumption.
 
 ## 5. Execution Log
 
@@ -381,3 +381,19 @@ Exact verification commands and results:
 Stage 1 remains partial/blocked until a real authoritative speaker map is supplied and passes the leakage gate. The synthetic identities are not authoritative evidence.
 
 Recommended next atomic task: manager review or provision of the authoritative speaker map; do not infer speakers or begin Stage 2.
+
+
+### MANAGER-DECISION-001 — Accept current split as speaker-independent by owner contract
+
+Status: accepted.
+
+- The dataset owner explicitly stated that no speaker_id is available and directed the project to use the existing train/dev/test split as already speaker-independent.
+- speaker_id therefore remains null/unavailable in the canonical manifest. No speaker identity is inferred.
+- TASK-001E's speaker-map tooling remains available as optional future audit infrastructure but is no longer a Stage 1 gate requirement.
+- TASK-001F is superseded before implementation and must not be executed.
+- Video-level split independence remains empirically verified with zero overlap after the existing split rule.
+- Speaker independence is an owner-provided dataset assumption and must be described as such in research artifacts; it is not independently measured evidence.
+- Stage 1 gate is accepted as complete under this explicit owner decision.
+- Final Test remains locked.
+
+Recommended next atomic task: begin Stage 2 with reproducible video input/preprocessing and cache-contract audit only; do not train or compare video models yet.
