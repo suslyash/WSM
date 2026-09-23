@@ -855,3 +855,51 @@ Status: accepted.
 - Test remains untouched and locked.
 
 Recommended next atomic task: implement/register the V1 video cache DataModule and collate contract for TRAIN+DEV only, with variable-length padding masks and masked sparse targets; do not create a training config or run training yet.
+
+
+### TASK-002I - Implement the V1 video cache DataModule and variable-length collate contract
+
+Status: complete; Stage 2 remains partial pending later video training/integration.
+
+Branch: codex/task-002i.
+Implementation commit: to be recorded after commit.
+Push result: to be recorded after push.
+
+Changed files:
+
+- src/video/data/__init__.py;
+- src/video/data/wsm_video_cache_datamodule.py;
+- src/chimera_plugin.py;
+- docs/PROGRESS_EN.md.
+
+Implementation facts:
+
+- Registered wsm_video_depart_v1_datamodule and added an explicit plugin import with no project-module warning.
+- The DataModule consumes only canonical TRAIN/DEV rows and joins them to cache_index.jsonl by segment_id. Test cache rows are not selected or loaded; test_dataset is None and test_rows_loaded=0.
+- Every included artifact is validated for real 1 <= T <= 60 features [T,512], bool artifact valid_mask [T], finite valid features, exact-zero invalid features, matching segment_id/fingerprint, pinned CLIP identity/revision, pinned YOLO SHA/settings, target_frames=60 metadata, and chronological sampled indices.
+- Failed no_body_detected records are excluded and counted as unavailable; no zero-video or synthetic samples are fabricated.
+- The video-local collate pads each batch only to its real batch maximum T, preserves internal detector-missed mask positions, sets padding mask=false, and keeps padded features exact zero.
+- Samples preserve independent two-task targets: unknown targets remain NaN with observed_mask=false.
+
+Cache and context results:
+
+- cache root/index: /media/maxim/Programs/Features/WSM/video_depart_v1/cache and cache_index.jsonl;
+- train_dataset length=6255; val_dataset length=907;
+- unavailable counts: train=70, dev=26;
+- valid cache total=7162; explicit failures=96;
+- context contract exposed video_feature_dim=512, video_sequence_steps=60, variable_length=true, and test_rows_loaded=0.
+
+Exact verification commands/results:
+
+- python3 -m py_compile src/video/data/__init__.py src/video/data/wsm_video_cache_datamodule.py src/chimera_plugin.py — passed.
+- Chimera registry smoke — passed: wsm_video_depart_v1_datamodule registered; no project-module warning.
+- Real cache/DataModule smoke — passed: mixed short/full batch [2,60,512], bool video_mask [2,60], targets [2,2], observed_mask [2,2], V1 forward, masked sparse loss, finite loss=0.6383081674575806, finite backward gradients.
+- Context contract smoke — passed for all required fields and accepted counts.
+- Test firewall assertions — passed: Test rows loaded=0; train samples are train split and validation samples are dev split.
+- Internal detector-mask, ownership-mask, and masked-NaN assertions — passed.
+- git diff --check — passed; git diff -- src/audio — empty; src/audio remained unchanged.
+- No training, Test processing, Test predictions, or Test metrics ran.
+
+Deviation/blocker: the 96 no_body_detected rows remain explicitly unavailable as required. Later batching pads variable-length sequences, but no training DataModule integration or training configuration was created.
+
+Recommended next atomic task: manager review, then implement the next V1 video training/integration gate without processing Test.
