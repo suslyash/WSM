@@ -23,7 +23,7 @@ If docs/NEXT_TASK_EN.md is absent, contains more than one unrelated goal, or con
 - Do not begin the next PLAN stage after completing the current task.
 - Do not broaden a refactor because adjacent code could be improved.
 - Do not change BASELINES, SOTA_REVIEW_EN, PROJECT_REQUIREMENTS, or PLAN unless the task explicitly requests a documentation revision.
-- Do not commit, push, delete data, start a large training run, or install a dependency unless the task explicitly authorizes it.
+- Do not delete data, start a large training run, or install a dependency unless the task explicitly authorizes it.
 - Do not delegate to another agent unless the current user or NEXT_TASK_EN explicitly asks for delegation.
 
 Repository authority order:
@@ -36,7 +36,28 @@ Repository authority order:
 
 NEXT_TASK_EN cannot waive a project invariant unless the manager explicitly identifies and approves the exact requirement being changed.
 
-## 3. Non-negotiable project invariants
+## 3. Git branch and handoff workflow
+
+For every implementation task, Git handoff is mandatory unless the manager explicitly disables it for that task.
+
+- Never implement directly on `main` or `master`.
+- Before editing, run `git fetch origin` and inspect `git status --short`. Preserve all existing user changes.
+- Start from the current `origin/main` after the manager task commit is visible.
+- Create exactly one task branch named `codex/<task-id-lowercase>`, for example `codex/task-001b`.
+- If that local or remote branch already exists, do not overwrite, reset, reuse, or force-push it unless the manager explicitly authorizes reuse. Stop and report the conflict.
+- Keep the branch limited to the current atomic task. Do not mix manager-only task-file edits or unrelated cleanup into the implementation commit.
+- After all required verification passes and `docs/PROGRESS_EN.md` is updated, commit the allowed tracked changes with a message beginning with the task ID, for example `TASK-001B: build canonical manifest`.
+- Push the task branch to `origin` with upstream tracking.
+- Never push implementation commits directly to `main` or `master`.
+- Never force-push.
+- Never merge, rebase, cherry-pick into, or otherwise update `main`/`master` as part of an implementation task.
+- Do not open or merge a pull request unless the current task explicitly requests it.
+- The manager or user reviews the pushed branch and decides whether and how it is integrated.
+- If branch creation, commit, or push fails, do not fall back to another branch or to `main`; report the exact failure.
+
+Final verification must include the task branch name, `git status --short`, the implementation commit SHA, and a diff summary against `origin/main`.
+
+## 4. Non-negotiable project invariants
 
 ### Frozen audio
 
@@ -88,7 +109,7 @@ Checkpointing and early stopping use dev/mean_score in max mode.
 - Do not create a broad grid unless the manager explicitly changes PLAN.
 - Preserve failed and negative results in PROGRESS_EN.
 
-## 4. Implementation routine
+## 5. Implementation routine
 
 For every task:
 
@@ -104,7 +125,7 @@ For every task:
 
 Unit tests are optional, but registry/config validation and a forward/loss/backward smoke check are mandatory when relevant.
 
-## 5. Research integrity
+## 6. Research integrity
 
 - Keep corpus/task identity and labels out of generation prompts unless an approved ablation studies a task token.
 - Version manifests, prompts, model revisions, and feature caches.
@@ -113,7 +134,7 @@ Unit tests are optional, but registry/config validation and a forward/loss/backw
 - Without a dual-annotated audit subset, do not claim verified recovery of the truly missing disease label or comorbidity.
 - Do not claim that dynamic RA-STCH inherits fixed-weight STCH theory without a new proof.
 
-## 6. PROGRESS_EN update format
+## 7. PROGRESS_EN update format
 
 Do not erase previous evidence. Update the status table and append:
 
@@ -128,7 +149,7 @@ Do not erase previous evidence. Update the status table and append:
 
 Only the manager edits docs/NEXT_TASK_EN.md unless the current task explicitly transfers ownership.
 
-## 7. Required manager handoff
+## 8. Required manager handoff
 
 Respond in English with exactly:
 
@@ -139,4 +160,4 @@ Respond in English with exactly:
 5. Blockers and risks
 6. Next atomic step
 
-Give exact commands/results and clickable paths where useful. State whether src/audio stayed unchanged and whether any Test metrics were inspected.
+Give exact commands/results and clickable paths where useful. State whether src/audio stayed unchanged and whether any Test metrics were inspected. Also state the task branch name, implementation commit SHA, whether the branch was pushed to origin, and whether main/master was left untouched by the implementing Codex.
