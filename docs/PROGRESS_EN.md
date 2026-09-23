@@ -552,3 +552,51 @@ Metrics/artifacts: machine-readable report at /tmp/wsm_depart_002c/report.json; 
 Manager integration: PR #8 merged to main as d73b2aeac6692356d586cd5f33d72774fd0239d0. TASK-002C is accepted as partial/blocked evidence, not as a successful real extraction pass.
 
 Recommended next atomic task: provision/cache the approved pinned CLIP model revision through an explicitly authorized model-provisioning task, then rerun only this fixed six-segment audit; do not start full extraction or training.
+
+### TASK-002D - Provision the pinned CLIP revision and rerun the fixed six-segment real audit
+
+Status: blocked; the pinned model provisioned and loads locally, but the unchanged TASK-002B extractor has a concrete Transformers compatibility blocker and no successful artifact was produced.
+
+Branch: codex/task-002d.
+Implementation commit: 06fbb97.
+Push result: successful; origin/codex/task-002d created and pushed.
+
+Tracked change:
+
+- docs/PROGRESS_EN.md only.
+
+Pinned CLIP provisioning:
+
+- repository: openai/clip-vit-base-patch32;
+- revision: b97b0100e55e367c057773c2a614676470b0d575;
+- architecture: CLIP ViT-B/32;
+- HF_HOME: /media/maxim/Programs/Models/WSM/huggingface;
+- resolved snapshot: /media/maxim/Programs/Models/WSM/huggingface/hub/models--openai--clip-vit-base-patch32/snapshots/b97b0100e55e367c057773c2a614676470b0d575;
+- cached files: config.json, merges.txt, model.safetensors, preprocessor_config.json, pytorch_model.bin, special_tokens_map.json, tokenizer.json, tokenizer_config.json, vocab.json;
+- local-only CLIPProcessor load: passed;
+- local-only CLIPModel load: passed; model.eval() and projection dimension 512.
+- HF_HUB_CACHE had to be explicitly set to /media/maxim/Programs/Models/WSM/huggingface/hub because the environment default pointed elsewhere; no source semantics changed.
+
+Audit facts:
+
+- Existing pinned YOLO checkpoint SHA-256 recheck passed: a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43.
+- The exact TASK-002C six rows were attempted: train ["depression","-7UpRmNVJzQ","-7UpRmNVJzQ_001.mp4"], ["depression","-7UpRmNVJzQ","-7UpRmNVJzQ_002.mp4"], ["depression","-7UpRmNVJzQ","-7UpRmNVJzQ_003.mp4"]; dev ["depression","3SYkj_mya6A","3SYkj_mya6A_001.mp4"], ["depression","3SYkj_mya6A","3SYkj_mya6A_002.mp4"], ["depression","3SYkj_mya6A","3SYkj_mya6A_003.mp4"].
+- CUDA was used. All six preflight temporal lengths remained 60: train source frames 376, 293, 243; dev source frames 394, 376, 147.
+- Test rows processed: zero. Success count=0, failure count=6, no-body-detected count=0, other extraction failures=6, detection coverage unavailable, and zero cache artifacts were produced.
+- Exact blocker for every row: AttributeError: 'BaseModelOutputWithPooling' object has no attribute 'ndim'. The unchanged extractor fallback calls vision_model(...).pooler_output, but the installed pinned Transformers runtime returns a BaseModelOutputWithPooling object there. TASK-002D forbids source changes, so this was not repaired.
+- No package auto-install was attempted in TASK-002D. YOLO_AUTOINSTALL=false was set.
+
+Exact verification commands/results:
+
+- HF_HOME=/media/maxim/Programs/Models/WSM/huggingface YOLO_AUTOINSTALL=false .venv/bin/python snapshot_download at the pinned revision - passed; resolved snapshot recorded above.
+- HF_HOME=/media/maxim/Programs/Models/WSM/huggingface HF_HUB_CACHE=/media/maxim/Programs/Models/WSM/huggingface/hub YOLO_AUTOINSTALL=false .venv/bin/python local-only CLIPProcessor/CLIPModel load - passed.
+- sha256sum /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt - passed with the expected SHA-256.
+- rm -rf /tmp/wsm_depart_002d followed by the exact fixed six-segment audit command with --model-revision b97b0100e55e367c057773c2a614676470b0d575 --target-frames 60 --device cuda - completed with exit code 2 and report status partial_blocked_no_success.
+- Report validation passed for six selected rows, exact IDs, zero Test usage, target_frames=60, no short-video blockers, and unchanged YOLO SHA; success_count>=1 could not pass because the extractor blocker remains.
+- git diff --check - passed.
+- git diff -- src/audio - empty; src/audio remained unchanged.
+- No full extraction, training, model selection, Test rows, Test predictions, or Test metrics ran.
+
+Metrics/artifacts: /tmp/wsm_depart_002d/report.json records the six failures; /tmp/wsm_depart_002d/cache contains no successful cache artifact. Stage 2 remains partial.
+
+Recommended next atomic task: repair the explicitly identified Transformers output-unwrapping compatibility defect in the video extractor under a new authorized source-change task, then rerun only this fixed six-segment audit.
