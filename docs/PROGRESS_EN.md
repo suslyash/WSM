@@ -290,7 +290,7 @@ Recommended next atomic task: implement the masked sparse loss/data contract con
 Status: implementation complete; Stage 1 remains partial.
 
 Branch: codex/task-001d.
-Implementation commit SHA: 02df3e8c7c4c32bf34e945be25f210ac1521561c.
+Implementation commit SHA: 02df3e8524964bb88edfa0b438048202e429434c.
 Push result: successful: origin/codex/task-001d created and pushed.
 
 Changed files:
