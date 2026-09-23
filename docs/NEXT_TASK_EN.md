@@ -1,4 +1,4 @@
-# TASK-002C: Provision the Pinned DEPART YOLOv8 Checkpoint and Run a Limited Real Extraction Audit
+# TASK-002D: Provision the Pinned CLIP Revision and Rerun the Fixed Six-Segment Real Audit
 
 ## Role
 
@@ -6,292 +6,342 @@ You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.
 
 Required branch:
 
-    codex/task-002c
+    codex/task-002d
 
 Do not run full-dataset feature extraction, do not train any model, do not implement V2/prototypes, and do not inspect Test predictions or Test metrics.
 
 ## Goal
 
-Provision the exact DEPART-referenced YOLOv8 human-body checkpoint from its pinned upstream source and run a small real-data extraction audit through the accepted TASK-002B pipeline.
+Resolve the TASK-002C blocker by provisioning a pinned local snapshot of the approved frozen CLIP visual encoder and rerunning exactly the same fixed six-segment real DEPART extraction audit.
 
-This task is the first real end-to-end validation of:
+No preprocessing semantics may change in this task.
 
-    real video
-      -> uniform temporal sampling
-      -> YOLOv8 human-body ROI
-      -> frozen CLIP
-      -> [T,D] temporal cache artifact + validity mask
-      -> machine-readable coverage/failure report
+The expected end-to-end path is:
 
-The purpose is to verify that the real detector checkpoint, real local videos, CLIP runtime, temporal masking, and cache serialization work together before any full-cache extraction.
+    fixed 3 train + 3 dev real segments
+      -> uniform 60-frame temporal sampling
+      -> pinned YOLOv8 human-body ROI
+      -> pinned frozen CLIP ViT-B/32
+      -> [60,D] cache artifact + validity mask
+      -> machine-readable audit
 
-## Pinned Detector Source
+## Pinned CLIP Source
 
 Use exactly:
 
-- upstream repository: J3lly-Been/YOLOv8-HumanDetection
-- upstream commit containing the checkpoint: ce2aae2e821100aee58ce2e7f75994a7e6c2ab9e
-- file: best.pt
-- Git blob SHA: afa44d4fcd0ff54691912bf8960d4fbb98ae1278
+- Hugging Face repository: openai/clip-vit-base-patch32
+- pinned revision: b97b0100e55e367c057773c2a614676470b0d575
+- architecture: CLIP ViT-B/32
 
-Do not use a different checkpoint and do not use a floating branch as the provenance record.
+Do not use a floating main revision.
 
-The checkpoint binary itself must NOT be committed to the WSM repository.
+The model snapshot must remain outside the WSM repository.
+
+## Existing Pinned YOLO Source
+
+Reuse the already provisioned TASK-002C checkpoint:
+
+- local path: /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt
+- expected local SHA-256:
+  a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43
+
+Do not redownload or replace it unless the file is missing or its SHA-256 differs.
 
 ## Required Reading
 
 1. AGENTS.md
 2. docs/PROJECT_REQUIREMENTS.md Sections 7-10 and 13-14
 3. Stage 2 in docs/PLAN.md
-4. docs/PROGRESS_EN.md through TASK-002B
+4. docs/PROGRESS_EN.md through TASK-002C
 5. docs/NEXT_TASK_EN.md
-6. src/video/features/yolov8_body_roi.py
+6. scripts/video/audit_depart_real_extraction.py
 7. src/video/features/clip_video_features.py
-8. scripts/video/extract_clip_video_features.py
-9. src/common/data/wsm_manifest.py
+8. src/video/features/yolov8_body_roi.py
 
 ## Allowed Tracked Files
 
-- scripts/video/audit_depart_real_extraction.py
 - docs/PROGRESS_EN.md
 
-No other tracked file may be modified.
+No source-code modification is expected or authorized in this task.
+
+If the existing audit helper cannot run successfully after correct model provisioning, stop and report the exact code blocker. Do not modify the helper or extractor in this task.
 
 Untracked/local artifacts are allowed only under:
 
+    /media/maxim/Programs/Models/WSM/huggingface/
     /media/maxim/Programs/Models/WSM/depart_yolov8/
-    /tmp/wsm_depart_002c/
+    /tmp/wsm_depart_002d/
 
-Do not commit model weights or cache artifacts.
+Do not commit model files or cache artifacts.
 
 ## Explicitly Authorized External Action
 
-You are authorized in this task to download the pinned upstream best.pt checkpoint from the repository/commit above to:
+You are authorized to download/cache the pinned CLIP snapshot from Hugging Face into:
 
-    /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt
+    HF_HOME=/media/maxim/Programs/Models/WSM/huggingface
 
 Do not install dependencies.
 
-Do not download any other model weights.
+Do not download any unrelated model.
 
-If the file already exists:
+Use the pinned revision, not main.
 
-- compute its SHA-256;
-- verify its provenance if possible;
-- do not overwrite it unless it is byte-identical to the pinned source or the task explicitly records why replacement is required.
+Prefer snapshot_download with allow_patterns limited to the files needed by Transformers CLIPModel/CLIPProcessor, including as applicable:
 
-## Implementation Requirements
+- config.json
+- preprocessor_config.json
+- model.safetensors
+- pytorch_model.bin
+- merges.txt
+- vocab.json
+- tokenizer.json
+- tokenizer_config.json
+- special_tokens_map.json
 
-### 1. Audit helper
+If snapshot_download reports that one of these optional alternatives is absent, that alone is not a failure provided CLIPModel and CLIPProcessor load successfully from the pinned revision with local_files_only=true.
 
-Create scripts/video/audit_depart_real_extraction.py as a small orchestration/audit helper around the accepted extractor.
+## Implementation / Execution Requirements
 
-Required arguments:
+### 1. Provision pinned CLIP snapshot
 
-    --data-root
-    --yolo-weights
-    --cache-root
-    --report-output
-    --per-split
+Set:
 
-Optional:
+    export HF_HOME=/media/maxim/Programs/Models/WSM/huggingface
 
-    --device
-    --model-name
-    --model-revision
-    --target-frames
-    --overwrite
+Use huggingface_hub.snapshot_download with:
 
-Defaults:
+    repo_id="openai/clip-vit-base-patch32"
+    revision="b97b0100e55e367c057773c2a614676470b0d575"
 
-    --per-split 3
-    --target-frames 60
-    --model-name openai/clip-vit-base-patch32
-    --model-revision main
+Do not install huggingface_hub; use the environment's existing package.
 
-The helper must:
+After provisioning, verify with local-only loads:
 
-- build the canonical manifest in memory;
-- select a deterministic small structural sample from train and dev only;
-- select exactly N rows per split when enough eligible rows exist;
-- do not use Test rows in this task;
-- preserve deterministic ordering, e.g. sorted by segment_id before taking the first N;
-- call the real TASK-002B extraction pipeline, not a mock;
-- write cache artifacts under the supplied cache root;
-- write one JSON audit report.
+    CLIPProcessor.from_pretrained(
+        "openai/clip-vit-base-patch32",
+        revision="b97b0100e55e367c057773c2a614676470b0d575",
+        local_files_only=True,
+    )
 
-### 2. Real extraction sample policy
+and:
 
-Use:
+    CLIPModel.from_pretrained(
+        "openai/clip-vit-base-patch32",
+        revision="b97b0100e55e367c057773c2a614676470b0d575",
+        local_files_only=True,
+    )
 
-- train: 3 real video segments;
-- dev: 3 real video segments;
-- Test: 0.
+Record the resolved snapshot directory and file list in PROGRESS_EN.md.
 
-Total target sample: 6 real segments.
+### 2. Verify YOLO checkpoint unchanged
 
-If fewer than 3 eligible rows exist in a split, fail clearly rather than silently changing the sample definition.
+Before rerunning the audit:
 
-No labels, diagnosis values, corpus identity, or task masks may be passed to YOLO or CLIP.
+    sha256sum /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt
 
-### 3. Checkpoint provenance record
+It must equal:
 
-The JSON audit must record:
+    a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43
 
-- upstream repository;
-- upstream commit;
-- upstream file path;
-- Git blob SHA;
-- local checkpoint path;
-- local checkpoint file size;
-- local checkpoint SHA-256;
-- ultralytics package version;
-- CLIP/transformers package version;
-- torch version;
-- WSM git commit SHA/dirty flag if obtainable.
+If not, stop and report.
 
-Do not claim the local SHA-256 is authoritative until computed from the downloaded file.
+### 3. Rerun the exact TASK-002C fixed audit
 
-### 4. Real cache validation
+Use the existing helper unchanged:
 
-For every successful segment artifact verify:
+    scripts/video/audit_depart_real_extraction.py
 
-- cache file exists;
-- features is rank 2;
-- valid_mask is bool rank 1;
-- features.shape[0] == valid_mask.shape[0];
-- temporal positions preserve sampled-frame order;
-- invalid masked positions are exactly zero;
-- valid positions are finite;
-- detector weights SHA-256 in artifact equals the local checkpoint SHA-256;
-- detector settings equal conf=0.5, IoU=0.5, imgsz=640;
-- target_frames requested is 60;
-- cache fingerprint exists and is unique among the sampled segments.
+The deterministic selected segment IDs must remain exactly:
 
-Important preflight:
+Train:
+- ["depression","-7UpRmNVJzQ","-7UpRmNVJzQ_001.mp4"]
+- ["depression","-7UpRmNVJzQ","-7UpRmNVJzQ_002.mp4"]
+- ["depression","-7UpRmNVJzQ","-7UpRmNVJzQ_003.mp4"]
 
-- if any selected source video yields fewer than 60 sampled temporal positions because the current sampler returns frame_count positions for short videos, record this as a blocker and STOP without modifying the extractor in this task;
-- do not silently change sampling semantics here.
+DEV:
+- ["depression","3SYkj_mya6A","3SYkj_mya6A_001.mp4"]
+- ["depression","3SYkj_mya6A","3SYkj_mya6A_002.mp4"]
+- ["depression","3SYkj_mya6A","3SYkj_mya6A_003.mp4"]
 
-### 5. Audit report
+Test rows processed: zero.
 
-The JSON report must contain at least:
+Run with:
 
-- schema/version;
-- pinned checkpoint provenance;
-- manifest fingerprint;
-- deterministic selected segment IDs by split;
-- requested target_frames;
-- per-segment:
-  - split;
-  - success/failure;
-  - failure category/reason;
-  - source frame count;
-  - temporal length;
-  - valid detection count;
-  - detection coverage;
-  - cache path if successful;
-  - cache fingerprint if successful;
-- aggregate:
-  - selected count;
-  - success count;
-  - failure count;
-  - no-body-detected count;
-  - other extraction failure count;
-  - mean/min/max detection coverage over successful segments;
-  - all_temporal_lengths_equal_60;
-- test_usage:
-  - test_rows_processed=false;
-  - model_predictions_inspected=false;
-  - performance_metrics_inspected=false;
-  - selection_or_tuning_performed=false.
+- target_frames=60
+- YOLO conf=0.5
+- YOLO IoU=0.5
+- YOLO imgsz=640
+- pinned CLIP revision above
+- CUDA if available; otherwise CPU with the deviation recorded.
+
+### 4. Real artifact verification
+
+For every successful cache artifact, require:
+
+- temporal length exactly 60;
+- features shape [60,D];
+- valid_mask bool [60];
+- invalid positions exactly zero;
+- valid positions finite;
+- selected frame indices chronological;
+- detector weights SHA-256 equals the TASK-002C pinned YOLO SHA-256;
+- CLIP model name equals openai/clip-vit-base-patch32;
+- CLIP model revision equals b97b0100e55e367c057773c2a614676470b0d575;
+- detection parameters are conf=0.5, IoU=0.5, imgsz=640;
+- unique cache fingerprints across the six attempted rows.
+
+At least one successful cache artifact is required to clear the TASK-002C blocker.
+
+### 5. Runtime side effects
+
+Before launching Ultralytics:
+
+    export YOLO_AUTOINSTALL=false
+
+No package installation is authorized.
+
+If any package auto-install is attempted again, stop and record the exact behavior.
 
 ### 6. No full extraction
 
-The helper must be structurally incapable of processing the full manifest by default.
+Only the existing fixed six-row audit is authorized.
 
-This task may process only the fixed small train/dev audit sample.
-
-Do not reuse the generic full extractor with no limit.
+Do not run scripts/video/extract_clip_video_features.py over the full manifest.
 
 ## Acceptance Criteria
 
-- pinned best.pt is downloaded or already present locally;
-- pinned source repo/commit/path/blob are recorded;
-- local SHA-256 is computed and recorded;
-- real ultralytics detector runs on real videos;
-- real frozen CLIP path runs on real body crops;
-- exactly 3 train + 3 dev rows are attempted;
+- pinned CLIP revision is cached locally outside the repo;
+- local-only CLIPProcessor load succeeds;
+- local-only CLIPModel load succeeds;
+- pinned YOLO SHA-256 remains unchanged;
+- exactly the same 3 train + 3 dev segments are attempted;
 - zero Test rows are processed;
-- at least one successful real cache artifact is produced; if zero succeed, task is partial/blocked and must not claim pass;
-- every successful artifact passes structural validation;
-- any short-video T<60 issue is reported as a blocker, not silently fixed;
-- no full-dataset extraction;
+- all six temporal preflight lengths remain 60;
+- at least one real cache artifact succeeds;
+- successful artifacts pass all structural checks;
+- detection coverage is reported for successful rows;
+- no dependency/package installation occurs;
+- no full extraction;
 - no training/model selection;
 - no Test predictions/metrics;
 - src/audio unchanged;
-- python compilation passes;
 - git diff --check passes;
-- branch codex/task-002c is committed and pushed;
-- main/master is untouched by implementing Codex;
-- tracked diff contains only the two allowed paths.
+- branch codex/task-002d is committed and pushed;
+- main/master is untouched;
+- tracked diff contains only docs/PROGRESS_EN.md.
+
+If success_count remains zero, TASK-002D is blocked and must identify the exact next blocker without changing source code.
 
 ## Exact Verification Commands
 
 Run from repository root.
 
-    python3 -m py_compile scripts/video/audit_depart_real_extraction.py
+First provision CLIP:
 
-Provision the pinned checkpoint to:
+    export HF_HOME=/media/maxim/Programs/Models/WSM/huggingface
+    export YOLO_AUTOINSTALL=false
 
-    /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt
+    PYTHONDONTWRITEBYTECODE=1 .venv/bin/python - <<'PY'
+    from huggingface_hub import snapshot_download
 
-Record:
+    path = snapshot_download(
+        repo_id="openai/clip-vit-base-patch32",
+        revision="b97b0100e55e367c057773c2a614676470b0d575",
+        cache_dir="/media/maxim/Programs/Models/WSM/huggingface/hub",
+        allow_patterns=[
+            "config.json",
+            "preprocessor_config.json",
+            "model.safetensors",
+            "pytorch_model.bin",
+            "merges.txt",
+            "vocab.json",
+            "tokenizer.json",
+            "tokenizer_config.json",
+            "special_tokens_map.json",
+        ],
+    )
+    print(path)
+    PY
+
+Verify local-only load:
+
+    PYTHONDONTWRITEBYTECODE=1 .venv/bin/python - <<'PY'
+    from transformers import CLIPModel, CLIPProcessor
+
+    repo = "openai/clip-vit-base-patch32"
+    revision = "b97b0100e55e367c057773c2a614676470b0d575"
+
+    processor = CLIPProcessor.from_pretrained(
+        repo,
+        revision=revision,
+        local_files_only=True,
+    )
+    model = CLIPModel.from_pretrained(
+        repo,
+        revision=revision,
+        local_files_only=True,
+    )
+    model.eval()
+
+    print(type(processor).__name__)
+    print(type(model).__name__)
+    PY
+
+Verify YOLO checksum:
 
     sha256sum /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt
 
-Then run only the small real audit:
+Rerun only the fixed audit:
 
-    rm -rf /tmp/wsm_depart_002c
+    rm -rf /tmp/wsm_depart_002d
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
-      scripts/video/audit_depart_real_extraction.py \
-      --data-root /media/maxim/Databases/WSM_NEW \
-      --yolo-weights /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt \
-      --cache-root /tmp/wsm_depart_002c/cache \
-      --report-output /tmp/wsm_depart_002c/report.json \
-      --per-split 3 \
-      --target-frames 60 \
-      --device cuda
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/video/audit_depart_real_extraction.py       --data-root /media/maxim/Databases/WSM_NEW       --yolo-weights /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt       --cache-root /tmp/wsm_depart_002d/cache       --report-output /tmp/wsm_depart_002d/report.json       --per-split 3       --target-frames 60       --model-name openai/clip-vit-base-patch32       --model-revision b97b0100e55e367c057773c2a614676470b0d575       --device cuda
 
-If CUDA is unavailable, rerun with --device cpu and record that deviation.
+If CUDA is unavailable, rerun with --device cpu and record the deviation.
 
-Validate the report:
+Validate:
 
     PYTHONDONTWRITEBYTECODE=1 .venv/bin/python - <<'PY'
     import json
     from pathlib import Path
 
-    report = json.loads(Path("/tmp/wsm_depart_002c/report.json").read_text(encoding="utf-8"))
+    report = json.loads(Path("/tmp/wsm_depart_002d/report.json").read_text(encoding="utf-8"))
 
     assert report["selected_count"] == 6
     assert report["selected_by_split"]["train"] == 3
     assert report["selected_by_split"]["dev"] == 3
+
+    expected_train = [
+        '["depression","-7UpRmNVJzQ","-7UpRmNVJzQ_001.mp4"]',
+        '["depression","-7UpRmNVJzQ","-7UpRmNVJzQ_002.mp4"]',
+        '["depression","-7UpRmNVJzQ","-7UpRmNVJzQ_003.mp4"]',
+    ]
+    expected_dev = [
+        '["depression","3SYkj_mya6A","3SYkj_mya6A_001.mp4"]',
+        '["depression","3SYkj_mya6A","3SYkj_mya6A_002.mp4"]',
+        '["depression","3SYkj_mya6A","3SYkj_mya6A_003.mp4"]',
+    ]
+
+    assert report["selected_by_split"]["train"] == expected_train
+    assert report["selected_by_split"]["dev"] == expected_dev
+
     assert report["test_usage"]["test_rows_processed"] is False
     assert report["test_usage"]["model_predictions_inspected"] is False
     assert report["test_usage"]["performance_metrics_inspected"] is False
     assert report["test_usage"]["selection_or_tuning_performed"] is False
 
-    assert report["checkpoint"]["upstream_repository"] == "J3lly-Been/YOLOv8-HumanDetection"
-    assert report["checkpoint"]["upstream_commit"] == "ce2aae2e821100aee58ce2e7f75994a7e6c2ab9e"
-    assert report["checkpoint"]["upstream_path"] == "best.pt"
-    assert report["checkpoint"]["git_blob_sha"] == "afa44d4fcd0ff54691912bf8960d4fbb98ae1278"
-    assert len(report["checkpoint"]["local_sha256"]) == 64
+    assert report["requested_target_frames"] == 60
+    assert not report["short_video_blockers"]
 
-    if report["success_count"] > 0:
-        assert report["all_success_artifacts_valid"] is True
+    assert report["checkpoint"]["local_sha256"] == (
+        "a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43"
+    )
 
-    print("TASK-002C limited real extraction audit assertions passed")
+    assert report["success_count"] >= 1
+    assert report["all_success_artifacts_valid"] is True
+    assert report["cache_fingerprints_unique"] is True
+
+    print("TASK-002D pinned CLIP real extraction audit passed")
     PY
 
 Then:
@@ -300,11 +350,9 @@ Then:
     git diff -- src/audio
     git status --short
 
-Before committing inspect only:
+Before commit, the only tracked diff must be:
 
-    git diff -- \
-      scripts/video/audit_depart_real_extraction.py \
-      docs/PROGRESS_EN.md
+    docs/PROGRESS_EN.md
 
 After commit/push:
 
@@ -316,26 +364,30 @@ After commit/push:
 
 ## Required PROGRESS_EN Update
 
-Append TASK-002C facts without erasing previous evidence.
+Append TASK-002D facts without erasing prior evidence.
 
 Record:
 
 - branch;
 - implementation commit SHA;
 - push result;
-- pinned upstream checkpoint repository/commit/path/blob;
-- local checkpoint SHA-256 and file size;
-- whether CUDA or CPU was used;
-- exact six selected train/dev segment IDs;
-- per-segment success/failure and detection coverage;
+- pinned CLIP repo/revision;
+- HF_HOME and resolved snapshot directory;
+- cached model file list sufficient for local-only load;
+- local-only CLIPProcessor/CLIPModel load result;
+- pinned YOLO SHA-256 recheck;
+- exact same six selected segment IDs;
+- device used;
+- per-segment success/failure;
+- detection coverage;
 - temporal lengths;
-- cache artifact structural validation;
-- whether any T<60 short-video blocker appeared;
+- artifact structural validation;
+- whether any package auto-install was attempted;
 - exact commands/results;
-- confirmation no Test rows were processed;
-- confirmation no full extraction ran;
-- confirmation src/audio unchanged;
-- confirmation no training/model selection/Test metrics;
+- zero Test rows;
+- no full extraction;
+- src/audio unchanged;
+- no training/model selection/Test metrics;
 - Stage 2 remains partial;
 - recommended next atomic step only.
 
@@ -352,18 +404,20 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch codex/task-002c;
+- branch codex/task-002d;
 - implementation commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
-- diff summary against origin/main;
-- local YOLO checkpoint SHA-256;
-- six attempted train/dev segments;
+- diff summary;
+- pinned CLIP revision;
+- local-only CLIP load result;
+- six attempted segments;
 - success/failure counts;
 - detection coverage summary;
-- whether any short-video T<60 blocker appeared;
+- YOLO SHA-256;
+- whether any package installation occurred;
 - src/audio unchanged;
-- no Test rows/metrics;
+- zero Test rows/metrics;
 - no full extraction/training.
 
 Stop after this task.
