@@ -762,3 +762,19 @@ Exact verification commands/results:
 Deviation: 111 rows were recorded as invalid_extraction_contract because the existing sampler returns fewer than 60 temporal positions for short videos; the extractor preserved that established sampling semantics and recorded explicit failures. One stale invalid artifact from the interrupted first attempt was recorded as invalid_cache. No fake features were counted as successful.
 
 Recommended next atomic task: manager review of the complete TRAIN+DEV cache and explicit short-video coverage decision; then implement the next video data/model integration task without processing Test.
+
+
+### MANAGER-DECISION-003 — Accept real variable-length V1 sequences up to 60 frames
+
+Status: accepted after TASK-002G cache audit.
+
+- TASK-002G is accepted and integrated through PR #12 as 96de6a07e65505cc61f568f800254fb14eb9d819.
+- The 111 invalid_extraction_contract rows are short source videos whose deterministic sampler returns fewer than 60 real temporal positions.
+- These rows must not be expanded by duplicating frames or synthesizing temporal positions.
+- The V1 model contract already supports T <= 60 and mask-aware batching, so valid cached sequences with 1 <= T <= 60 are accepted.
+- Batch padding, if needed, belongs only in the later cache DataModule/collate and must use video_mask=false for padded positions.
+- The 96 no_body_detected rows remain genuine extraction failures; no fake visual feature may be created for them.
+- The single stale invalid cache may be overwritten only with an artifact produced under the exact pinned V1 extraction contract.
+- Test remains untouched and locked.
+
+Recommended next atomic task: relax only cache structural validation to accept real 1<=T<=60 sequences, rerun TRAIN+DEV in resume mode to recover the short-video rows and stale artifact, independently audit the final coverage, and leave no-body failures explicit.
