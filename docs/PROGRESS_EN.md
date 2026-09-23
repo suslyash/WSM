@@ -500,3 +500,53 @@ Deviations/blockers: real YOLO weights were unavailable, so verification used in
 Manager integration: original PR #6 conflicted after manager-side main updates and was closed unmerged. Accepted TASK-002B was replayed onto current main via manager integration PR #7 and merged as c23df08c46b5ab98c8d530581535d552edd9406f.
 
 Recommended next atomic task: provision the pinned DEPART-referenced YOLOv8 human-body checkpoint and run a limited real cache extraction audit; do not run full extraction or model training yet.
+
+### TASK-002C - Provision the pinned DEPART YOLOv8 checkpoint and run a limited real extraction audit
+
+Status: partial/blocked; no successful real cache artifact was produced because the frozen CLIP processor/model was unavailable locally and this task did not authorize downloading another model.
+
+Branch: codex/task-002c.
+Implementation commit: recorded after verification.
+Push result: to be recorded after push.
+
+Changed files:
+
+- scripts/video/audit_depart_real_extraction.py;
+- docs/PROGRESS_EN.md.
+
+Pinned checkpoint provenance:
+
+- upstream repository: J3lly-Been/YOLOv8-HumanDetection;
+- upstream commit: ce2aae2e821100aee58ce2e7f75994a7e6c2ab9e;
+- upstream path: best.pt;
+- Git blob SHA: afa44d4fcd0ff54691912bf8960d4fbb98ae1278;
+- local path: /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt;
+- local size: 6259289 bytes;
+- local SHA-256: a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43;
+- the checkpoint binary is not tracked or committed.
+
+Implementation/audit facts:
+
+- Added a fixed-sample helper that builds the canonical manifest in memory, deterministically selects exactly three video-available train rows and three dev rows, processes zero Test rows, and cannot run the full manifest by default.
+- The selected train segment IDs were ["depression","-7UpRmNVJzQ","-7UpRmNVJzQ_001.mp4"], ["depression","-7UpRmNVJzQ","-7UpRmNVJzQ_002.mp4"], and ["depression","-7UpRmNVJzQ","-7UpRmNVJzQ_003.mp4"].
+- The selected dev segment IDs were ["depression","3SYkj_mya6A","3SYkj_mya6A_001.mp4"], ["depression","3SYkj_mya6A","3SYkj_mya6A_002.mp4"], and ["depression","3SYkj_mya6A","3SYkj_mya6A_003.mp4"].
+- Source frame counts/temporal lengths were train 376/60, 293/60, 243/60 and dev 394/60, 376/60, 147/60. No T<60 blocker appeared.
+- All six attempts reached the real pipeline and failed with category video_read_or_model_load because the local-only CLIP image processor for openai/clip-vit-base-patch32 was unavailable. Success count=0, failure count=6, no-body-detected count=0, other extraction failures=6, mean/min/max successful detection coverage unavailable (0.0 report default), and no cache artifacts were written.
+- Runtime versions recorded in the report: ultralytics 8.4.157, transformers 5.14.1, torch 2.10.0. CUDA was used and available.
+- The first detector initialization emitted an Ultralytics auto-install warning and installed dill despite no explicit install command; the helper was then corrected to set YOLO_AUTOINSTALL=false and the fixed audit was rerun. No model weights other than the authorized pinned detector were downloaded. This environment-side runtime behavior is recorded as a deviation.
+
+Exact verification commands/results:
+
+- python3 -m py_compile scripts/video/audit_depart_real_extraction.py - passed.
+- curl from the pinned raw GitHub commit to /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt - downloaded; Git blob verification produced afa44d4fcd0ff54691912bf8960d4fbb98ae1278.
+- sha256sum /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt - produced a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43.
+- CUDA availability check - passed; CUDA=True.
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python scripts/video/audit_depart_real_extraction.py --data-root /media/maxim/Databases/WSM_NEW --yolo-weights /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt --cache-root /tmp/wsm_depart_002c/cache --report-output /tmp/wsm_depart_002c/report.json --per-split 3 --target-frames 60 --device cuda - completed the fixed six-row audit and returned exit code 2 because success_count=0.
+- Report validation against /tmp/wsm_depart_002c/report.json - passed for selected_count=6, train/dev selection, zero Test usage, pinned Git blob, six temporal lengths of 60, and no short-video blockers.
+- git diff --check - passed.
+- git diff -- src/audio - empty; src/audio remained unchanged.
+- No full extraction, training, model selection, Test rows, Test predictions, or Test metrics ran.
+
+Metrics/artifacts: machine-readable report at /tmp/wsm_depart_002c/report.json; zero successful cache artifacts. Stage 2 remains partial.
+
+Recommended next atomic task: provision/cache the approved CLIP model revision through an explicitly authorized dependency/model-provisioning task, then rerun only this fixed six-segment audit; do not start full extraction or training.
