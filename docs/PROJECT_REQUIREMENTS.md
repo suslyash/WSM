@@ -116,12 +116,15 @@ Model/config selection MUST maximize DEV/Mean_Score. The formula and monitor MUS
 
 After config/checkpoint freeze, report TEST_NONE, TEST_SOFT, and TEST_HARD, each with per-task UAR/MF1/Score and Mean_Score.
 
+The metric implementation and reporting stack MUST support the same per-task UAR/MF1/Score and Mean_Score contract for DEV, TEST_NONE, TEST_SOFT, and TEST_HARD. Test metrics are required for comparative monitoring against baselines/other systems and for final reporting, but they are not selection signals.
+
 Test metrics:
 
-- are informational/comparative only;
-- MUST NOT select epochs, thresholds, hyperparameters, modalities, pseudo-label rules, or ablations;
-- SHOULD run separately after model selection;
-- MUST explicitly identify uncleaned/soft/hard protocols.
+- are informational/comparative monitoring metrics only;
+- MUST NOT select epochs, thresholds, hyperparameters, modalities, pseudo-label rules, architectures, or ablations;
+- SHOULD run separately after model/checkpoint selection unless an explicitly non-selective evaluation pass is authorized;
+- MUST explicitly identify uncleaned/soft/hard protocols;
+- MUST use the same task-wise masked-label semantics as DEV metrics.
 
 New datamodules SHOULD separate DEV and Test. Running Test every validation epoch is forbidden for new methods.
 
