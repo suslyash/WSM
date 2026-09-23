@@ -608,8 +608,8 @@ Recommended next atomic task: repair only the Transformers CLIP output-unwrappin
 Status: implementation complete; Stage 2 remains partial pending later video-model work.
 
 Branch: codex/task-002e.
-Implementation commit: recorded after verification.
-Push result: to be recorded after push.
+Implementation commit: bd3e710.
+Push result: successful; origin/codex/task-002e created and pushed.
 
 Changed files:
 
