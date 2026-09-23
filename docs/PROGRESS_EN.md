@@ -602,3 +602,49 @@ Metrics/artifacts: /tmp/wsm_depart_002d/report.json records the six failures; /t
 Manager integration: PR #9 merged to main as 326da7ba5a4cdcdfceca90e3f6f3b61afef28ce3. TASK-002D is accepted as blocked evidence; CLIP provisioning succeeded but real extraction remains blocked by the identified output-unwrapping incompatibility.
 
 Recommended next atomic task: repair only the Transformers CLIP output-unwrapping compatibility defect, then rerun the exact same fixed six-segment audit.
+
+### TASK-002E - Fix Transformers CLIP output unwrapping and clear the fixed six-segment real audit
+
+Status: implementation complete; Stage 2 remains partial pending later video-model work.
+
+Branch: codex/task-002e.
+Implementation commit: recorded after verification.
+Push result: to be recorded after push.
+
+Changed files:
+
+- src/video/features/clip_video_features.py;
+- docs/PROGRESS_EN.md.
+
+Compatibility fix:
+
+- Added normalize_clip_image_features with strict precedence: Tensor first, then image_embeds Tensor, then pooler_output Tensor; unsupported output types and non-rank-2 tensors raise clear RuntimeError exceptions.
+- Applied the helper to both get_image_features and vision_model paths without changing projection, sampling, detector, temporal masking, cache fingerprint, or artifact semantics.
+- In the real pinned Transformers runtime, model.get_image_features exists and returns BaseModelOutputWithPooling; its pooler_output is a Tensor with shape [B,512]. No double projection was introduced.
+
+Pinned runtime/audit facts:
+
+- CLIP repo/revision: openai/clip-vit-base-patch32 at b97b0100e55e367c057773c2a614676470b0d575.
+- YOLO SHA-256 remained a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43.
+- CUDA was used. The exact six segments were attempted: train ["depression","-7UpRmNVJzQ","-7UpRmNVJzQ_001.mp4"], ["depression","-7UpRmNVJzQ","-7UpRmNVJzQ_002.mp4"], ["depression","-7UpRmNVJzQ","-7UpRmNVJzQ_003.mp4"]; dev ["depression","3SYkj_mya6A","3SYkj_mya6A_001.mp4"], ["depression","3SYkj_mya6A","3SYkj_mya6A_002.mp4"], ["depression","3SYkj_mya6A","3SYkj_mya6A_003.mp4"].
+- Test rows processed: zero. All six preflight temporal lengths remained 60.
+- Success count=6, failure count=0. Detection coverage by segment: 0.9166666667, 1.0, 1.0, 0.9166666667, 0.9166666667, 1.0; mean=0.9583333333, min=0.9166666667, max=1.0.
+- All successful artifacts validated with feature shape [60,512], bool valid_mask [60], exact zero invalid positions, finite valid positions, chronological sampled indices, pinned YOLO SHA, detector settings 0.5/0.5/640, pinned CLIP revision, and unique cache fingerprints.
+- No package installation or auto-install was attempted. YOLO_AUTOINSTALL=false was set.
+
+Exact verification commands/results:
+
+- python3 -m py_compile src/video/features/clip_video_features.py - passed.
+- CLIP output normalization regression smoke for Tensor, image_embeds, pooler_output, and unsupported output - passed.
+- Local-only pinned CLIPProcessor/CLIPModel load - passed.
+- Real runtime output inspection - passed; get_image_features returned BaseModelOutputWithPooling with Tensor pooler_output [1,512].
+- sha256sum /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt - passed with the expected SHA-256.
+- Exact fixed six-segment audit with --target-frames 60, pinned CLIP revision, pinned YOLO, CUDA, and YOLO_AUTOINSTALL=false - passed with exit code 0 and success_count=6.
+- Report/artifact validation against /tmp/wsm_depart_002e/report.json - passed; report status complete and all_success_artifacts_valid=true.
+- git diff --check - passed.
+- git diff -- src/audio - empty; src/audio remained unchanged.
+- No full extraction, training, model selection, Test rows, Test predictions, or Test metrics ran.
+
+Metrics/artifacts: six successful cache artifacts under /tmp/wsm_depart_002e/cache and machine-readable report at /tmp/wsm_depart_002e/report.json. These are external audit artifacts and are not committed.
+
+Recommended next atomic task: manager review of the cleared V1 preprocessing gate, then define the next limited Stage 2 video-model integration task; do not start full extraction or training in this task.
