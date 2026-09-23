@@ -48,11 +48,19 @@ def _validate_artifact(record, args):
     if artifact["model_name"] != args.model_name or artifact["model_revision"] != args.model_revision: raise ValueError("CLIP identity mismatch")
     if artifact["detector_weights_sha256"] != args.yolo_sha: raise ValueError("YOLO SHA mismatch")
     if artifact["detection_parameters"] != {"confidence":0.5,"iou":0.5,"imgsz":640}: raise ValueError("detector settings mismatch")
-    if not isinstance(features,torch.Tensor) or tuple(features.shape)!=(args.target_frames,512): raise ValueError("feature shape mismatch")
-    if not isinstance(mask,torch.Tensor) or mask.dtype != torch.bool or tuple(mask.shape)!=(args.target_frames,): raise ValueError("mask mismatch")
+    if not isinstance(features,torch.Tensor) or features.ndim != 2 or features.shape[1] != 512: raise ValueError("feature shape mismatch")
+    temporal_length=int(features.shape[0])
+    if not 1 <= temporal_length <= args.target_frames: raise ValueError("temporal length out of range")
+    if not isinstance(mask,torch.Tensor) or mask.dtype != torch.bool or tuple(mask.shape)!=(temporal_length,): raise ValueError("mask mismatch")
+    sampled_indices=artifact.get("sampled_frame_indices")
+    if not isinstance(sampled_indices,list) or len(sampled_indices) != temporal_length: raise ValueError("sampled indices mismatch")
+    if any(not isinstance(index,int) or index < 0 for index in sampled_indices): raise ValueError("invalid sampled index")
+    if any(left > right for left,right in zip(sampled_indices,sampled_indices[1:])): raise ValueError("sampled indices not chronological")
+    preprocessing=artifact.get("preprocessing")
+    if not isinstance(preprocessing,dict) or preprocessing.get("target_frames") != args.target_frames: raise ValueError("target_frames metadata mismatch")
     if not bool(torch.isfinite(features[mask]).all()): raise ValueError("non-finite valid feature")
     if not torch.equal(features[~mask],torch.zeros_like(features[~mask])): raise ValueError("non-zero invalid feature")
-    return {"temporal_length":int(features.shape[0]),"feature_dim":int(features.shape[1]),
+    return {"temporal_length":temporal_length,"feature_dim":int(features.shape[1]),
             "valid_detection_count":int(artifact["valid_detection_count"]),
             "detection_coverage":float(artifact["detection_coverage"])}
 
@@ -88,6 +96,15 @@ def main():
         vals=[float(x["detection_coverage"]) for x in records if x.get("status") in {"extracted","reused"} and "detection_coverage" in x]
         return {"count":len(vals),"mean":sum(vals)/len(vals) if vals else None,"min":min(vals) if vals else None,"max":max(vals) if vals else None}
     failures=[record for record in selected_records if record.get("status")=="failed"]
+    successful_records=[record for record in valid_records if record.get("status") in {"extracted","reused"}]
+    temporal_lengths=[record["temporal_length"] for record in successful_records]
+    temporal_length_stats={"count":len(temporal_lengths),
+                           "min":min(temporal_lengths) if temporal_lengths else None,
+                           "max":max(temporal_lengths) if temporal_lengths else None,
+                           "mean":sum(temporal_lengths)/len(temporal_lengths) if temporal_lengths else None,
+                           "shorter_than_60_count":sum(length < args.target_frames for length in temporal_lengths),
+                           "exact_target_frames_count":sum(length == args.target_frames for length in temporal_lengths),
+                           "distribution":{str(length):temporal_lengths.count(length) for length in sorted(set(temporal_lengths))}}
     report={"schema_version":"wsm-video-cache-audit-v1","requested_splits":requested,
             "manifest_fingerprint":audit["manifest_fingerprint"]["value"],"expected_by_split":expected_by_split,
             "expected_total":len(selected),"indexed_selected_count":len(selected_records),
@@ -99,6 +116,9 @@ def main():
             "failed_by_split":{split:sum(r.get("status")=="failed" and r.get("split")==split for r in selected_records) for split in requested},
             "coverage_by_split":{split:cov([r for r in selected_records if r.get("split")==split]) for split in requested},
             "coverage_overall":cov(selected_records),"failure_categories":{cat:sum(r.get("failure_category")==cat for r in failures) for cat in sorted({r.get("failure_category") for r in failures})},
+            "temporal_length_stats":temporal_length_stats,
+            "no_body_detected_failure_count":sum(r.get("failure_category")=="no_body_detected" for r in failures),
+            "other_failure_count":sum(r.get("failure_category")!="no_body_detected" for r in failures),
             "detector_weights_sha256":args.yolo_sha,"model_name":args.model_name,"model_revision":args.model_revision,
             "target_frames":args.target_frames,"git":_git_state(),
             "package_versions":{name:_version(name) for name in ("torch","transformers","ultralytics")},
