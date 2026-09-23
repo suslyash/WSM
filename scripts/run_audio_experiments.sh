@@ -2,7 +2,7 @@
 set -euo pipefail
 
 CHIMERA="${CHIMERA:-./.venv/bin/chimera-ml}"
-BASE="${BASE:-configs/wsm_audio_mamba_multitask.yaml}"
+BASE="${BASE:-configs/wsm_mm_pd_dep_v1/audio/00_frozen_baseline.yaml}"
 MAX_TRIALS="${MAX_TRIALS:-}"
 STAGE="${1:-all}"
 
