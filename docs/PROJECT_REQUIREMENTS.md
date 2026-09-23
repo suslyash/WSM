@@ -114,19 +114,32 @@ Mean\_Score=(Score_D+Score_P)/2.
 
 Model/config selection MUST maximize DEV/Mean_Score. The formula and monitor MUST remain fixed.
 
-After config/checkpoint freeze, report TEST_NONE, TEST_SOFT, and TEST_HARD, each with per-task UAR/MF1/Score and Mean_Score.
+Every training epoch/validation cycle MUST report DEV, TEST_NONE, TEST_SOFT, and TEST_HARD using the same per-task UAR/MF1/Score and Mean_Score definitions.
 
-The metric implementation and reporting stack MUST support the same per-task UAR/MF1/Score and Mean_Score contract for DEV, TEST_NONE, TEST_SOFT, and TEST_HARD. Test metrics are required for comparative monitoring against baselines/other systems and for final reporting, but they are not selection signals.
+The metric implementation and reporting stack MUST therefore support the same masked two-task contract for all four protocol prefixes:
+
+    dev
+    test_none
+    test_soft
+    test_hard
+
+For each protocol, report per-task UAR, MF1, Score=(UAR+MF1)/2, and Mean_Score as the arithmetic mean of the depression and Parkinson Scores.
+
+Model/checkpoint selection, early stopping, and any automatic best-epoch logic MUST use only:
+
+    dev/mean_score
+
+The epoch-level TEST_NONE/SOFT/HARD metrics are mandatory comparative-monitoring outputs. They MUST be logged and surfaced alongside DEV metrics so runs can be compared continuously with baselines/other systems.
 
 Test metrics:
 
-- are informational/comparative monitoring metrics only;
-- MUST NOT select epochs, thresholds, hyperparameters, modalities, pseudo-label rules, architectures, or ablations;
-- SHOULD run separately after model/checkpoint selection unless an explicitly non-selective evaluation pass is authorized;
+- MUST be computed every epoch/validation cycle for TEST_NONE, TEST_SOFT, and TEST_HARD;
+- are comparative-monitoring outputs, not automatic selection signals;
+- MUST NOT be consumed by checkpoint_callback, early_stopping_callback, threshold search, or automatic hyperparameter/model-selection logic;
 - MUST explicitly identify uncleaned/soft/hard protocols;
 - MUST use the same task-wise masked-label semantics as DEV metrics.
 
-New datamodules MUST separate DEV and Test. For the WSM evaluation protocol, a training/evaluation DataModule MUST support distinct test_none, test_soft, and test_hard evaluation datasets or an equivalent explicit protocol selector. These Test datasets MUST NOT be merged into val_dataset and MUST NOT run every validation epoch. They are invoked only by a separate non-selective evaluation pass for comparative monitoring/final reporting.
+New datamodules MUST separate DEV from Test at the dataset/protocol level, but the training/evaluation stack MUST expose DEV, TEST_NONE, TEST_SOFT, and TEST_HARD loaders/evaluation streams in every epoch-level evaluation cycle. The three Test protocols MUST never be merged into val_dataset; they remain separately named evaluation streams.
 
 Segment-level metrics remain primary; video/person aggregation SHOULD be secondary. Ablations SHOULD use at least 3 seeds. Final methods MUST use at least 5 seeds and report mean, standard deviation, and confidence interval or a pre-justified alternative. Use paired comparison where samples match.
 
