@@ -778,3 +778,64 @@ Status: accepted after TASK-002G cache audit.
 - Test remains untouched and locked.
 
 Recommended next atomic task: relax only cache structural validation to accept real 1<=T<=60 sequences, rerun TRAIN+DEV in resume mode to recover the short-video rows and stale artifact, independently audit the final coverage, and leave no-body failures explicit.
+
+
+### TASK-002H - Recover short-video V1 cache rows with variable-length temporal sequences
+
+Status: complete; Stage 2 remains partial pending later video data/model integration.
+
+Branch: codex/task-002h.
+Implementation commit: e6d516a36e65bb80125b9f06622ab5bea8444316.
+Push result: successful; origin/codex/task-002h created and pushed.
+
+Changed files:
+
+- scripts/video/extract_clip_video_features.py;
+- scripts/video/audit_video_cache.py;
+- docs/PROGRESS_EN.md.
+
+Implementation facts:
+
+- Relaxed both extractor and independent-audit artifact validation from exact T=60 to real 1 <= T <= 60 with rank [T,512], bool mask [T], matching sampled-index length, chronological sampled indices, finite valid features, exact-zero invalid features, pinned model/revision, detector settings, and preprocessing target_frames=60 metadata.
+- Preserved the existing fingerprint inputs and sampling semantics. No duplicated frames, interpolation, or synthetic temporal positions were added.
+- Added independent temporal-length distribution, min/max/mean, shorter-than-target count, exact-target count, no-body failure count, and other-failure count to the audit report.
+
+Persistent artifacts:
+
+- extraction report: /media/maxim/Programs/Features/WSM/video_depart_v1/extraction_report_task002h.json;
+- independent audit: /media/maxim/Programs/Features/WSM/video_depart_v1/cache_audit_task002h.json;
+- cache root/index remained /media/maxim/Programs/Features/WSM/video_depart_v1/cache and cache/cache_index.jsonl.
+
+Full authorized TRAIN+DEV recovery results:
+
+- command used --splits train,dev --resume --overwrite with target_frames=60, CUDA, pinned YOLO checkpoint/SHA, and pinned CLIP revision;
+- selected rows=7258;
+- reused successes=7051;
+- newly extracted successes=111;
+- failures=96, all failure_category=no_body_detected;
+- Test rows processed/indexed=0;
+- no dependency installation occurred; YOLO_AUTOINSTALL=false was set.
+
+Independent audit results:
+
+- complete_for_requested_splits=true;
+- expected_total=7258; missing_record_count=0; indexed selected rows=7258;
+- successful_artifacts_valid=true; cache_fingerprints_unique=true;
+- success counts: train=6255, dev=907; failures: train=70, dev=26;
+- failure categories: no_body_detected=96; other failures=0;
+- temporal lengths: successful count=7162, min=3, max=60, mean=59.5914549009, shorter_than_60_count=112, exact_target_frames_count=7050;
+- all successful artifacts retained target_frames=60 metadata and real chronological sampled indices.
+
+Exact verification commands/results:
+
+- python3 -m py_compile scripts/video/extract_clip_video_features.py scripts/video/audit_video_cache.py — passed.
+- Synthetic validator smoke — passed: T=17 and T=60 accepted; T=0 and T=61 rejected.
+- Full extractor command with --resume --overwrite and no --limit — passed: extracted=111, reused=7051, failures=96, selected=7258.
+- Independent audit helper — passed with complete=true.
+- Required JSON assertions — passed for requested splits, expected count, zero Test rows, complete audit, valid artifacts, unique fingerprints, variable temporal lengths, and Test firewall flags.
+- git diff --check — passed; git diff -- src/audio — empty; src/audio remained unchanged.
+- No training, model selection, Test predictions, or Test metrics ran.
+
+Deviation/blocker: the 96 no_body_detected rows remain genuine extraction failures as required. The recovered short rows use their real sampled lengths, including the measured minimum T=3; later padding belongs to the future DataModule and was not implemented here.
+
+Recommended next atomic task: manager review of the variable-length cache and then implement the V1 video cache DataModule/collate contract with padding masks, without processing Test.

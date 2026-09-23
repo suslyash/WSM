@@ -96,10 +96,23 @@ def _validate_artifact(path: Path, expected: dict[str, Any], target_frames: int,
     if artifact.get("cache_fingerprint") != expected["cache_fingerprint"]:
         raise ValueError("cache_fingerprint mismatch")
     features, mask = artifact.get("features"), artifact.get("valid_mask")
-    if not isinstance(features, torch.Tensor) or features.ndim != 2 or tuple(features.shape) != (target_frames, 512):
-        raise ValueError("features must have shape [60,512]")
-    if not isinstance(mask, torch.Tensor) or mask.dtype != torch.bool or tuple(mask.shape) != (target_frames,):
-        raise ValueError("valid_mask must be bool [60]")
+    if not isinstance(features, torch.Tensor) or features.ndim != 2 or features.shape[1] != 512:
+        raise ValueError("features must have shape [T,512]")
+    temporal_length = int(features.shape[0])
+    if not 1 <= temporal_length <= target_frames:
+        raise ValueError(f"features temporal length must be in [1,{target_frames}]")
+    if not isinstance(mask, torch.Tensor) or mask.dtype != torch.bool or tuple(mask.shape) != (temporal_length,):
+        raise ValueError("valid_mask must be bool [T]")
+    sampled_indices = artifact.get("sampled_frame_indices")
+    if not isinstance(sampled_indices, list) or len(sampled_indices) != temporal_length:
+        raise ValueError("sampled_frame_indices must have length T")
+    if any(not isinstance(index, int) or index < 0 for index in sampled_indices):
+        raise ValueError("sampled_frame_indices must contain non-negative integers")
+    if any(left > right for left, right in zip(sampled_indices, sampled_indices[1:])):
+        raise ValueError("sampled_frame_indices must be chronological")
+    preprocessing = artifact.get("preprocessing")
+    if not isinstance(preprocessing, dict) or preprocessing.get("target_frames") != target_frames:
+        raise ValueError("preprocessing target_frames mismatch")
     if not bool(torch.isfinite(features[mask]).all()):
         raise ValueError("valid features must be finite")
     if not torch.equal(features[~mask], torch.zeros_like(features[~mask])):
@@ -110,7 +123,7 @@ def _validate_artifact(path: Path, expected: dict[str, Any], target_frames: int,
         raise ValueError("detector settings mismatch")
     if artifact.get("model_name") != model_name or artifact.get("model_revision") != model_revision:
         raise ValueError("CLIP model identity mismatch")
-    return {"temporal_length": target_frames, "feature_dim": 512,
+    return {"temporal_length": temporal_length, "feature_dim": 512,
             "valid_detection_count": int(artifact.get("valid_detection_count", int(mask.sum()))),
             "detection_coverage": float(artifact.get("detection_coverage", float(mask.float().mean())))}
 
