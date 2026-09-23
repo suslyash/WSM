@@ -6,7 +6,7 @@ Stages are sequential. Advance only after the current gate is met and evidence i
 
 Authority: latest user instruction → PROJECT_REQUIREMENTS.md → this plan → BASELINES.md/SOTA_REVIEW_EN.md → existing code.
 
-TEST_NONE/SOFT/HARD MUST NOT influence any decision before final freeze. Test metrics remain required for non-selective comparative monitoring against other systems and for final reporting, using the same per-task UAR/MF1/Score/Mean_Score definitions as DEV. New training DataModules must expose test_none, test_soft, and test_hard as separate evaluation datasets/protocols, never merged into DEV validation. Sole selection metric:
+TEST_NONE/SOFT/HARD MUST be reported every epoch/validation cycle for comparative monitoring, using the same per-task UAR/MF1/Score/Mean_Score definitions as DEV. They MUST NOT be consumed by automatic checkpointing, early stopping, threshold search, or hyperparameter/model-selection logic. Sole automatic selection metric:
 
 \[
 \mathrm{DEV/Mean\_Score}
