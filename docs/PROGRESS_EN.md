@@ -599,4 +599,6 @@ Exact verification commands/results:
 
 Metrics/artifacts: /tmp/wsm_depart_002d/report.json records the six failures; /tmp/wsm_depart_002d/cache contains no successful cache artifact. Stage 2 remains partial.
 
-Recommended next atomic task: repair the explicitly identified Transformers output-unwrapping compatibility defect in the video extractor under a new authorized source-change task, then rerun only this fixed six-segment audit.
+Manager integration: PR #9 merged to main as 326da7ba5a4cdcdfceca90e3f6f3b61afef28ce3. TASK-002D is accepted as blocked evidence; CLIP provisioning succeeded but real extraction remains blocked by the identified output-unwrapping incompatibility.
+
+Recommended next atomic task: repair only the Transformers CLIP output-unwrapping compatibility defect, then rerun the exact same fixed six-segment audit.
