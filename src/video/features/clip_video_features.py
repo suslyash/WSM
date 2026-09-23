@@ -70,6 +70,25 @@ class ExtractionResult:
     detector_identity: str | None = None
     failure_kind: str | None = None
 
+def normalize_clip_image_features(output: Any) -> Any:
+    """Normalize supported CLIP image outputs to a rank-2 tensor [B,D]."""
+    import torch
+    if isinstance(output, torch.Tensor):
+        tensor = output
+    else:
+        image_embeds = getattr(output, "image_embeds", None)
+        if isinstance(image_embeds, torch.Tensor):
+            tensor = image_embeds
+        else:
+            pooler_output = getattr(output, "pooler_output", None)
+            if isinstance(pooler_output, torch.Tensor):
+                tensor = pooler_output
+            else:
+                raise RuntimeError(f"unsupported CLIP image-feature output type: {type(output).__name__}")
+    if tensor.ndim != 2:
+        raise RuntimeError(f"CLIP image features must be rank-2 [B,D], got shape {tuple(tensor.shape)}")
+    return tensor
+
 def _rgb_frame(frame: Any) -> Any:
     import numpy as np
     array = np.asarray(frame)
@@ -169,10 +188,11 @@ class ClipVideoFeatureExtractor:
                       for key, value in inputs.items()}
             with torch.inference_mode():
                 if hasattr(self.model, "get_image_features"):
-                    features = self.model.get_image_features(**inputs)
+                    raw_features = self.model.get_image_features(**inputs)
                 else:
-                    features = self.model.vision_model(pixel_values=inputs["pixel_values"]).pooler_output
-            if features.ndim != 2 or features.shape[0] != len(crops):
+                    raw_features = self.model.vision_model(pixel_values=inputs["pixel_values"])
+                features = normalize_clip_image_features(raw_features)
+            if features.shape[0] != len(crops):
                 raise RuntimeError(f"CLIP returned invalid feature shape: {tuple(features.shape)}")
             if self.detector is not None:
                 temporal = torch.zeros((len(indices), features.shape[1]), dtype=features.dtype)
