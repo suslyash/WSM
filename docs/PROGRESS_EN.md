@@ -1135,3 +1135,49 @@ Status: accepted.
 - The remaining pre-training requirement is integration wiring only: every epoch must evaluate dev/test_none/test_soft/test_hard while checkpointing/early stopping use only dev/mean_score.
 
 Recommended next atomic task: TASK-002L final pre-training config/integration gate. After TASK-002L passes, proceed directly to TASK-002M real V1 video training run.
+
+
+### TASK-002L - Create the V1 video training config and wire four epoch-level evaluation streams
+
+Status: complete; Stage 2 is ready for the first real V1 training run.
+
+Branch: codex/task-002l.
+Implementation commit: pending until the implementation commit is created.
+Push result: pending until the branch is pushed.
+
+Changed files:
+
+- src/video/data/wsm_video_cache_datamodule.py;
+- configs/wsm_mm_pd_dep_v1/video/00_depart_v1.yaml;
+- docs/PROGRESS_EN.md.
+
+Implementation facts:
+
+- Added WSMVideoCacheDataModule.val_dataloader() returning exactly dev, test_none, test_soft, test_hard in that order. DEV remains val_dataset only; Test remains separate test_dataset entries. All four loaders use shuffle=false, drop_last=false, and the variable-length WSM collate. train_dataloader() semantics are unchanged.
+- Added the self-contained config at configs/wsm_mm_pd_dep_v1/video/00_depart_v1.yaml with experiment_name=wsm_mm_pd_dep_v1 and run_name=depart_v1_clip_yolo_transformer.
+- Fixed V1 model parameters: video_feature_dim=512, hidden_dim=192, num_layers=2, num_heads=4, ff_mult=4, dropout=0.2, sequence_steps=60, num_tasks=2.
+- Fixed optimizer parameters: AdamW lr=0.0001 and weight_decay=0.01. Training parameters are epochs=30, device=cuda, mixed_precision=true, grad_clip_norm=0.5, log_every_steps=25, collect_cache=true. No scheduler or sweep is configured.
+- The config uses the accepted full-coverage cache root and wsm_video_depart_v1_datamodule, wsm_video_depart_v1_model, wsm_masked_sparse_loss, and adamw_optimizer registry keys.
+- Required instrumentation is present: checkpoint_callback, snapshot_callback, early_stopping_callback, wsm_summary_callback, wsm_segment_metrics_callback, console_file_logger, and mlflow_logger. Checkpointing and early stopping both monitor only dev/mean_score in max mode. Test protocol names are not selector inputs.
+
+DataModule counts:
+
+- train_dataset=6325; val_dataset=933;
+- test_none=1364; test_soft=1208; test_hard=1014;
+- all train, DEV, and Test unavailable counts are zero;
+- validation stream keys are exactly dev, test_none, test_soft, test_hard.
+
+Exact verification commands/results:
+
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config --config-path configs/wsm_mm_pd_dep_v1/video/00_depart_v1.yaml - passed: Config is valid.
+- Actual Chimera registry build smoke for DataModule, model, masked loss, AdamW optimizer, five callbacks, and two loggers - passed; no project-module warning. Dataset counts and four stream keys asserted.
+- python3 -m py_compile src/video/data/wsm_video_cache_datamodule.py - passed.
+- Selector firewall assertions and corrected ripgrep monitor scan - passed: checkpoint and early stopping use dev/mean_score/max; no test_none/test_soft/test_hard monitor reference.
+- Bounded one-epoch CPU Trainer.fit smoke used exactly 4 real train samples and 4 real samples for each of dev, test_none, test_soft, and test_hard, with two depression-owned and two Parkinson-owned rows per stream. Forward/loss/backward and the real wsm_segment_metrics_callback completed.
+- Structural, non-performance smoke values from that single epoch were dev/mean_score=0.5, test_none/mean_score=0.5, test_soft/mean_score=0.5, and test_hard/mean_score=0.5. All four were finite and appeared in the same epoch logs. Test metrics were monitoring outputs only and were not used for selection.
+- No full V1 training experiment, model selection, threshold search, or Test performance evaluation ran.
+- git diff --check passed; git diff -- src/audio was empty; src/audio remained unchanged.
+
+Deviation: an initial bounded smoke subset selected only depression-owned rows and correctly raised the sparse-metric zero-observation guard for DEV/Parkinson. The final deterministic smoke used the smallest balanced 2+2 ownership subset for every stream and passed.
+
+Recommended next atomic task: TASK-002M real V1 video training run.
