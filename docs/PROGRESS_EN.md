@@ -17,7 +17,7 @@ Final Test authorized: **no**.
 | 1. Manifest/partial-label contract | complete | Canonical manifest, separate DEV/Test consumer, masked sparse loss, zero video leakage, and owner-accepted speaker-independent split contract | TASK-001A through TASK-001E plus manager decision below |
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
-| 4. Fusion baselines | partial | Canonical sparse A+V DataModule ready; F0/F1/F2 models not implemented | TASK-004A |
+| 4. Fusion baselines | partial | Canonical sparse A+V DataModule and fixed F0 baseline complete; F1/F2 remain | TASK-004A, TASK-004B, TASK-004C |
 | 5. RAMPS | not started | Direct reliable missing-head gradient | None |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
@@ -1592,3 +1592,58 @@ Status: accepted.
 - No hyperparameter sweep is authorized.
 
 Recommended next atomic task: TASK-004C — create the fixed F0 training config and run the real seed-42 F0 baseline. Preserve all artifacts and report the DEV-selected result, descriptive gate diagnostics, and descriptive comparison to frozen audio and video V2.
+
+
+### TASK-004C — Run the fixed F0 audio+video gated late-fusion baseline
+
+Status: complete. The fixed seed-42 F0 run completed with early stopping after epoch 9; epoch 3 was selected solely by DEV/mean_score. No tuning, sweep, text/description work, or Test-based selection was performed.
+
+Branch: codex/task-004c.
+
+Changed files:
+
+- configs/wsm_mm_pd_dep_v1/fusion/00_f0_gated_late.yaml
+- docs/PROGRESS_EN.md
+
+Fixed configuration:
+
+- experiment_name=wsm_mm_pd_dep_v1; run_name=av_f0_gated_late; seed=42;
+- wsm_av_fusion_datamodule with accepted audio/video cache roots, batch_size=32, num_workers=4;
+- wsm_av_f0_gated_late_model with audio_dim=768, video_dim=512, hidden_dim=192, gate_hidden_dim=64, dropout=0.2;
+- AdamW lr=1e-4, weight_decay=0.01; up to 30 epochs, mixed precision, gradient clip 0.5;
+- checkpointing and early stopping monitor dev/mean_score in max mode; patience=6;
+- checkpoint_callback, snapshot_callback, early_stopping_callback, wsm_summary_callback, wsm_segment_metrics_callback, console_file_logger, and mlflow_logger are all present.
+
+Exact commands and verification:
+
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config --config-path configs/wsm_mm_pd_dep_v1/fusion/00_f0_gated_late.yaml` — passed: Config is valid.
+- Registered-component smoke with the exact config dimensions and cache roots — passed: datamodule/model/loss/optimizer/callback/logger factories built; train/dev/test_none/test_soft/test_hard counts were 6325/933/1364/1208/1014; joined_total=8622 and missing audio/video=0/0.
+- Real batch forward/loss/backward smoke — passed with finite loss=0.7255817652, preds [32,2], and finite gradients.
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/00_f0_gated_late.yaml` — completed normally; CUDA used an NVIDIA GeForce RTX 4080; early stopping reported best dev/mean_score=0.744211 and stopped after six non-improving epochs.
+- `git diff --check` — passed. `git diff -- src/audio`, `git diff -- src/video`, and `git diff -- src/fusion/data/wsm_av_fusion_datamodule.py` — empty.
+
+Run artifact directory: `logs/wsm_mm_pd_dep_v1/av_f0_gated_late_2026-09-24_16-06_wsm_av_f0_gated_late_model_76aabbe3/`. It contains the resolved YAML, `train.log`, `summary.txt`, `code.zip`, `last.pt`, and top checkpoints `epoch=1_dev_mean_score=0.6824.pt` and `epoch=3_dev_mean_score=0.7442.pt`. MLflow tracking used `sqlite:///logs/mlflow.db`.
+
+Complete epoch summary (all Test streams are monitoring-only):
+
+| epoch | train loss | DEV dep Score | DEV PD Score | DEV mean | TEST_NONE mean | TEST_SOFT mean | TEST_HARD mean |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 0.457178 | 0.718872 | 0.645875 | 0.682374 | 0.810256 | 0.823804 | 0.824830 |
+| 2 | 0.201685 | 0.603561 | 0.614824 | 0.609193 | 0.806443 | 0.816302 | 0.833725 |
+| 3 | 0.115101 | 0.642220 | 0.846201 | 0.744211 | 0.764716 | 0.772471 | 0.763449 |
+| 4 | 0.076510 | 0.660091 | 0.631210 | 0.645651 | 0.790554 | 0.783775 | 0.795652 |
+| 5 | 0.056097 | 0.652310 | 0.615991 | 0.634151 | 0.782179 | 0.775133 | 0.786278 |
+| 6 | 0.032694 | 0.682259 | 0.771585 | 0.726922 | 0.771875 | 0.767342 | 0.780787 |
+| 7 | 0.030294 | 0.641039 | 0.775287 | 0.708163 | 0.764535 | 0.755299 | 0.766524 |
+| 8 | 0.017438 | 0.619257 | 0.791414 | 0.705335 | 0.778355 | 0.772062 | 0.779007 |
+| 9 | 0.022634 | 0.676279 | 0.751109 | 0.713694 | 0.754287 | 0.746469 | 0.757987 |
+
+The selected epoch-3 scores are DEV depression UAR/MF1/Score=0.643651/0.640790/0.642220 and Parkinson UAR/MF1/Score=0.844582/0.847819/0.846201, DEV mean=0.744211. Same-epoch Test means are NONE/SOFT/HARD=0.764716/0.772471/0.763449. Their task scores are, respectively, NONE depression/PD=0.763471/0.765961, SOFT=0.772255/0.772687, HARD=0.771150/0.755747.
+
+DEV-only gate diagnostic on the selected checkpoint over all 933 DEV segments: audio weight mean depression/PD=0.613509/0.442834, std=0.277911/0.303191, min=0.039258/0.012320, max=0.989841/0.977797; complementary video weight mean=0.386491/0.557166. Fusion weights were finite and normalized. This is descriptive only and did not affect selection.
+
+Comparison using the fixed DEV references: F0 DEV mean 0.744211 versus frozen audio 0.787827 (delta -0.043616) and selected video V2 0.706572 (delta +0.037639). Depression Score deltas are -0.105698 versus audio and +0.022119 versus V2; Parkinson Score deltas are +0.018466 versus audio and +0.053158 versus V2. No Test value was used to select an epoch, threshold, hyperparameter, or model.
+
+Deviations/blockers: none for the authorized F0 run. The legacy AV YAML remains non-runnable and was not repaired. Test metrics were inspected only as mandatory per-epoch monitoring. Text/description remains deferred; F1/F2 and later RAMPS work were not started.
+
+Implementation commit and push are recorded in the manager handoff after the final evidence update.
