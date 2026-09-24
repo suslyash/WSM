@@ -209,13 +209,16 @@ T2: T1 plus cached observable description/semantic feature and simple T/D gating
 
 Gate: at most two configs, diagnosis-free prompt, one DEV-selected representation.
 
-### Stage 4 — Honest multimodal baselines [ACTIVE AFTER STAGE 2]
+### Stage 4 — Honest multimodal baselines [REOPENED FOR STRONG-AUDIO CONTROLLED ABLATION]
 
 - F0: simple masked late/gated fusion.
 - F1: sparse masked two-head MTL with no pseudo-labeling.
 - F2: TACME-like task-aware relation bank with observed loss; add PAGB comparator only if budget permits.
+- Owner-authorized pre-RAMPS strong-audio ablation: replace the pooled `audio_cls` fusion branch with the frozen DEV-selected historical temporal-audio checkpoint through a fusion-side adapter; do not edit `src/audio`.
+- Execute this ablation causally: first reproduce the historical audio DEV result from the frozen checkpoint, then measure strong-audio+video F1-style residual fusion, and only after that add the corresponding F2 directed-relation variant if the contract remains valid.
+- RAMPS Stage 5 is deferred until this strong-audio fusion ablation is completed or explicitly stopped by the manager.
 
-Gate: same encoders/splits/metric; F1 isolates shared-representation gain; F2 isolates task-aware fusion; gradient norms/cosines diagnose interference.
+Gate: same canonical splits/metric and DEV-only selector; the frozen audio adapter must reproduce the historical audio DEV reference before its fusion result is trusted; F1-style strong-audio fusion isolates the value of adding video without discarding the temporal audio encoder; the later F2-style variant isolates directed task-aware relations on top.
 
 ### Stage 5 — RAMPS
 
