@@ -55,7 +55,7 @@ callbacks:
       splits: [auto]
   - name: checkpoint_callback
     params:
-      log_path: /tmp/wsm_task002l/checkpoints
+      log_path: logs
       filename_template: epoch={epoch}_{monitor}={value:.4f}.pt
       monitor: dev/mean_score
       mode: max
@@ -63,7 +63,7 @@ callbacks:
       save_last: true
   - name: snapshot_callback
     params:
-      log_path: /tmp/wsm_task002l/snapshots
+      log_path: logs
       include:
         - src
         - configs
@@ -82,10 +82,10 @@ callbacks:
 logging:
   - name: console_file_logger
     params:
-      log_path: /tmp/wsm_task002l/logs
+      log_path: logs
       log_file: train.log
       console_level: INFO
       file_level: INFO
   - name: mlflow_logger
     params:
-      tracking_uri: sqlite:////tmp/wsm_task002l/mlflow.db
+      tracking_uri: sqlite:///logs/mlflow.db
