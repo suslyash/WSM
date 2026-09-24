@@ -2094,3 +2094,37 @@ Status: accepted.
 - RAMPS remains deferred. After the fixed F1-temporal run, proceed to the analogous F2-temporal directed residual contract unless a concrete implementation/reproduction blocker appears.
 
 Recommended next atomic task: TASK-004I — create the fixed strong-audio F1 residual training config and run the real seed-42 experiment, selecting only by DEV/Mean_Score and recording same-DEV-row frozen-base versus final-fusion deltas.
+
+### TASK-004I — Run the fixed strong-temporal-audio F1 residual A+V experiment
+
+Status: blocked before training by the mandatory optimizer firewall. No training, DEV reproduction pass, production smoke, or Test-stream iteration was run after the blocker was found.
+
+Branch: codex/task-004i.
+
+Changed files:
+
+- configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml;
+- docs/PROGRESS_EN.md.
+
+Configuration and pre-run evidence:
+
+- Created the self-contained fixed config at `configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml` with seed 42, run name `av_f1_temporal_audio_residual`, batch size 8, 30 epochs, the required strong-temporal-audio F1 residual model, sparse loss, AdamW settings, instrumentation, and `dev/mean_score` max-only checkpoint/early-stopping monitors.
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config --config-path configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml` — passed: Config is valid.
+- Historical checkpoint SHA256 recomputation — passed: `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`.
+- Actual registry smoke — passed for `wsm_av_f1_temporal_audio_residual_model`, `wsm_masked_sparse_loss`, `wsm_av_fusion_datamodule`, `wsm_segment_metrics_callback`, `console_file_logger`, and `mlflow_logger`; CUDA was available on `NVIDIA GeForce RTX 4080`. The only import warning was the existing PyTorch nested-tensor warning; no project-module warning appeared.
+- Real DataModule construction — passed counts: train=6325, dev=933, test_none=1364, test_soft=1208, test_hard=1014; joined_total=8622; audio/video dimensions=768/512. No samples from any Test loader were iterated.
+- Model construction and parent `train()` guard — passed: all 105 audio parameters were `requires_grad=false` and `audio_adapter.audio_model.training` remained false.
+- Trainable parameter accounting — passed before optimizer creation: video_projection=99,520, shared_fusion=111,744, residual_heads=74,178, total trainable=285,442; frozen audio=3,031,880 parameters. All trainable names belonged to video_projection, shared_fusion, or residual_heads.
+
+Blocking defect:
+
+- The actual configured `adamw_optimizer` factory was instantiated with the configured model and included all 127 parameter objects: all 105 frozen audio parameters plus the 22 trainable residual-branch tensors. The optimizer therefore contains frozen audio objects, directly violating the required assertion that no frozen audio parameter object appears in optimizer param groups.
+- This is a source/optimizer-factory integration defect outside the allowed TASK-004I files. The task explicitly says to stop if this check fails and forbids source/model/DataModule changes, so no workaround, training, or Test evaluation was attempted.
+
+Verification and scope:
+
+- `git diff --check` and final scope audit are pending the evidence commit; no source file was changed and no `src/audio` or `src/video` change was made.
+- No audio retraining, fusion training, Test metric inspection, RAMPS, F2-temporal, or text/description work was performed.
+- Evidence commit SHA and push result will be recorded after this documentation update.
+
+Recommended next atomic task: manager-authorized repair of the optimizer construction path so frozen audio parameters are excluded from optimizer groups, followed by rerunning TASK-004I’s pre-run gates. Do not train until that firewall passes.
