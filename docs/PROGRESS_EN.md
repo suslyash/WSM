@@ -17,7 +17,7 @@ Final Test authorized: **no**.
 | 1. Manifest/partial-label contract | complete | Canonical manifest, separate DEV/Test consumer, masked sparse loss, zero video leakage, and owner-accepted speaker-independent split contract | TASK-001A through TASK-001E plus manager decision below |
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
-| 4. Fusion baselines | partial | Canonical sparse A+V DataModule and fixed F0/F1 baselines complete; F2 remains | TASK-004A through TASK-004E |
+| 4. Fusion baselines | partial | Canonical sparse A+V DataModule and fixed F0/F1/F2 model contracts complete; F2 run remains | TASK-004A through TASK-004F |
 | 5. RAMPS | not started | Direct reliable missing-head gradient | None |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
@@ -1835,3 +1835,52 @@ Status: accepted.
 - F2 does NOT include pseudo-labeling, flow matching, PAGB, auxiliary relation losses, text/description, semantic label embeddings, or Test-driven selection.
 
 Recommended next atomic task: TASK-004F — implement/register the fixed F2 availability-aware task-specific directed relation-bank model and verify synthetic/real forward-loss-backward behavior. Do not create an F2 training config or run training yet.
+
+
+### TASK-004F — Implement and register the F2 availability-aware task-specific directed A+V relation-bank model
+
+Status: complete. Branch: codex/task-004f. No training config, real training run, Test metrics, pseudo-labeling, flow matching, PAGB, or text/description work was performed.
+
+Changed files:
+
+- src/fusion/models/av_f2_task_aware_directed.py
+- src/fusion/models/__init__.py
+- src/chimera_plugin.py
+- docs/PROGRESS_EN.md
+
+Implementation commit SHA: a33499d965589b255e192e118845d79e11a767de. Push result: successful after final branch push.
+
+Registry and fixed architecture:
+
+- Registered `wsm_av_f2_task_aware_directed_model`; F0 and F1 registry keys remain intact; plugin import produced no F2 project-module warning.
+- Constructor defaults: audio_feature_dim=768, video_feature_dim=512, hidden_dim=192, fusion_hidden_dim=192, relation_hidden_dim=192, dropout=0.2, num_tasks=2; any num_tasks other than 2 is rejected.
+- The base path matches F1 exactly: hard availability-zeroed audio/video inputs, LayerNorm/Linear/GELU/Dropout modality projections, masked-mean video, and the F1 LayerNorm/Linear/GELU/Dropout/Linear/GELU/Dropout shared_fusion trunk.
+- Exactly two shared independently parameterized directed experts exist: `audio_to_video` and `video_to_audio`. Each computes `LayerNorm(q + RelationMLP(concat(q,c)))`, where RelationMLP is LayerNorm(2H) -> Linear(2H,R) -> GELU -> Dropout -> Linear(R,H) -> Dropout.
+- Each disease has an independent gate over the same two-expert bank: Linear(H,H) -> LayerNorm(H) -> GELU -> Dropout -> Linear(H,1), followed by softmax over expert positions only when both modalities are available.
+- For task t, relation_t = w_t,A2V E_A2V + w_t,V2A E_V2A and task_feature_t = LayerNorm_t(features_shared + relation_t). Two independent F1-capacity disease heads return un-sigmoided `[depression, parkinson]` logits.
+
+ModelOutput contract:
+
+- `preds`: `[B,2]`;
+- `features_audio`, `features_video`, `effective_audio_features`, `effective_video_features`, `features_shared`: `[B,H]`;
+- `relation_experts`: `[B,2,H]`, expert order `[audio_to_video, video_to_audio]`;
+- `relation_valid`: `[B,2]` bool;
+- `task_expert_weights`: `[B,2,2]`, task order `[depression, parkinson]`, expert order `[audio_to_video, video_to_audio]`;
+- `task_relation_features`: `[B,2,H]`; `task_features`: `[B,2,H]`; task logits map directly to `preds[:,0]` and `preds[:,1]`.
+
+Exact verification commands and results:
+
+- `python3 -m py_compile src/fusion/models/av_f2_task_aware_directed.py src/fusion/models/__init__.py src/chimera_plugin.py` — passed.
+- Required registry smoke — passed: F0/F1/F2 keys present and F2 imported without a project warning.
+- Synthetic F2 forward/loss/backward smoke — passed with finite loss=`0.6777748466`. Verified output/aux shapes, both-available gate weights finite and normalized, single-modality relation weights/features exactly zero, relation validity, distinct direction outputs, disjoint expert parameter sets, padded-video invariance, unavailable-modality invariance, available-video all-false rejection, neither-modality rejection, masked NaN sparse supervision, and finite nonzero gradients for both projections, shared_fusion, both directed experts, both task gates, and both task heads.
+- Real A+V DataModule smoke — passed with finite loss=`0.6790300012`, output `[4,2]`, finite gradients, normalized finite task weights, no `task_id`/`task_ids`, and counts train/dev/test_none/test_soft/test_hard=`6325/933/1364/1208/1014`.
+- `git diff --check` and frozen-source checks passed.
+
+Scope and safety:
+
+- No training config, training run, or Test metric computation occurred.
+- No DataModule, F0, or F1 changes; src/audio and src/video are unchanged.
+- No pseudo-labeling, flow matching, PAGB, auxiliary relation loss, learned loss balancing, prototypes, temporal encoders, text, description, or semantic label embeddings were added.
+- Stage 4 remains partial: F0/F1/F2 model contracts are complete; the fixed F2 run and later RAMPS work remain. Text/description remains deferred.
+
+Recommended next atomic task: run the fixed F2 task-aware directed relation-bank baseline only after manager assignment; do not add a training config or start RAMPS in this task.
