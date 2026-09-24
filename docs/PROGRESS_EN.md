@@ -2879,3 +2879,39 @@ Exact commands/results:
 - No Test rows/metrics, raw-frame extraction, Candidate B/fusion teacher, student training, TASK-005B, R3/R4, Stage 6/7, or general Text/Description work occurred. No missing-label correctness/comorbidity claim is made. `src/audio` and `src/video` remained unchanged.
 
 The exact fixed policy remained precision_target=`0.90`, min_support=`10`, folds=`5`; the fixed prompt bank and S1/S2/S3 method were unchanged.
+
+### MANAGER-REVIEW-035 — TASK-005A4-C1 runtime evidence accepted, one reproducibility correction required
+
+Status: corrective task required before PR #38 can merge. Stage 5 remains active.
+
+Owner clarification:
+
+- The owner explicitly authorized Codex to download/provision the exact `openai/clip-vit-base-patch32`, revision `main`. Therefore the CLIP download is NOT treated as an instruction violation or blocker.
+
+Evidence accepted:
+
+- Exact local CLIP dependency is now present and offline loading was reported successful.
+- Audio/video historical DEV reproduction matched the frozen references.
+- Depression OOF selected S1 positive/negative rules; full-DEV retained only the positive side at precision/support `0.9020619/194`.
+- Frozen Parkinson Family-A rules reproduced unchanged.
+- Published TRAIN cache reports accepted missing targets: depression `376/2665`, Parkinson `1801/3660`.
+- Reported cache invariants include 6325 unique rows, zero observed overwrite, exact accepted-target equality to calibrated audio probability, bounded reliability, and no Test use.
+- The semantic bridge is acceptance-only; general Text/Description Stage 3 remains deferred.
+
+Blocking reproducibility finding:
+
+- Current committed `normalize_prompt_bank()` uses:
+  `getattr(x, "text_embeds", None) or getattr(x, "pooler_output", None)`.
+- If `text_embeds` is a multi-element `torch.Tensor`, Python evaluates its truth value for the `or` expression and raises:
+  `RuntimeError: Boolean value of Tensor with more than one value is ambiguous`.
+- This directly affects the compatibility path added for the installed Transformers output object and contradicts the requirement that the committed code rerun reproducibly from the published branch.
+
+Decision:
+
+- Do not merge PR #38 yet.
+- Preserve all successful semantic/cache evidence; do not redesign or reselect anything.
+- Execute one narrow corrective task, TASK-005A4-C2, that fixes only safe CLIP text-output unwrapping, adds a regression smoke for an object carrying a multi-row `text_embeds` Tensor, and reruns the exact offline semantic audit.
+- The rerun must reproduce the frozen semantic selection/cache result without Test use. No TASK-005B implementation is authorized in this corrective cycle.
+
+Recommended next atomic task: TASK-005A4-C2 — make CLIP text-output unwrapping tensor-safe and reproduce the already accepted semantic audit/cache.
+
