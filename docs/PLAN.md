@@ -209,7 +209,7 @@ T2: T1 plus cached observable description/semantic feature and simple T/D gating
 
 Gate: at most two configs, diagnosis-free prompt, one DEV-selected representation.
 
-### Stage 4 — Honest multimodal baselines [REOPENED FOR STRONG-AUDIO CONTROLLED ABLATION]
+### Stage 4 — Honest multimodal baselines [COMPLETE — NO SAFE STRONG-AUDIO FUSION WINNER]
 
 - F0: simple masked late/gated fusion.
 - F1: sparse masked two-head MTL with no pseudo-labeling.
@@ -224,7 +224,7 @@ Gate: at most two configs, diagnosis-free prompt, one DEV-selected representatio
 
 Gate: same canonical splits/metric and DEV-only selector; exact frozen-audio reproduction at initialization for every candidate; no Test-driven search; at most three screened candidate models; preserve all negative results; nominate at most one DEV winner for later multi-seed confirmation.
 
-### Stage 5 — RAMPS
+### Stage 5 — RAMPS [ACTIVE]
 
 - R1: disease teachers calibrated only on the corresponding observed-task DEV data; soft cross-corpus targets, warm-up, separate thresholds, stop-gradient teacher.
 - R2: uncertainty, multimodal agreement, OOD distance, coverage curves; semantic agreement only after the base reliability mechanism.
