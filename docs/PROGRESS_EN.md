@@ -1348,3 +1348,17 @@ Exact verification commands/results:
 Deviations/blockers: none. The standard PyTorch nested-tensor warning from norm_first=True was not a project-module import warning and did not affect the passing checks.
 
 Recommended next atomic task: manager review of the V2 contract and authorization of a fixed V2 training config/run; do not select a V2 model or epoch using Test metrics.
+
+
+### MANAGER-DECISION-015 — Accept TASK-002N and authorize fixed V2 training comparison
+
+Status: accepted.
+
+- TASK-002N is integrated through PR #21 as 8e7577bc157ee1673fdbf6979f8074255aeac520.
+- The second and final allowed Stage 2 video family is now implemented and registered as wsm_video_depart_v2_model.
+- V2 preserves the V1 temporal encoder and [B,2] sparse two-task output contract, adding only task-specific class prototypes and learned prototype/MLP gates.
+- No contrastive loss is part of the initial V2 comparison.
+- The next experiment must be a controlled V1-versus-V2 comparison: use the identical full-coverage cache, seed=42, optimizer, batch size, epoch budget, early stopping, callbacks, and four evaluation streams. The only intended model-family differences are the V2 registry key plus prototype_scale=10.0 and gate_hidden_dim=64.
+- V2 checkpoint selection must use only dev/mean_score. Test metrics remain mandatory monitoring outputs and must not influence selection or tuning.
+
+Recommended next atomic task: TASK-002O — create the fixed V2 config by mirroring the accepted V1 config with only the model-family changes above, validate it, and run the real V2 seed-42 experiment. Report the DEV-selected V2 result and descriptive V1/V2 comparison.
