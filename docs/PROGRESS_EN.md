@@ -1231,3 +1231,18 @@ Exact verification commands/results:
 - No full training experiment, Test performance evaluation, or model selection ran.
 
 Recommended next atomic task: TASK-002M real V1 video training run.
+
+
+### MANAGER-DECISION-013 — Accept TASK-002L2 and unlock the first real V1 training run
+
+Status: accepted; Stage 2 V1 is training-ready.
+
+- TASK-002L2 is integrated through PR #19 as 71166ffffca0b7376427ed1872f6fd2bef0f8105.
+- The production V1 config now uses durable project paths: checkpoint/snapshot/console log_path=logs and MLflow tracking_uri=sqlite:///logs/mlflow.db.
+- No /tmp/wsm_task002l production path remains.
+- The accepted config still uses the full-coverage DEPART-compatible cache, four epoch-level evaluation streams (dev/test_none/test_soft/test_hard), and dev/mean_score as the sole checkpoint/early-stopping selector.
+- The first real V1 baseline run is authorized at the already fixed seed=42 and fixed config. This is a baseline training run, not a hyperparameter sweep.
+- Test metrics must be logged every epoch for comparative monitoring but must not drive any automatic or manual model-selection decision.
+- No further pre-training implementation gate is required unless the real run exposes a concrete runtime blocker.
+
+Recommended next atomic task: TASK-002M — run the real V1 video training experiment from the accepted production config, preserve all run artifacts, report the full epoch history, and identify the best checkpoint strictly by dev/mean_score.
