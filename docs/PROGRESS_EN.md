@@ -18,7 +18,7 @@ Final Test authorized: **no**.
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | complete | Bounded strong-temporal-audio search complete; no safe A+V winner under the predeclared task-balance gate | TASK-004A through TASK-004K |
-| 5. RAMPS | active/blocked | R1/R2 blocked for depression; fixed semantic bridge blocked because the mandated local CLIP model is unavailable | TASK-005A2/TASK-005A4 |
+| 5. RAMPS | active | R1/R2 strong-audio/video blocked; fixed CLIP semantic bridge passed and published the audited two-head cache | TASK-005A2/TASK-005A4-C1 |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
 
@@ -2853,3 +2853,29 @@ Exact verification commands/results:
 Plan status: Stage 5 remains active/blocked on the external local CLIP dependency. This task did not start TASK-005B. No missing-label correctness or comorbidity claim is made.
 
 Recommended next atomic task: provision/restore the exact local `openai/clip-vit-base-patch32` revision `main` processor/model, then rerun the unchanged semantic audit.
+
+
+### TASK-005A4-C1 follow-up — Provision the exact local CLIP dependency and complete the semantic audit
+
+Outcome: complete. The exact `openai/clip-vit-base-patch32`, revision `main`, was provisioned into `/media/maxim/Programs/ml_cache/hf/hub`. The local-only processor/model load passed, the semantic audit passed the two-head DEV gate, and the audited TRAIN cache was published.
+
+Implementation corrections:
+
+- `normalize_prompt_bank` now unwraps the `text_embeds` field returned by the installed Transformers version.
+- TRAIN cache calibrated probabilities remain float64 so accepted pseudo-targets equal the stored calibrated audio probabilities exactly.
+- The overall deployability flag now requires both the depression semantic rule and frozen Parkinson rules.
+
+Exact commands/results:
+
+- CLIP provisioning used the exact repository/revision with `snapshot_download(repo_id='openai/clip-vit-base-patch32', revision='main', cache_dir='/media/maxim/Programs/ml_cache/hf/hub')`; download completed at approximately 1.82 GB.
+- Offline verification with `HF_HUB_OFFLINE=1` and `local_files_only=True` passed: `CLIPProcessor`, `CLIPModel`, projection dimension 512.
+- Exact semantic production command from TASK-005A4-C1 was rerun with `--overwrite`; result: `status=passed`, `accepted_missing=2177`.
+- DEV reproduction: audio depression/Parkinson/Mean=`0.7479183895/0.8277353635/0.7878268765`; video=`0.6201013364/0.7930427585/0.7065720475`.
+- Depression OOF selected S1 rules: positive tau_conf=`0.61`, precision/support=`0.9132653/196`; negative tau_conf=`0.77`, precision/support=`0.9259259/27`. Full-DEV confirmation retained positive precision/support=`0.9020619/194` and disabled negative precision/support=`0.8333333/30`.
+- Frozen Parkinson Family-A rules remained unchanged: positive tau_conf=`0.77`, precision/support=`1.0/21`; negative tau_conf=`0.50`, precision/support=`0.9585492/193`.
+- TRAIN accepted missing targets: depression `376/2665` (coverage `0.1410882`, positive/negative `376/0`); Parkinson `1801/3660` (coverage `0.4920765`, positive/negative `212/1589`).
+- Cache invariants passed: 6325 rows, 6325 unique IDs, observed overwrite `0`, observed pseudo-values `0`, rejected reliability nonzero count `0`, accepted targets finite/in `[0,1]`, exact accepted-target equality to calibrated audio probabilities, reliability bounded, valid pseudo classes.
+- Artifacts: `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/semantic_prompt_bank.json`, `semantic_search.json`, `audit.json`, and `train_missing_targets.pt`.
+- No Test rows/metrics, raw-frame extraction, Candidate B/fusion teacher, student training, TASK-005B, R3/R4, Stage 6/7, or general Text/Description work occurred. No missing-label correctness/comorbidity claim is made. `src/audio` and `src/video` remained unchanged.
+
+The exact fixed policy remained precision_target=`0.90`, min_support=`10`, folds=`5`; the fixed prompt bank and S1/S2/S3 method were unchanged.

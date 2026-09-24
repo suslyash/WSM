@@ -11,7 +11,13 @@ def normalize_embeddings(x: torch.Tensor)->torch.Tensor:
 def masked_pool_clip_frames(video: torch.Tensor, mask: torch.Tensor)->torch.Tensor:
  x=normalize_embeddings(video); m=torch.as_tensor(mask,dtype=torch.bool).unsqueeze(-1); return normalize_embeddings((x*m).sum(1)/m.sum(1).clamp_min(1))
 
-def normalize_prompt_bank(x: torch.Tensor)->torch.Tensor: return normalize_embeddings(torch.as_tensor(x)).mean(0).div(normalize_embeddings(torch.as_tensor(x)).mean(0).norm().clamp_min(1e-12))
+def normalize_prompt_bank(x: torch.Tensor)->torch.Tensor:
+    if not isinstance(x,torch.Tensor):
+        x=getattr(x,"text_embeds",None) or getattr(x,"pooler_output",None)
+    if not isinstance(x,torch.Tensor): raise TypeError("CLIP text output has no tensor embedding field")
+    normalized=normalize_embeddings(x)
+    mean=normalized.mean(0)
+    return mean/mean.norm().clamp_min(1e-12)
 
 def semantic_cosine_margin(image, depression, neutral):
  image=normalize_embeddings(image); depression=normalize_embeddings(depression).reshape(-1); neutral=normalize_embeddings(neutral).reshape(-1); return image@depression-image@neutral
