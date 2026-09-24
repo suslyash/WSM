@@ -2267,3 +2267,36 @@ Boundary and next step:
 - No `chimera-ml train`, epoch metrics, MLflow training run, Test iteration, source/config change, or optimizer step occurred.
 - Evidence commit SHA: `c982eb0` (final documentation reference commit follows); push result: pending.
 - Stage 4 strong-temporal-audio ablation is pre-training-ready. Recommended next atomic task: TASK-004I3 run the fixed seed-42 strong-temporal-audio F1 residual experiment using the accepted production config and repaired optimizer.
+
+
+### MANAGER-DECISION-028 — Accept TASK-004I2B and authorize the real strong-temporal-audio F1 residual run
+
+Status: accepted; training authorized.
+
+- TASK-004I2B is integrated through PR #33 as `b4024c2174bc7ec164b78e697dda3e499314eac8`.
+- Actual final task branch HEAD/evidence commit is `624ac9261b6e74db36fea26460efb4cbed39dc24`, pushed to origin. The in-task PROGRESS text retained an intermediate short SHA/pending push note; this manager record is the authoritative final provenance.
+- Corrected production parameter counts are accepted:
+  - frozen audio: 105 objects / 3,031,880 scalars;
+  - trainable: 22 objects / 286,530 scalars;
+  - video_projection=99,520;
+  - shared_fusion=111,744;
+  - residual_heads=75,266.
+- The production optimizer firewall passes exactly:
+  `optimizer_ids == trainable_ids`,
+  optimizer object count=22,
+  and optimizer/frozen intersection is empty.
+- Production optimizer is `wsm_trainable_adamw_optimizer` -> AdamW with lr=1e-4 and weight_decay=0.01.
+- Historical checkpoint SHA remains exact:
+  `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`.
+- Canonical DEV frozen-base reproduction remains exact:
+  depression Score=0.7479183895,
+  Parkinson Score=0.8277353635,
+  Mean_Score=0.7878268765.
+- Bounded real TRAIN forward/loss/backward passes; frozen audio gradients are all None and required trainable branches receive finite nonzero gradients.
+- No optimizer step, full training, MLflow training run, or Test iteration occurred in TASK-004I2B.
+- The strong-temporal-audio experiment is now pre-training-ready. No architecture/config/hyperparameter change is authorized for the run.
+- TASK-004I3 must use the already accepted `03_f1_temporal_audio_residual.yaml` unchanged, seed=42, batch_size=8, 30-epoch ceiling, repaired optimizer, and DEV-only selector.
+- Every completed epoch must report DEV, TEST_NONE, TEST_SOFT, and TEST_HARD. Test remains monitoring-only.
+- The primary result is the selected-checkpoint same-row DEV delta between final A+V logits and frozen `audio_base_logits`, including task Scores and corrected-versus-introduced error counts.
+
+Recommended next atomic task: TASK-004I3 — run the fixed strong-temporal-audio F1 residual experiment using the accepted production config with no source/config changes.
