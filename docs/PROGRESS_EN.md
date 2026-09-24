@@ -2446,3 +2446,26 @@ Status: owner-authorized search expansion.
 - RAMPS, text, and description remain deferred until this search is reviewed.
 
 Recommended next atomic task: TASK-004K — design, implement, and run the bounded three-candidate audio-first temporal A+V search under the fixed DEV-only screening protocol.
+
+
+### TASK-004K SEARCH MANIFEST — frozen before metric-bearing training
+
+Status: architecture manifest frozen before the first full training run. Candidate architectures are frozen before the first metric-bearing training run. Exactly three candidates are declared; no fourth candidate is authorized.
+
+Fixed anchor for A/B/C: `FrozenAudioTemporalAdapter` loaded from `logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt`, SHA256 `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`. Audio task features are 192-dimensional and base logits are the fixed temporal-audio task-conditioned logits.
+
+- Candidate A, registry `wsm_av_audio_first_zero_residual_model`, config `configs/wsm_mm_pd_dep_v1/fusion/04_audio_first_zero_residual.yaml`, run order 1. Equation: `final_logits_t = audio_base_logits_t + video_available * Linear_zero(GELU(Linear(LN([audio_task_feature_t, masked_mean(video)_128]))))`. Video projection is 512 -> 128; residual hidden width is 128; two task-specific heads; trainable count excluding audio is 150,402. Each final correction Linear(128,1) weight and bias is exactly zero-initialized.
+- Candidate B, registry `wsm_av_audio_query_temporal_video_model`, config `configs/wsm_mm_pd_dep_v1/fusion/05_audio_query_temporal_video.yaml`, run order 2. Equation: `final_logits_t = audio_base_logits_t + video_available * Linear_zero(GELU(Linear([MHA(Q=Linear(audio_task_feature_t), K=V=Linear(video_frames_512))])) )`. Video/query width is 128, four attention heads, temporal video mask is used, residual hidden width is 128; two task-specific heads; trainable count excluding audio is 224,898. Each final correction Linear(128,1) weight and bias is exactly zero-initialized.
+- Candidate C, registry `wsm_av_audio_confidence_gated_model`, config `configs/wsm_mm_pd_dep_v1/fusion/06_audio_confidence_gated.yaml`, run order 3. Equation: `final_logits_t = audio_base_logits_t + video_available * sigmoid(G_t([audio_task_feature_t, abs(audio_base_logits_t)])) * R_zero_t([audio_task_feature_t, masked_mean(video)_128])`. Gate hidden width is 64, residual hidden width is 128, two task-specific bounded sigmoid gates and zero-initialized residual heads; trainable count excluding audio is 175,364. Gate is learned from frozen audio evidence and base-logit magnitude; no hard threshold is used.
+
+All candidates use seed 42, batch size 8, the same canonical DataModule, masked sparse loss, trainable-only AdamW (lr 1e-4, weight decay 0.01), 30-epoch ceiling, and DEV-only `dev/mean_score` max selection. Candidate B/C use no pooled-only replacement for the temporal-audio anchor; B explicitly attends over temporal video frames. Run order is A, then B, then C. No source/config changes are permitted after this manifest is frozen.
+
+Pre-run evidence for all three candidates:
+
+- All three configs passed `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config --config-path <candidate-config>`.
+- Plugin registration passed with all three registry keys present and no project-module warning from `chimera_plugin.register()`. A separate Chimera entrypoint emitted the pre-existing legacy warnings for absent `fusion.data.wsm_segment_datamodule` and `fusion.loss.wsm_avsync_loss`; neither is imported by the candidate plugin registration.
+- Production DataModule audit passed: train=6325, dev=933, test_none=1364, test_soft=1208, test_hard=1014.
+- Exact checkpoint SHA passed. Frozen audio parameters were absent from each optimizer; optimizer IDs exactly matched trainable IDs and were disjoint from frozen audio. Audio remained eval-only under parent train.
+- Trainable parameter counts passed caps: A=150,402 <=500,000; B=224,898 <=1,000,000; C=175,364 <=1,000,000.
+- Production-batch two-step wake-up smoke passed for A/B/C. Initial correction was exactly zero and `torch.equal(preds, audio_base_logits)` passed. First/second losses and total gradient sums were A `0.6438447/0.6434986`, `4.5865/5.1352`; B `0.6438447/0.6434728`, `5.1868/5.4412`; C `0.6438447/0.6436312`, `2.7043/2.9361`. All frozen audio gradients were None after the second backward.
+- Fresh-model canonical DEV-only initialization equality passed across every DEV batch for A/B/C. Each reproduced depression Score=`0.7479183895`, Parkinson Score=`0.8277353635`, Mean_Score=`0.7878268765`; no Test loader was iterated for this gate.
