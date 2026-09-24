@@ -1884,3 +1884,19 @@ Scope and safety:
 - Stage 4 remains partial: F0/F1/F2 model contracts are complete; the fixed F2 run and later RAMPS work remain. Text/description remains deferred.
 
 Recommended next atomic task: run the fixed F2 task-aware directed relation-bank baseline only after manager assignment; do not add a training config or start RAMPS in this task.
+
+
+### MANAGER-DECISION-022 — Accept TASK-004F and authorize the fixed F2 metric-driven run
+
+Status: accepted.
+
+- TASK-004F is integrated through PR #28 as f3c65408fe350113cfc3934584087a8fbf15a9bf.
+- The F2 registry/model contract is accepted as wsm_av_f2_task_aware_directed_model.
+- Synthetic and real DataModule smoke losses reported by TASK-004F are structural verification only: they demonstrate that forward, masked sparse BCE, backward, directed experts, task gates, and gradients work. They are NOT model-selection criteria and are not the experiment outcome.
+- The actual F2 experiment MUST evaluate DEV, TEST_NONE, TEST_SOFT, and TEST_HARD every epoch with per-task UAR/MF1/Score and Mean_Score.
+- The sole selector remains dev/mean_score in max mode. Training loss is logged as an optimization diagnostic only.
+- F2 must be trained with the same fixed seed=42, data, optimizer, batch size, epoch budget, callbacks/loggers, and selector policy as F1. No tuning is authorized.
+- The primary Stage 4 comparison is F2 versus F1 on DEV Mean_Score and per-task DEV Scores. Test metrics remain mandatory monitoring-only outputs.
+- At the DEV-selected F2 checkpoint, task-specific directed-expert gate statistics over all DEV rows should be recorded descriptively; they must not affect selection.
+
+Recommended next atomic task: TASK-004G — create the fixed F2 training config and run the real seed-42 F2 baseline, reporting all four metric streams every epoch and selecting only by dev/mean_score.
