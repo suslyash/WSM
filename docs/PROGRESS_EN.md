@@ -1043,3 +1043,19 @@ Exact verification commands/results:
 Deviation/blocker: 70 Test rows remain explicitly unavailable because no body ROI was detected; they are excluded from valid protocol datasets and counted per protocol. Test metrics remain monitoring-only and were not inspected in this task.
 
 Recommended next atomic task: manager review, then wire dev, test_none, test_soft, and test_hard into the epoch-level evaluation/metric callback path while keeping dev/mean_score as the sole selector and leaving Test outputs non-selective.
+
+
+### MANAGER-DECISION-010 — DEPART-compatible full-frame fallback and full video coverage
+
+Status: accepted; supersedes the prior policy that treated no_body_detected as video-unavailable for the V1 DEPART-comparable path.
+
+- The official released DEPART preprocessing code uses the detected body ROI when a valid YOLO box exists and falls back to the full RGB frame when no box exists.
+- Therefore a YOLO miss is not an extraction failure for the DEPART-comparable V1 pipeline.
+- The previously accepted cache (TRAIN/DEV 7162 successes + 96 no-body failures; TEST 1294 successes + 70 no-body failures) remains historical evidence but is superseded for future V1 training/evaluation.
+- A new cache version must be built under a separate cache root with explicit ROI-or-full-frame fallback in its preprocessing/fingerprint metadata.
+- All canonical TRAIN/DEV/TEST rows must be attempted under one identical preprocessing contract. No row may be excluded solely because YOLO failed to detect a body.
+- The full evaluation protocols must preserve raw membership: test_none=1364, test_soft=1208, test_hard=1014 before any non-YOLO fatal extraction filtering.
+- If any row remains unavailable after the fallback, the failure must be a genuine non-YOLO fatal source/model/runtime error and must be audited individually.
+- Training configuration/integration is paused until this full-coverage cache gate is cleared.
+
+Recommended next atomic task: implement the ROI-or-full-frame fallback, version/fingerprint it, rebuild and independently audit the full 8622-row TRAIN+DEV+TEST cache in a new cache root, and repoint the video DataModule to that cache with full protocol coverage. Do not train yet.
