@@ -15,7 +15,7 @@ Final Test authorized: **no**.
 | Paper/project analysis | complete | Baselines, structure, requirements, plan | BASELINES.md, PROJECT_INIT_STRUCTURE.md, PROJECT_REQUIREMENTS.md, PLAN.md |
 | 0. Reproducible base | complete | Canonical frozen audio config validates and registry/smoke gates pass | Verification records TASK-000-A and TASK-000B below |
 | 1. Manifest/partial-label contract | complete | Canonical manifest, separate DEV/Test consumer, masked sparse loss, zero video leakage, and owner-accepted speaker-independent split contract | TASK-001A through TASK-001E plus manager decision below |
-| 2. Video | partial | Deterministic V1 preprocessing/cache and V1/V2 model contracts implemented; no model winner selected | TASK-002A through TASK-002N |
+| 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | not started | Comparable F0/F1/F2 | None |
 | 5. RAMPS | not started | Direct reliable missing-head gradient | None |
@@ -1362,3 +1362,81 @@ Status: accepted.
 - V2 checkpoint selection must use only dev/mean_score. Test metrics remain mandatory monitoring outputs and must not influence selection or tuning.
 
 Recommended next atomic task: TASK-002O — create the fixed V2 config by mirroring the accepted V1 config with only the model-family changes above, validate it, and run the real V2 seed-42 experiment. Report the DEV-selected V2 result and descriptive V1/V2 comparison.
+
+
+### TASK-002O — Run the fixed prototype-aware V2 video experiment
+
+Status: complete; fixed seed-42 V2 experiment completed 11 epochs and stopped by the configured DEV-only early-stopping rule. Stage 2 video family comparison is complete; no Stage 3 work was started.
+
+Branch: codex/task-002o.
+
+Changed files:
+
+- configs/wsm_mm_pd_dep_v1/video/01_depart_v2_prototype.yaml
+- docs/PROGRESS_EN.md
+
+Config and pre-run evidence:
+
+- V2 config: configs/wsm_mm_pd_dep_v1/video/01_depart_v2_prototype.yaml.
+- Parsed V1/V2 equivalence audit passed. The only semantic differences were experiment_info.params.run_name, model.name, model.params.prototype_scale, and model.params.gate_hidden_dim. All seed, data, loss, optimizer, train, metric, callback, and logging settings were identical.
+- Fixed V2 model parameters: video_feature_dim=512, hidden_dim=192, num_layers=2, num_heads=4, ff_mult=4, dropout=0.2, sequence_steps=60, num_tasks=2, prototype_scale=10.0, gate_hidden_dim=64.
+- No contrastive loss, scheduler, or prototype auxiliary loss was added.
+- chimera-ml validate-config passed. CUDA gate passed on NVIDIA GeForce RTX 4080. Registry, masked sparse loss, callbacks, and loggers built successfully with no project-module warning.
+- DataModule counts passed: train=6325, dev=933, test_none=1364, test_soft=1208, test_hard=1014, all unavailable counts=0. val_dataloader keys were exactly dev, test_none, test_soft, test_hard.
+
+Exact training command:
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/video/01_depart_v2_prototype.yaml
+
+Run artifacts:
+
+- Run name: depart_v2_prototype_gated_2026-09-24_14-39_wsm_video_depart_v2_model_0a7294f4.
+- Completed epochs: 11/30.
+- Early stopping: fired at epoch 11 after 6 non-improvements; best=0.706572, last=0.641350.
+- Best checkpoint, selected only by maximum dev/mean_score: logs/wsm_mm_pd_dep_v1/depart_v2_prototype_gated_2026-09-24_14-39_wsm_video_depart_v2_model_0a7294f4/checkpoints/epoch=5_dev_mean_score=0.7066.pt.
+- Top-2 checkpoints: epoch=2_dev_mean_score=0.6807.pt and epoch=5_dev_mean_score=0.7066.pt; last checkpoint: last.pt.
+- Console log: logs/wsm_mm_pd_dep_v1/depart_v2_prototype_gated_2026-09-24_14-39_wsm_video_depart_v2_model_0a7294f4/train.log.
+- Summary: logs/wsm_mm_pd_dep_v1/depart_v2_prototype_gated_2026-09-24_14-39_wsm_video_depart_v2_model_0a7294f4/summary.txt.
+- Code archive: logs/wsm_mm_pd_dep_v1/depart_v2_prototype_gated_2026-09-24_14-39_wsm_video_depart_v2_model_0a7294f4/code.zip.
+- MLflow experiment: wsm_mm_pd_dep_v1; run ID 04f3f63362df49c0bd9386db479dfe42; status FINISHED.
+
+DEV-selected V2 result (epoch 5):
+
+- DEV Mean_Score=0.706572.
+- DEV depression UAR=0.620401, MF1=0.619801, Score=0.620101.
+- DEV Parkinson UAR=0.785231, MF1=0.800854, Score=0.793043.
+- Same-epoch monitoring only: TEST_NONE Mean_Score=0.722250, TEST_SOFT Mean_Score=0.721935, TEST_HARD Mean_Score=0.730925.
+- Optional descriptive DEV diagnostics from the selected checkpoint: mean prototype gate depression=0.890684, Parkinson=0.839221; prototype cosine separation depression=-0.225844, Parkinson=-0.372512.
+
+Full epoch history from summary.txt. Columns are epoch, train loss, dev loss, DEV depression UAR/MF1/Score, DEV Parkinson UAR/MF1/Score, DEV Mean_Score, TEST_NONE Mean_Score, TEST_SOFT Mean_Score, TEST_HARD Mean_Score:
+
+1  0.301832 0.866965 0.622222 0.621103 0.621662 0.685162 0.698622 0.691892 0.656777 0.701073 0.704115 0.709502
+2  0.115212 1.417376 0.614753 0.597885 0.606319 0.749275 0.760920 0.755097 0.680708 0.677020 0.681638 0.672118
+3  0.071853 1.629187 0.638982 0.638953 0.638968 0.717598 0.715523 0.716561 0.677764 0.687202 0.691737 0.671206
+4  0.042187 1.828645 0.659897 0.659873 0.659885 0.649275 0.615475 0.632375 0.646130 0.697722 0.694537 0.688554
+5  0.023420 2.094167 0.620401 0.619801 0.620101 0.785231 0.800854 0.793043 0.706572 0.722250 0.721935 0.730925
+6  0.014233 2.120936 0.610878 0.609941 0.610409 0.736232 0.720601 0.728416 0.669413 0.662892 0.665267 0.660468
+7  0.013028 2.786173 0.581886 0.549292 0.565589 0.636025 0.630893 0.633459 0.599524 0.629516 0.636282 0.633429
+8  0.005176 2.612524 0.591036 0.584681 0.587859 0.678192 0.648379 0.663285 0.625572 0.703916 0.703808 0.707913
+9  0.001312 2.747703 0.681606 0.680169 0.680887 0.666391 0.642323 0.654357 0.667622 0.698075 0.691241 0.688046
+10 0.004178 2.653282 0.599813 0.587356 0.593584 0.702761 0.689416 0.696088 0.644836 0.697507 0.704964 0.688274
+11 0.002704 2.731254 0.671709 0.671490 0.671599 0.634507 0.587694 0.611100 0.641350 0.719349 0.721270 0.715376
+
+V1 versus V2 DEV-only comparison:
+
+- Frozen V1: DEV Mean_Score=0.703274, depression Score=0.661923, Parkinson Score=0.744626.
+- V2: DEV Mean_Score=0.706572, depression Score=0.620101, Parkinson Score=0.793043.
+- Delta DEV Mean_Score = +0.003298.
+- Delta DEV depression Score = -0.041822.
+- Delta DEV Parkinson Score = +0.048417.
+- V2 is ahead by DEV Mean_Score for this fixed seed-42 comparison. Test metrics were inspected only as mandatory monitoring outputs and did not determine the family result, checkpoint, epoch, threshold, or tuning decision.
+
+Final verification:
+
+- All 11 completed epochs emitted finite train/DEV/TEST_NONE/TEST_SOFT/TEST_HARD losses and metrics; all four streams appeared every epoch.
+- Checkpointing and early stopping monitored only dev/mean_score in max mode.
+- No source code, preprocessing, cache, DataModule, loss, metrics, callbacks, optimizer, audio, or Test protocol definitions were changed.
+- No multi-seed confirmation, dependency installation, or additional Test evaluation ran.
+- git diff --check passed; git diff -- src/audio was empty.
+
+Recommended next atomic task: manager review of the DEV-selected V1/V2 family decision and authorization of the next PLAN stage; preserve the Test firewall and do not start multi-seed confirmation in this task.
