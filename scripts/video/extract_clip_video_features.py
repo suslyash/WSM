@@ -113,10 +113,42 @@ def _validate_artifact(path: Path, expected: dict[str, Any], target_frames: int,
     preprocessing = artifact.get("preprocessing")
     if not isinstance(preprocessing, dict) or preprocessing.get("target_frames") != target_frames:
         raise ValueError("preprocessing target_frames mismatch")
-    if not bool(torch.isfinite(features[mask]).all()):
-        raise ValueError("valid features must be finite")
-    if not torch.equal(features[~mask], torch.zeros_like(features[~mask])):
-        raise ValueError("invalid features must be exact zero")
+    if preprocessing.get("version") != PREPROCESSING_VERSION:
+        raise ValueError("preprocessing version mismatch")
+    if preprocessing.get("roi_policy_version") != ROI_POLICY_VERSION:
+        raise ValueError("ROI policy version mismatch")
+    if not bool(mask.all()):
+        raise ValueError("valid_mask must be all true for readable sampled frames")
+    if not bool(torch.isfinite(features).all()):
+        raise ValueError("features must be finite")
+    frame_sources = artifact.get("frame_sources")
+    if not isinstance(frame_sources, list) or len(frame_sources) != temporal_length:
+        raise ValueError("frame_sources must have length T")
+    if any(source not in {"body_roi", "full_frame_fallback"} for source in frame_sources):
+        raise ValueError("invalid frame source")
+    detected_count = int(artifact.get("detected_body_count", -1))
+    fallback_count = int(artifact.get("full_frame_fallback_count", -1))
+    if detected_count + fallback_count != temporal_length:
+        raise ValueError("detection/fallback counts do not equal T")
+    if detected_count != frame_sources.count("body_roi") or fallback_count != frame_sources.count("full_frame_fallback"):
+        raise ValueError("detection/fallback counts disagree with frame_sources")
+    if artifact.get("valid_detection_count") != detected_count:
+        raise ValueError("valid_detection_count must equal detected_body_count")
+    if artifact.get("selected_boxes") is not None:
+        boxes = artifact["selected_boxes"]
+        if len(boxes) != temporal_length:
+            raise ValueError("selected_boxes must have length T")
+        for source, box in zip(frame_sources, boxes, strict=True):
+            if source == "body_roi" and box is None:
+                raise ValueError("body_roi frame must have a selected box")
+            if source == "full_frame_fallback" and box is not None:
+                raise ValueError("fallback frame must have no selected box")
+    detection_coverage = float(artifact.get("detection_coverage", -1.0))
+    fallback_coverage = float(artifact.get("fallback_coverage", -1.0))
+    if detection_coverage != detected_count / temporal_length:
+        raise ValueError("detection coverage mismatch")
+    if fallback_coverage != fallback_count / temporal_length:
+        raise ValueError("fallback coverage mismatch")
     if artifact.get("detector_weights_sha256") != local_sha:
         raise ValueError("detector weights SHA-256 mismatch")
     if artifact.get("detection_parameters") != {"confidence": 0.5, "iou": 0.5, "imgsz": 640}:
@@ -124,8 +156,12 @@ def _validate_artifact(path: Path, expected: dict[str, Any], target_frames: int,
     if artifact.get("model_name") != model_name or artifact.get("model_revision") != model_revision:
         raise ValueError("CLIP model identity mismatch")
     return {"temporal_length": temporal_length, "feature_dim": 512,
-            "valid_detection_count": int(artifact.get("valid_detection_count", int(mask.sum()))),
-            "detection_coverage": float(artifact.get("detection_coverage", float(mask.float().mean())))}
+            "valid_detection_count": int(artifact["valid_detection_count"]),
+            "detected_body_count": int(artifact["detected_body_count"]),
+            "full_frame_fallback_count": int(artifact["full_frame_fallback_count"]),
+            "detection_coverage": float(artifact["detection_coverage"]),
+            "fallback_coverage": float(artifact["fallback_coverage"]),
+            "fallback_segment": int(artifact["full_frame_fallback_count"]) > 0}
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -237,13 +273,23 @@ def main() -> int:
                       "cache_path": str(cache_path), "cache_fingerprint": fingerprint, **details}
             index[segment_id] = record; extracted.append(record); _write_index(index_path, index)
         def cover(items):
-            values = [float(x["detection_coverage"]) for x in items if x.get("status") in {"extracted", "reused"}]
-            return {"count": len(values), "mean": sum(values)/len(values) if values else None,
-                    "min": min(values) if values else None, "max": max(values) if values else None}
+            successful = [x for x in items if x.get("status") in {"extracted", "reused"}]
+            detections = [float(x["detection_coverage"]) for x in successful]
+            fallbacks = [float(x["fallback_coverage"]) for x in successful]
+            return {
+                "count": len(successful),
+                "mean_detection_coverage": sum(detections) / len(detections) if detections else None,
+                "min_detection_coverage": min(detections) if detections else None,
+                "max_detection_coverage": max(detections) if detections else None,
+                "mean_fallback_coverage": sum(fallbacks) / len(fallbacks) if fallbacks else None,
+                "min_fallback_coverage": min(fallbacks) if fallbacks else None,
+                "max_fallback_coverage": max(fallbacks) if fallbacks else None,
+                "segments_with_fallback": sum(x.get("fallback_segment", False) for x in successful),
+            }
         all_records = [index[row["segment_id"]] for row in candidates if row["segment_id"] in index]
         test_rows_selected = sum(row["split"] == "test" for row in candidates)
         test_rows_indexed = sum(record.get("split") == "test" for record in index.values())
-        report = {"schema_version": "wsm-depart-video-cache-report-v2", "manifest_path": str(manifest_path),
+        report = {"schema_version": "wsm-depart-video-cache-report-v3", "manifest_path": str(manifest_path),
                   "manifest_fingerprint": manifest_fingerprint, "requested_splits": requested_splits,
                   "candidate_counts_by_split": candidate_counts, "test_rows_selected": test_rows_selected,
                   "test_rows_processed": test_rows_selected > 0, "test_rows_indexed": test_rows_indexed,
@@ -256,8 +302,11 @@ def main() -> int:
                   "sampling_method": SAMPLING_METHOD, "roi_policy_version": ROI_POLICY_VERSION,
                   "limit": args.limit, "resume": args.resume, "selected_count": len(candidates),
                   "extracted_success_count": len(extracted), "reused_success_count": len(reused),
-                  "failure_count": len(failures), "no_body_detected_count": sum(x.get("failure_category") == "no_body_detected" for x in failures),
-                  "other_failure_count": sum(x.get("failure_category") != "no_body_detected" for x in failures),
+                  "failure_count": len(failures), "no_body_detected_count": 0,
+                  "other_failure_count": len(failures),
+                  "success_by_split": {split: sum(x.get("status") in {"extracted", "reused"} and x.get("split") == split for x in all_records) for split in requested_splits},
+                  "failure_by_split": {split: sum(x.get("status") == "failed" and x.get("split") == split for x in all_records) for split in requested_splits},
+                  "coverage_by_split": {split: cover([x for x in all_records if x.get("split") == split]) for split in requested_splits},
                   "coverage_overall": cover(all_records), "records": all_records,
                   "test_metrics_inspected": False, "labels_passed_to_encoder": False}
         args.report_output.parent.mkdir(parents=True, exist_ok=True)
