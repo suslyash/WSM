@@ -2401,3 +2401,48 @@ Status: TASK-004I3 accepted as a negative result for the random-initialized resi
 - If TASK-004I4 passes, run exactly one fixed zero-init training experiment before deciding whether F2-temporal is still warranted.
 
 Recommended next atomic task: TASK-004I4 — implement/register the zero-initialized strong-audio F1 residual control and prove exact baseline-at-initialization plus two-step learnability without running a full experiment.
+
+
+### MANAGER-DECISION-030 — Supersede unexecuted TASK-004I4 and authorize a bounded audio-first temporal-fusion search
+
+Status: owner-authorized search expansion.
+
+- The owner explicitly requested more Codex autonomy: try several models rather than one manager-specified architecture at a time, with greater emphasis on the stronger temporal-audio modality.
+- TASK-004I4 had been assigned but no `codex/task-004i4` branch existed when this override was issued. TASK-004I4 is therefore superseded before execution, not failed.
+- TASK-004I3 remains accepted negative evidence for the random-init residual recipe.
+- The search objective is now to discover a temporal A+V fusion candidate that exceeds the exact frozen-audio DEV Mean_Score `0.7878268765` while preserving task balance.
+- Every candidate MUST:
+  - load the exact historical epoch-4 temporal-audio checkpoint (SHA256 `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`);
+  - keep the historical audio model fully frozen/eval-only and absent from optimizer groups;
+  - use the temporal audio model, not pooled `audio_cls`, as the audio anchor;
+  - start with `preds == audio_base_logits` exactly by zero-initializing the candidate's final correction path;
+  - treat video as an additive correction/residual source, never replace the audio base;
+  - consume no external task_id/task_ids;
+  - retain independent depression/Parkinson logits and masked sparse supervision.
+- Search budget: at most THREE candidate model families, one seed-42 screening run each. This is a bounded architecture search, not a grid.
+- Codex receives freedom to choose exact internal details from the following allowed primitives:
+  1. zero-initialized audio-anchored residual MLP;
+  2. task-specific frozen-audio query attending over the temporal video sequence;
+  3. audio-confidence/task-feature gated video correction;
+  4. F2-like directed audio↔video relation expert used only inside a zero-initialized additive residual path.
+- At least one candidate MUST use temporal video frames rather than only masked-mean video. All candidates keep the frozen temporal audio checkpoint as the dominant anchor.
+- Before the first candidate is trained, Codex MUST write a fixed search manifest into PROGRESS_EN documenting exactly which three candidates will be run, their equations, trainable parameter counts, and run order. Candidate architecture definitions are frozen after that point; no redesign after seeing DEV/Test results inside this task.
+- Per-candidate trainable parameter cap: 1,000,000 scalars excluding the frozen audio model. No candidate may unfreeze audio.
+- All candidate screening runs use:
+  - seed=42;
+  - batch_size=8 unless a temporal-attention candidate is CUDA-OOM at batch 8, in which case one documented fallback to batch 4 is allowed for that candidate only;
+  - AdamW via `wsm_trainable_adamw_optimizer`;
+  - lr=1e-4, weight_decay=0.01;
+  - 30-epoch ceiling;
+  - early stopping on `dev/mean_score` only, patience=6, min_delta=0.0005;
+  - DEV, TEST_NONE, TEST_SOFT, TEST_HARD every epoch.
+- Test metrics are monitoring-only and may not influence candidate design, stopping, ranking, or next-step choice.
+- Candidate ranking uses ONLY best DEV/Mean_Score. The frozen audio comparator is `0.7878268765`.
+- A candidate is a safe single-seed screen winner only if:
+  - best DEV/Mean_Score > 0.7878268765; and
+  - neither DEV task Score is more than 0.010 below the frozen-audio task Score.
+- If no candidate exceeds the audio baseline, preserve the negative result and stop the search; do not add a fourth model in this task.
+- If one or more candidates exceed audio, nominate exactly one by DEV/Mean_Score for a later 3-seed confirmation task. Do not claim promotion from one seed.
+- RAMPS, text, and description remain deferred until this search is reviewed.
+
+Recommended next atomic task: TASK-004K — design, implement, and run the bounded three-candidate audio-first temporal A+V search under the fixed DEV-only screening protocol.
