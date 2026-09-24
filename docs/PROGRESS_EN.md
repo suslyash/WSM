@@ -2958,3 +2958,37 @@ Artifacts:
 Plan status: Stage 5 remains active. TASK-005A4-C2 is complete; stop before TASK-005B. No missing-label correctness or comorbidity claim is made.
 
 Recommended next atomic task: manager review for TASK-005B.
+
+### MANAGER-DECISION-036 — Accept TASK-005A4-C2, merge semantic R2 cache, and authorize TASK-005B contract wiring
+
+Status: accepted and integrated; Stage 5 remains active.
+
+Integration:
+
+- PR #38 was manager-reviewed after TASK-005A4-C2, marked ready, and merged to `main` as `41aaba77cbbd55c0c66427c65f284378e97491b2`.
+- Final corrective implementation commit: `1223f434a41688f78a123ae4a37a6247b8ddbd01`.
+- The owner-authorized provisioning of exact `openai/clip-vit-base-patch32`, revision `main`, is accepted and is not treated as a process violation.
+
+Accepted semantic reliability evidence:
+
+- Exact offline rerun reproduced the frozen audio DEV depression/Parkinson/Mean scores `0.7479183895 / 0.8277353635 / 0.7878268765`.
+- Exact offline rerun reproduced video V2 DEV depression/Parkinson/Mean scores `0.6201013364 / 0.7930427585 / 0.7065720475`.
+- Depression OOF selected S1 positive `tau_conf=0.61` with precision/support `0.9132653061/196`, and S1 negative `tau_conf=0.77` with precision/support `0.9259259259/27`.
+- Frozen full-DEV confirmation retained only the depression positive side at precision/support `0.9020618557/194`; the negative side measured `0.8333333333/30` and remained disabled.
+- Frozen Parkinson Family-A rules reproduced unchanged: positive `tau_conf=0.77`, precision/support `1.0/21`; negative `tau_conf=0.50`, precision/support `0.9585492015/193`.
+- Published TRAIN missing-target cache reproduced exactly: depression `376/2665` accepted, all positive; Parkinson `1801/3660` accepted, `212` positive and `1589` negative; total accepted missing entries `2177`.
+- Independent cache audit passed: 6325 unique TRAIN IDs, no pseudo acceptance on observed truth, rejected/observed pseudo fields remain inactive, accepted targets exactly equal calibrated strong-audio probabilities, and reliability is finite/bounded.
+- Fixed policy remains `precision_target=0.90`, `min_support=10`, `folds=5`.
+- No Test rows or Test metrics influenced semantic rule selection, cache construction, or this manager decision.
+- No missing-label correctness or comorbidity recovery claim is authorized.
+
+Gate decision:
+
+- The offline two-head R2 semantic cache is accepted as the frozen pseudo-target source for the next contract step.
+- Stage 5 is NOT complete. The PLAN Stage-5 gate still requires proof that an accepted missing head receives a non-zero direct training gradient on the other corpus while observed truth wins and gradients remain finite.
+- Full student training is NOT authorized yet.
+- General Text/Description Stage 3 remains deferred and the CLIP prompt-bank bridge remains acceptance evidence only, not the transcript/text modality.
+- R3/R4, Stage 6, and Stage 7 remain locked.
+
+Recommended next atomic task: TASK-005B — wire the accepted `ramps-r2-semantic-v1` TRAIN cache into a registered A+V DataModule/loss contract and prove direct accepted-missing-head gradients with a bounded forward/loss/backward smoke only; do not run training.
+
