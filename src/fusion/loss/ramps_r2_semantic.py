@@ -12,10 +12,15 @@ def masked_pool_clip_frames(video: torch.Tensor, mask: torch.Tensor)->torch.Tens
  x=normalize_embeddings(video); m=torch.as_tensor(mask,dtype=torch.bool).unsqueeze(-1); return normalize_embeddings((x*m).sum(1)/m.sum(1).clamp_min(1))
 
 def normalize_prompt_bank(x: torch.Tensor)->torch.Tensor:
-    if not isinstance(x,torch.Tensor):
-        x=getattr(x,"text_embeds",None) or getattr(x,"pooler_output",None)
-    if not isinstance(x,torch.Tensor): raise TypeError("CLIP text output has no tensor embedding field")
-    normalized=normalize_embeddings(x)
+    if isinstance(x, torch.Tensor):
+        embeddings = x
+    else:
+        embeddings = getattr(x, "text_embeds", None)
+        if not isinstance(embeddings, torch.Tensor):
+            embeddings = getattr(x, "pooler_output", None)
+    if not isinstance(embeddings, torch.Tensor):
+        raise TypeError("CLIP text output has no tensor embedding field")
+    normalized=normalize_embeddings(embeddings)
     mean=normalized.mean(0)
     return mean/mean.norm().clamp_min(1e-12)
 

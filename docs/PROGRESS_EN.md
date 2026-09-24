@@ -4,7 +4,7 @@
 
 Plan initialized: 2026-09-23.
 
-Current stage: **Stage 5 active — RAMPS R2 offline reliability audit is blocked for depression after full-DEV confirmation**.
+Current stage: **Stage 5 active — fixed CLIP semantic bridge accepted; subsequent RAMPS work remains manager-gated**.
 
 Final Test authorized: **no**.
 
@@ -18,7 +18,7 @@ Final Test authorized: **no**.
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | complete | Bounded strong-temporal-audio search complete; no safe A+V winner under the predeclared task-balance gate | TASK-004A through TASK-004K |
-| 5. RAMPS | active | R1/R2 strong-audio/video blocked; fixed CLIP semantic bridge passed and published the audited two-head cache | TASK-005A2/TASK-005A4-C1 |
+| 5. RAMPS | active | Fixed CLIP semantic bridge passed and published the audited two-head cache; further RAMPS work remains manager-gated | TASK-005A2/TASK-005A4-C2 |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
 
@@ -2915,3 +2915,46 @@ Decision:
 
 Recommended next atomic task: TASK-005A4-C2 — make CLIP text-output unwrapping tensor-safe and reproduce the already accepted semantic audit/cache.
 
+
+
+### TASK-005A4-C2 — Make CLIP text-output unwrapping tensor-safe and reproduce the accepted semantic cache
+
+Outcome: complete. The committed `normalize_prompt_bank()` compatibility path no longer truth-tests a Tensor. It now accepts a direct Tensor, prefers a Tensor `text_embeds` field, falls back explicitly to a Tensor `pooler_output` field, and raises `TypeError` when neither field is usable. The exact fixed semantic audit reproduced the previously accepted OOF/full-DEV rules and TRAIN cache completely offline.
+
+Changed files:
+
+- `src/fusion/loss/ramps_r2_semantic.py`;
+- `docs/PROGRESS_EN.md`.
+
+Branch and history:
+
+- Required/reused branch: `codex/task-005a4`;
+- manager commits `aa47508` and `5983309` were preserved;
+- one corrective implementation commit was created after verification and pushed to `origin` (SHA recorded in the final handoff);
+- `main`/`master` was untouched by Codex.
+
+Exact verification commands/results:
+
+- `python3 -m py_compile src/fusion/loss/ramps_r2_semantic.py scripts/common/prepare_ramps_r2_semantic_targets.py` — passed.
+- The exact inline tensor-safe regression smoke passed for direct Tensor, multi-row `text_embeds`, and `pooler_output` fallback; outputs were identical, finite, and unit norm. Unsupported output raised the required clear `TypeError`.
+- `HF_HUB_OFFLINE=1` with `local_files_only=True` loaded `openai/clip-vit-base-patch32`, revision `main`, projection dimension 512 — passed. No download or model update occurred in this task.
+- Exact offline production rerun with the approved fixed command and `--overwrite` completed: `{"accepted_missing":2177,"status":"passed"}`. The production script was unchanged.
+- Historical DEV reproduction: audio depression/Parkinson/Mean=`0.7479183894738777/0.8277353634690592/0.7878268764714684`; video=`0.620101336372725/0.7930427585483398/0.7065720474605324`.
+- Depression OOF S1 rules reproduced: positive `tau_conf=0.61`, precision/support=`0.9132653061224489/196`; negative `tau_conf=0.77`, precision/support=`0.9259259259259259/27`.
+- Full-DEV confirmation reproduced: positive enabled, precision/support=`0.9020618556701031/194`; negative disabled, measured precision/support=`0.8333333333333334/30`.
+- Frozen Parkinson Family-A rules reproduced: positive `tau_conf=0.77`, precision/support=`1.0/21`; negative `tau_conf=0.50`, precision/support=`0.9585492014884949/193`.
+- TRAIN cache reproduced exactly: depression accepted `376/2665`, class counts `376/0`; Parkinson accepted `1801/3660`, class counts `212/1589`; total accepted missing `2177`.
+- Independent `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt` invariant check passed: 6325 rows and unique IDs, task dimension 2, no observed pseudo-acceptance/values, rejected reliability zero, rejected class `-1`, accepted targets finite and in `[0,1]`, exact equality to calibrated audio probabilities, bounded reliability, and pseudo classes limited to `-1/0/1`.
+- Fixed policy remained `precision_target=0.90`, `min_support=10`, `folds=5`; fixed prompt bank and semantic method were unchanged.
+- `git diff --check` passed. `git diff -- src/audio` and `git diff -- src/video` were empty. No Test rows or metrics were used; no raw-frame extraction, Candidate B/fusion teacher, student training, missing-label correctness/comorbidity claim, TASK-005B, R3/R4, Stage 6/7, or general Text/Description work occurred.
+
+Artifacts:
+
+- `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/semantic_prompt_bank.json`;
+- `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/semantic_search.json`;
+- `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/audit.json`;
+- `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt`.
+
+Plan status: Stage 5 remains active. TASK-005A4-C2 is complete; stop before TASK-005B. No missing-label correctness or comorbidity claim is made.
+
+Recommended next atomic task: manager review for TASK-005B.
