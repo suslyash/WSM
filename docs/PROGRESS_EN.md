@@ -1718,3 +1718,19 @@ Safety and scope:
 - Stage 4 remains partial: F0 and F1 contracts are complete; F2 and later RAMPS work remain.
 
 Recommended next atomic task: define and implement the fixed F2 task-aware directed fusion baseline only after manager assignment; do not train F1/F2 in this task.
+
+
+### MANAGER-DECISION-020 — Accept TASK-004D and require the fixed F1 run before F2
+
+Status: accepted.
+
+- TASK-004D is integrated through PR #26 as 57a2d580302170b01135ff3bfd40814c51cb1e32.
+- The F1 registry/model contract is accepted as wsm_av_f1_shared_mtl_model.
+- F1 preserves the accepted TASK-004A A+V data contract and uses pooled frozen audio/video inputs, hard availability masking, one shared fusion MLP, and two independent sparse disease heads.
+- Synthetic and real DataModule forward/loss/backward checks passed with finite nonzero gradients through both modality projections, the shared trunk, and both disease heads.
+- F0, the A+V DataModule, src/audio, and src/video remain unchanged.
+- The implementing handoff proposed proceeding directly to F2, but Stage 4 defines F1 as the baseline that isolates shared-representation gain. A real fixed F1 run is therefore required before F2 so the later F2 result can isolate task-aware fusion relative to an actually measured F1 baseline.
+- The fixed F1 run must use the same seed=42, data, optimizer, batch size, epoch budget, instrumentation, and DEV-only selector policy as F0. No tuning is authorized.
+- DEV/TEST_NONE/TEST_SOFT/TEST_HARD must be reported every epoch; Test remains monitoring-only.
+
+Recommended next atomic task: TASK-004E — create the fixed F1 training config and run the real seed-42 F1 baseline. Compare F1 to F0 on DEV only. After TASK-004E, proceed directly to F2 model implementation.
