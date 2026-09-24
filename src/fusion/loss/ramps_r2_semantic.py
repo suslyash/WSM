@@ -66,8 +66,15 @@ def apply_semantic_rule(records,rule,pos):
  if rule["family"]=="S3": mask &= ((v>=.5)==(s>=.5)); mask &= torch.minimum(conf,semantic_confidence(v,pos))>=rule["tau_conf"]; mask &= torch.maximum(torch.maximum(records["audio_entropy"],records["semantic_entropy"]),records["video_entropy"])<=rule["tau_entropy"]
  return mask
 
-def semantic_reliability(records,rule,mask):
- a,s=records["audio_prob"],records["semantic_prob"]; value=torch.minimum(semantic_confidence(a,a>=.5),semantic_confidence(s,s>=.5))
- if rule.get("family")=="S2": value=value*(1-torch.maximum(records["audio_entropy"],records["semantic_entropy"]))*(1-records["ood_percentile"])
- if rule.get("family")=="S3": value=torch.minimum(value,semantic_confidence(records["video_prob"],records["video_prob"]>=.5))*(1-torch.maximum(torch.maximum(records["audio_entropy"],records["semantic_entropy"]),records["video_entropy"]))
- return value.detach().clamp(0,1)*mask
+def semantic_reliability(records, rule, positive, mask):
+    """Detached candidate-side semantic reliability for one depression class side."""
+    audio_conf=semantic_confidence(records["audio_prob"],positive)
+    semantic_conf=semantic_confidence(records["semantic_prob"],positive)
+    value=torch.minimum(audio_conf,semantic_conf)
+    if rule.get("family")=="S2":
+        ood=records["ood_percentile_positive"] if positive else records["ood_percentile_negative"]
+        value=value*(1-torch.maximum(records["audio_entropy"],records["semantic_entropy"]))*(1-ood)
+    if rule.get("family")=="S3":
+        video_conf=semantic_confidence(records["video_prob"],positive)
+        value=torch.minimum(value,video_conf)*(1-torch.maximum(torch.maximum(records["audio_entropy"],records["semantic_entropy"]),records["video_entropy"]))
+    return value.detach().clamp(0,1)*torch.as_tensor(mask,dtype=torch.bool)

@@ -2812,3 +2812,44 @@ Decision:
 
 Recommended next atomic task: TASK-005A4-C1 — complete the already-authorized TASK-005A4 success path and fixed-contract enforcement without changing the research method.
 
+
+
+### TASK-005A4-C1 — Complete the fixed CLIP semantic audit success path without changing the method
+
+Outcome: corrective implementation complete; production remains environment-blocked because the mandated local-only CLIP processor/model is unavailable. The blocked path remains valid, and the previously unreachable success path is now structurally complete.
+
+Changed files:
+
+- `src/fusion/loss/ramps_r2_semantic.py`;
+- `src/fusion/loss/__init__.py`;
+- `scripts/common/prepare_ramps_r2_semantic_targets.py`;
+- `docs/PROGRESS_EN.md`.
+
+Branch/evidence:
+
+- Reused the manager-authorized existing branch `codex/task-005a4`; manager commits `9699b0f` and `e412542` were preserved.
+- Corrective implementation commit SHA is recorded in the final handoff after commit/push.
+- Main/master was not modified.
+
+Corrections implemented:
+
+- Removed the unconditional `semantic TRAIN writer not reached` sentinel. The success path now performs canonical TRAIN inference only after both-head DEV deployment, constructs the required two-head artifact, validates masks/targets/finite ranges/accepted audio-target equality/positive coverage, atomically writes `train_missing_targets.pt`, and writes pass audit statistics.
+- Fixed `semantic_reliability(records, rule, positive, mask)` to use explicit candidate-side confidence and `ood_percentile_positive` for side 1 or `ood_percentile_negative` for side 0; output is detached and clamped to `[0,1]`.
+- Enforced exact `openai/clip-vit-base-patch32`, revision `main`, precision_target `0.90`, min_support `10`, and folds `5`.
+- Added deterministic seed 42 for Python, Torch, and CUDA.
+- Preserved the exact prompts, S1/S2/S3 families, frozen Parkinson rules, side-conditional OOD logic, local-only CLIP loading, and no-Test firewall.
+
+Exact verification commands/results:
+
+- `python3 -m py_compile src/fusion/loss/ramps_r2_semantic.py src/fusion/loss/__init__.py scripts/common/prepare_ramps_r2_semantic_targets.py` — passed.
+- Required candidate-side S2 smoke — passed: finite bounded detached positive/negative reliability and side-specific ordering.
+- Sentinel absence check — passed. Fixed model/prompt string checks — passed.
+- Exact production rerun with `--overwrite` was attempted. Audio SHA=`0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`; video SHA=`3e39778126db401a2fe17bb472a172191616e8a7b5265e982233c53dcd4af2f6`; video epoch-5 strict construction passed.
+- Production stopped at `CLIPProcessor.from_pretrained(..., local_files_only=True)` with `OSError: Can't load image processor for 'openai/clip-vit-base-patch32'`. No download, network access, substitute model, raw-frame extraction, DEV semantic inference, TRAIN inference, or cache publication occurred.
+- Required blocked artifacts were rewritten: `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/semantic_prompt_bank.json`, `semantic_search.json`, and `audit.json`. `train_missing_targets.pt` is absent; blocked audit records `train_inference_ran=false` and `train_missing_targets_published=false`.
+- `precision_target=0.90`, `min_support=10`, and `folds=5` remained exact. No Test rows/metrics, Candidate B/fusion teacher, student training, TASK-005B, R3/R4, Stage 6/7, or general Text/Description work occurred.
+- `git diff --check` passed; `src/audio`, `src/video`, `src/fusion/models`, and `src/fusion/data` remained unchanged.
+
+Plan status: Stage 5 remains active/blocked on the external local CLIP dependency. This task did not start TASK-005B. No missing-label correctness or comorbidity claim is made.
+
+Recommended next atomic task: provision/restore the exact local `openai/clip-vit-base-patch32` revision `main` processor/model, then rerun the unchanged semantic audit.

@@ -1,6 +1,6 @@
 """Offline fixed-CLIP semantic evidence audit for RAMPS R2."""
 from __future__ import annotations
-import argparse,hashlib,json,tempfile
+import argparse,hashlib,json,tempfile,random
 from datetime import datetime,timezone
 from pathlib import Path
 import torch
@@ -21,6 +21,15 @@ def sha(p):
 def atomic(path,obj):
  with tempfile.NamedTemporaryFile('w',dir=path.parent,prefix='.tmp-',suffix='.json',delete=False,encoding='utf8') as f: json.dump(obj,f,indent=2,sort_keys=True,allow_nan=False); n=f.name
  Path(n).replace(path)
+def atomic_torch(path,obj):
+ with tempfile.NamedTemporaryFile('wb',dir=path.parent,prefix='.tmp-',suffix='.pt',delete=False) as f:
+  torch.save(obj,f); f.flush(); name=f.name
+ Path(name).replace(path)
+
+def stats(value):
+ value=value.detach().cpu().flatten()
+ return {'min':float(value.min()) if value.numel() else None,'max':float(value.max()) if value.numel() else None,'mean':float(value.mean()) if value.numel() else None}
+
 def move_batch(b,device):
  b.inputs={k:v.to(device) if isinstance(v,torch.Tensor) else v for k,v in b.inputs.items()}; b.masks={k:v.to(device) if isinstance(v,torch.Tensor) else v for k,v in b.masks.items()}; return b
 def infer(audio,video,clip,dep_text,neu_text,dataset,collate,device,bs,nw):
@@ -41,8 +50,10 @@ def main():
  ap=argparse.ArgumentParser();
  for n in ('data_root','audio_feature_cache_root','video_cache_root','audio_checkpoint','video_checkpoint','output_root'): ap.add_argument('--'+n.replace('_','-'),required=True)
  ap.add_argument('--clip-model',default='openai/clip-vit-base-patch32'); ap.add_argument('--clip-revision',default='main'); ap.add_argument('--precision-target',type=float,default=.9); ap.add_argument('--min-support',type=int,default=10); ap.add_argument('--folds',type=int,default=5); ap.add_argument('--batch-size',type=int,default=32); ap.add_argument('--num-workers',type=int,default=4); ap.add_argument('--device',default='cuda'); ap.add_argument('--overwrite',action='store_true'); args=ap.parse_args()
+ random.seed(42); torch.manual_seed(42)
+ if torch.cuda.is_available(): torch.cuda.manual_seed_all(42)
+ if args.clip_model!='openai/clip-vit-base-patch32' or args.clip_revision!='main' or args.precision_target!=0.90 or args.min_support!=10 or args.folds!=5: raise ValueError('fixed TASK-005A4-C1 contract changed')
  if not torch.cuda.is_available() and args.device.startswith('cuda'): raise RuntimeError('CUDA unavailable; semantic audit blocked')
- if args.folds!=5 or args.precision_target<.9 or args.min_support<10: raise ValueError('fixed reliability contract changed')
  out=Path(args.output_root).resolve(); out.mkdir(parents=True,exist_ok=True)
  if any(out.iterdir()) and not args.overwrite: raise FileExistsError('non-empty output root refuses overwrite')
  ac,vc=Path(args.audio_checkpoint),Path(args.video_checkpoint); ah,vh=sha(ac),sha(vc)
@@ -96,5 +107,25 @@ def main():
  if not search['depression_deployable']:
   audit={'version':'ramps-r2-semantic-v1','blocked':True,'reason':'depression semantic reliability gate failed','train_inference_ran':False,'train_missing_targets_published':False,'no_missing_label_correctness_claim':True,'counts':data.audit['counts'],'no_test_statement':'No Test rows or metrics were iterated or inspected.','depression':confirmed,'parkinson_frozen_rules':park_rules,'prompt_bank_sha256':prompt_payload['canonical_json_sha256']}; atomic(out/'audit.json',audit); raise RuntimeError('R2 semantic blocked: depression has no deployable side')
  # The deployment path is reachable only after the two-head DEV gate.
- train=infer(audio,video,clip,dep_text.to(device),neu_text.to(device),data.train_dataset,data.collate_fn,device,args.batch_size,args.num_workers); raise RuntimeError('semantic TRAIN writer not reached in this blocked audit')
+ train=infer(audio,video,clip,dep_text.to(device),neu_text.to(device),data.train_dataset,data.collate_fn,device,args.batch_size,args.num_workers)
+ if len(train['segment_ids'])!=6325 or len(set(train['segment_ids']))!=6325: raise RuntimeError('TRAIN canonical rows/IDs invalid')
+ pseudo_accept=torch.zeros((6325,2),dtype=torch.bool); pseudo_targets=torch.full((6325,2),float('nan')); pseudo_reliability=torch.zeros((6325,2)); pseudo_class=torch.full((6325,2),-1,dtype=torch.long)
+ dep_train=records(train,torch.arange(6325),0,full_st)
+ for side,pos in (('positive',True),('negative',False)):
+  rule=confirmed[side]; mask=apply_semantic_rule(dep_train,rule,pos)&~train['observed'][:,0]
+  pseudo_accept[:,0]|=mask; pseudo_targets[mask,0]=dep_train['audio_prob'][mask]; pseudo_reliability[mask,0]=semantic_reliability(dep_train,rule,pos,mask)[mask]; pseudo_class[mask,0]=int(pos)
+ park_train=records(train,torch.arange(6325),1,ps)
+ for side,pos in (('positive',True),('negative',False)):
+  rule=park_rules[side]; mask=(((park_train['audio_prob']>=.5)==(park_train['video_prob']>=.5))&((park_train['audio_prob']>=.5) if pos else (park_train['audio_prob']<.5))&(torch.minimum(semantic_confidence(park_train['audio_prob'],pos),semantic_confidence(park_train['video_prob'],pos))>=rule['tau_conf'])&~train['observed'][:,1])
+  pseudo_accept[:,1]|=mask; pseudo_targets[mask,1]=park_train['audio_prob'][mask]; pseudo_reliability[mask,1]=torch.minimum(semantic_confidence(park_train['audio_prob'],pos),semantic_confidence(park_train['video_prob'],pos)).detach()[mask].clamp(0,1); pseudo_class[mask,1]=int(pos)
+ observed_overwrite=int((pseudo_accept&train['observed']).sum()); pseudo_observed=int(torch.isfinite(pseudo_targets[train['observed']]).sum()); accepted=pseudo_targets[pseudo_accept]
+ if observed_overwrite or pseudo_observed or (accepted.numel() and not bool(torch.isfinite(accepted).all())) or (accepted.numel() and not bool(((accepted>=0)&(accepted<=1)).all())): raise RuntimeError('TRAIN pseudo-target invariant failed')
+ if not bool(pseudo_accept[~train['observed']].any(dim=0).all()): raise RuntimeError('TRAIN two-head acceptance gate failed')
+ artifact={'version':'ramps-r2-semantic-v1','task_names':list(TASKS),'segment_ids':train['segment_ids'],'observed_mask':train['observed'],'observed_targets':train['targets'],'raw_audio_logits':train['audio_logits'],'calibrated_audio_probs':torch.stack([dep_train['audio_prob'],park_train['audio_prob']],1).float(),'raw_video_logits':train['video_logits'],'calibrated_video_probs':torch.stack([dep_train['video_prob'],park_train['video_prob']],1).float(),'semantic_margin_depression':train['margin'],'calibrated_semantic_prob_depression':dep_train['semantic_prob'].float(),'audio_task_features':train['audio_features'],'pseudo_accept_mask':pseudo_accept,'pseudo_targets':pseudo_targets,'pseudo_reliability':pseudo_reliability,'pseudo_class':pseudo_class,'depression_selected_rules':confirmed,'parkinson_frozen_rules':park_rules,'audio_temperatures':{'depression':full_st[0],'parkinson':ps[0]},'video_temperatures':{'depression':full_st[1],'parkinson':ps[1]},'semantic_calibrator':full_st[2],'semantic_prompt_bank':prompt_payload,'semantic_prompt_bank_sha256':prompt_payload['canonical_json_sha256'],'clip_model_name':args.clip_model,'clip_model_revision':args.clip_revision,'audio_checkpoint_path':str(ac.resolve()),'audio_checkpoint_sha256':ah,'video_checkpoint_path':str(vc.resolve()),'video_checkpoint_sha256':vh}
+ atomic_torch(out/'train_missing_targets.pt',artifact)
+ audit={'version':'ramps-r2-semantic-v1','blocked':False,'train_inference_ran':True,'train_missing_targets_published':True,'no_missing_label_correctness_claim':True,'counts':data.audit['counts'],'train_rows':6325,'observed_overwrite_violations':observed_overwrite,'pseudo_values_on_observed_entries':pseudo_observed,'accepted_missing_entries':int(pseudo_accept.sum()),'tasks':{}}
+ for task,name in enumerate(TASKS):
+  missing=~train['observed'][:,task]; acc=pseudo_accept[:,task]; vals=pseudo_targets[acc,task]; rel=pseudo_reliability[acc,task]; audit['tasks'][name]={'missing_train_count':int(missing.sum()),'accepted_total':int(acc.sum()),'rejected_total':int((missing&~acc).sum()),'coverage':float(acc.sum()/missing.sum()),'accepted_positive_count':int((acc&(pseudo_class[:,task]==1)).sum()),'accepted_negative_count':int((acc&(pseudo_class[:,task]==0)).sum()),'accepted_probability_stats':stats(vals),'reliability_stats':stats(rel)}
+ atomic(out/'audit.json',audit)
+ print(json.dumps({'status':'passed','accepted_missing':int(pseudo_accept.sum()),'output_root':str(out)},sort_keys=True))
 if __name__=='__main__': main()
