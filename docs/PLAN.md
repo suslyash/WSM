@@ -215,7 +215,7 @@ Gate: at most two configs, diagnosis-free prompt, one DEV-selected representatio
 - F1: sparse masked two-head MTL with no pseudo-labeling.
 - F2: TACME-like task-aware relation bank with observed loss; add PAGB comparator only if budget permits.
 - Owner-authorized pre-RAMPS strong-audio ablation: replace the pooled `audio_cls` fusion branch with the frozen DEV-selected historical temporal-audio checkpoint through a fusion-side adapter; do not edit `src/audio`.
-- Execute this ablation causally: first reproduce the historical audio DEV result from the frozen checkpoint, then measure strong-audio+video F1-style residual fusion, and only after that add the corresponding F2 directed-relation variant if the contract remains valid.
+- Execute this ablation causally: first reproduce the historical audio DEV result from the frozen checkpoint, then measure strong-audio+video F1-style residual fusion. If that residual experiment does not initialize exactly at the frozen-audio baseline, run one explicit zero-initialized residual control before interpreting the value of video. Only after that control is resolved add the corresponding F2 directed-relation variant if the contract remains valid.
 - RAMPS Stage 5 is deferred until this strong-audio fusion ablation is completed or explicitly stopped by the manager.
 
 Gate: same canonical splits/metric and DEV-only selector; the frozen audio adapter must reproduce the historical audio DEV reference before its fusion result is trusted; F1-style strong-audio fusion isolates the value of adding video without discarding the temporal audio encoder; the later F2-style variant isolates directed task-aware relations on top.
