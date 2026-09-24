@@ -17,7 +17,7 @@ Final Test authorized: **no**.
 | 1. Manifest/partial-label contract | complete | Canonical manifest, separate DEV/Test consumer, masked sparse loss, zero video leakage, and owner-accepted speaker-independent split contract | TASK-001A through TASK-001E plus manager decision below |
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
-| 4. Fusion baselines | partial | Canonical sparse A+V DataModule and fixed F0/F1/F2 model contracts complete; F2 run remains | TASK-004A through TASK-004F |
+| 4. Fusion baselines | complete | Canonical sparse A+V DataModule and fixed F0/F1/F2 baselines complete; F2 selected by DEV/Mean_Score | TASK-004A through TASK-004G |
 | 5. RAMPS | not started | Direct reliable missing-head gradient | None |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
@@ -1900,3 +1900,82 @@ Status: accepted.
 - At the DEV-selected F2 checkpoint, task-specific directed-expert gate statistics over all DEV rows should be recorded descriptively; they must not affect selection.
 
 Recommended next atomic task: TASK-004G — create the fixed F2 training config and run the real seed-42 F2 baseline, reporting all four metric streams every epoch and selecting only by dev/mean_score.
+
+
+### TASK-004G — Run the fixed F2 task-aware directed A+V relation-bank baseline
+
+Status: complete. Branch: codex/task-004g. The fixed seed-42 F2 run completed 11 epochs and stopped by the configured DEV patience rule. Epoch 5 was selected solely by maximum `dev/mean_score`; training loss was optimization diagnostics only.
+
+Changed files:
+
+- configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml
+- docs/PROGRESS_EN.md
+
+Config and pre-run evidence:
+
+- Config path: `configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml`.
+- F1/F2 equivalence audit passed: seed, data, loss, optimizer, training, metrics, callbacks, loggers, selector, and all non-model semantics are identical. Intentional differences are run_name, model name, and F2 relation_hidden_dim=192.
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config --config-path configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml` — passed.
+- Registry/build smoke passed with no project-module warnings; CUDA was NVIDIA GeForce RTX 4080. Counts were train/dev/test_none/test_soft/test_hard=6325/933/1364/1208/1014; joined_total=8622; missing audio/video=0/0; validation keys were exactly dev/test_none/test_soft/test_hard; checkpoint and early stopping monitored only dev/mean_score in max mode.
+- Production-size real batch smoke passed with finite structural loss=0.7181825042, output [32,2], finite gradients, and normalized finite task expert weights. This loss was not interpreted as model quality.
+
+Exact training command:
+
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml` — completed normally on CUDA; early stopping ended after epoch 11 with six non-improving DEV epochs.
+
+Selected result:
+
+- Best epoch: 5; selected checkpoint: `logs/wsm_mm_pd_dep_v1/av_f2_task_aware_directed_2026-09-24_18-18_wsm_av_f2_task_aware_directed_model_f1b9902d/checkpoints/epoch=5_dev_mean_score=0.7746.pt`.
+- DEV depression UAR/MF1/Score=0.699907/0.694163/0.697035.
+- DEV Parkinson UAR/MF1/Score=0.851691/0.852516/0.852104.
+- DEV Mean_Score=0.774569.
+- Same-epoch TEST_NONE depression UAR/MF1/Score=0.751529/0.731182/0.741356; Parkinson=0.791502/0.783516/0.787509; Mean_Score=0.764432.
+- Same-epoch TEST_SOFT depression UAR/MF1/Score=0.723356/0.705465/0.714410; Parkinson=0.791289/0.783327/0.787308; Mean_Score=0.750859.
+- Same-epoch TEST_HARD depression UAR/MF1/Score=0.720165/0.700303/0.710234; Parkinson=0.797087/0.782887/0.789987; Mean_Score=0.750110.
+- Top-2 checkpoints: `epoch=5_dev_mean_score=0.7746.pt` and `epoch=1_dev_mean_score=0.7624.pt`; last checkpoint: `last.pt`.
+
+Complete epoch table. Each triple is UAR/MF1/Score; Test metrics are monitoring-only:
+
+| epoch | train | DEV D | DEV P | DEV mean | NONE D | NONE P | NONE mean | SOFT D | SOFT P | SOFT mean | HARD D | HARD P | HARD mean |
+|---:|---:|---|---|---:|---|---|---:|---|---|---:|---|---|---:|
+| 1 | 0.390081 | 0.708964/0.708426/0.708695 | 0.815804/0.816545/0.816174 | 0.762434 | 0.752645/0.752765/0.752705 | 0.790637/0.759661/0.775149 | 0.763927 | 0.764278/0.761840/0.763059 | 0.793491/0.761611/0.777551 | 0.770305 | 0.766390/0.762225/0.764308 | 0.750755/0.719907/0.735331 | 0.749819 |
+| 2 | 0.181808 | 0.646032/0.645688/0.645860 | 0.799793/0.822546/0.811169 | 0.728515 | 0.778907/0.775415/0.777161 | 0.828678/0.841427/0.835052 | 0.806107 | 0.779437/0.775405/0.777421 | 0.825863/0.840735/0.833299 | 0.805360 | 0.773743/0.768798/0.771270 | 0.833518/0.843750/0.838634 | 0.804952 |
+| 3 | 0.105752 | 0.654108/0.653727/0.653918 | 0.792685/0.816705/0.804695 | 0.729306 | 0.771857/0.768153/0.770005 | 0.818544/0.841240/0.829892 | 0.799948 | 0.762194/0.758347/0.760270 | 0.826975/0.850743/0.838859 | 0.799565 | 0.754081/0.748903/0.751492 | 0.843171/0.859137/0.851154 | 0.801323 |
+| 4 | 0.077411 | 0.660177/0.660169/0.660173 | 0.773775/0.801485/0.787630 | 0.723902 | 0.736479/0.730418/0.733449 | 0.779666/0.809463/0.794564 | 0.764007 | 0.724752/0.717413/0.721083 | 0.783223/0.814000/0.798612 | 0.759847 | 0.722167/0.711348/0.716757 | 0.805497/0.828351/0.816924 | 0.766841 |
+| 5 | 0.050698 | 0.699907/0.694163/0.697035 | 0.851691/0.852516/0.852104 | 0.774569 | 0.751529/0.731182/0.741356 | 0.791502/0.783516/0.787509 | 0.764432 | 0.723356/0.705465/0.714410 | 0.791289/0.783327/0.787308 | 0.750859 | 0.720165/0.700303/0.710234 | 0.797087/0.782887/0.789987 | 0.750110 |
+| 6 | 0.042364 | 0.672829/0.672833/0.672831 | 0.823050/0.826079/0.824565 | 0.748698 | 0.760963/0.753198/0.757081 | 0.812775/0.801934/0.807354 | 0.782218 | 0.746934/0.739846/0.743390 | 0.809012/0.798097/0.803555 | 0.773472 | 0.739182/0.730510/0.734846 | 0.799018/0.785618/0.792318 | 0.763582 |
+| 7 | 0.031415 | 0.628291/0.620879/0.624585 | 0.759144/0.778409/0.768777 | 0.696681 | 0.764840/0.766430/0.765635 | 0.797411/0.811255/0.804333 | 0.784984 | 0.757377/0.757986/0.757682 | 0.802821/0.815706/0.809263 | 0.783472 | 0.756891/0.756478/0.756685 | 0.820005/0.822915/0.821460 | 0.789072 |
+| 8 | 0.024903 | 0.679505/0.679496/0.679501 | 0.796756/0.800221/0.798489 | 0.738995 | 0.742449/0.735682/0.739066 | 0.791409/0.789212/0.790311 | 0.764688 | 0.724772/0.718485/0.721629 | 0.786972/0.786179/0.786576 | 0.754102 | 0.721608/0.713496/0.717552 | 0.813621/0.803317/0.808469 | 0.763010 |
+| 9 | 0.013836 | 0.665966/0.664108/0.665037 | 0.768047/0.771162/0.769605 | 0.717321 | 0.782114/0.774879/0.778496 | 0.816534/0.804800/0.810667 | 0.794582 | 0.769136/0.763369/0.766252 | 0.829395/0.816916/0.823155 | 0.794704 | 0.766948/0.760329/0.763639 | 0.844413/0.824162/0.834287 | 0.798963 |
+| 10 | 0.014743 | 0.688142/0.687016/0.687579 | 0.802001/0.819442/0.810722 | 0.749150 | 0.742289/0.726767/0.734528 | 0.821484/0.812705/0.817095 | 0.775811 | 0.721352/0.707042/0.714197 | 0.826626/0.815984/0.821305 | 0.767751 | 0.724063/0.707754/0.715908 | 0.804809/0.793875/0.799342 | 0.757625 |
+| 11 | 0.014731 | 0.663259/0.659162/0.661210 | 0.766460/0.789790/0.778125 | 0.719668 | 0.774685/0.774422/0.774553 | 0.853616/0.871185/0.862400 | 0.818477 | 0.769237/0.768105/0.768671 | 0.851565/0.870817/0.861191 | 0.814931 | 0.773185/0.770590/0.771888 | 0.845101/0.862269/0.853685 | 0.812786 |
+
+Artifacts and MLflow:
+
+- Run directory: `logs/wsm_mm_pd_dep_v1/av_f2_task_aware_directed_2026-09-24_18-18_wsm_av_f2_task_aware_directed_model_f1b9902d/`.
+- Preserved `train.log`, `summary.txt`, `code.zip`, resolved `02_f2_task_aware_directed.yaml`, checkpoints, and `last.pt`.
+- MLflow experiment: `wsm_mm_pd_dep_v1`; run ID: `73d9de2877014d9d89a899d83df987b5`; final status: `FINISHED`; artifact URI: `/media/maxim/Programs/Projects/WSM/mlruns/5/73d9de2877014d9d89a899d83df987b5/artifacts`.
+
+DEV expert-gate diagnostic:
+
+- Post-hoc evaluation used the selected epoch-5 checkpoint over all 933 DEV rows, with no parameter updates and no Test rows. All weights were finite and each task summed to 1 on every DEV row.
+- Depression audio_to_video mean/std/min/max=`0.547594/0.363625/0.014547/0.994460`; video_to_audio=`0.452406/0.363625/0.005540/0.985453`; mean task relation-feature norm=`11.754878`.
+- Parkinson audio_to_video mean/std/min/max=`0.471908/0.279517/0.034241/0.932433`; video_to_audio=`0.528092/0.279517/0.067567/0.965759`; mean task relation-feature norm=`10.682920`.
+
+DEV comparison:
+
+- F2 versus F1: DEV Mean_Score delta `+0.000728`; depression Score delta `+0.007327`; Parkinson Score delta `-0.005869`.
+- F2 versus F0: DEV Mean_Score delta `+0.030358`; depression Score delta `+0.054815`; Parkinson Score delta `+0.005903`.
+- F2 versus frozen audio: DEV Mean_Score delta `-0.013258`; depression Score delta `-0.050883`; Parkinson Score delta `+0.024369`.
+- F2 versus selected video V2: DEV Mean_Score delta `+0.067997`; depression Score delta `+0.076934`; Parkinson Score delta `+0.059061`.
+- The primary conclusion is F2 versus F1 on DEV. Train loss was never used for selection; Test metrics were monitoring-only and never influenced selection, tuning, thresholds, stopping, or architecture choice.
+
+Scope and status:
+
+- No source changes; src/audio and src/video are unchanged. Accepted A+V DataModule and F0/F1/F2 model code are unchanged.
+- No dependency installation, pseudo-labeling, flow matching, PAGB, auxiliary loss, or Test-driven selection occurred. Stage 5 RAMPS was not started. Text/description remains deferred.
+- Stage 4 is complete for the fixed F0/F1/F2 baseline ladder; later reliability/ablation work remains.
+
+Evidence commit SHA: b38b2897e5c82a805f9ec10564a99762f57071f2. Push result: successful after final branch push.
+
+Recommended next atomic task: begin the manager-assigned Stage 5 RAMPS contract only after preserving this DEV-selected F2 evidence; do not reinterpret Test metrics as selection evidence.
