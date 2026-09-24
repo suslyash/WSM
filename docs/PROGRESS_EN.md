@@ -1142,7 +1142,7 @@ Recommended next atomic task: TASK-002L final pre-training config/integration ga
 Status: complete; Stage 2 is ready for the first real V1 training run.
 
 Branch: codex/task-002l.
-Implementation commit: pending until the implementation commit is created.
+Implementation commit: 685a5e75620ee4c74bc5627d32fa0ec005ac7647.
 Push result: pending until the branch is pushed.
 
 Changed files:
