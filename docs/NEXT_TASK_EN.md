@@ -1,80 +1,90 @@
-# TASK-002K: Build the Full V1 Test Video Cache and Expose test_none/test_soft/test_hard DataModule Streams
+# TASK-002K2: Rebuild the DEPART-Compatible Full-Coverage Video Cache with Full-Frame Fallback
 
 ## Role
 
-You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.md, commit on the required task branch, push to origin, then stop. Follow AGENTS.md.
+You are the implementing Codex. Execute only this corrective task, update docs/PROGRESS_EN.md, commit on the required task branch, push to origin, then stop. Follow AGENTS.md.
 
 Required branch:
 
-    codex/task-002k
+    codex/task-002k2
 
 Do not create a training YAML and do not run training in this task.
 
-This task explicitly authorizes full canonical TEST video feature extraction and structural audit. It does NOT authorize using Test metrics for checkpointing, early stopping, threshold search, hyperparameter/model selection, or architecture decisions.
-
 ## Goal
 
-Complete the V1 video data path required by PROJECT_REQUIREMENTS so later training can report, every epoch:
+Replace the superseded V1 cache policy with the released DEPART-compatible frame policy:
 
-    dev
-    test_none
-    test_soft
-    test_hard
+    sampled frame
+      -> valid YOLO body box ? body ROI : full RGB frame
+      -> frozen CLIP
+      -> temporal feature
 
-TASK-002K must:
+A YOLO detection miss is NOT an extraction failure.
 
-1. correct the extractor/audit Test telemetry so it reports actual Test processing truthfully;
-2. build the full canonical TEST V1 video cache using the same pinned YOLO+CLIP contract as TRAIN+DEV;
-3. independently audit the Test cache;
-4. extend wsm_video_depart_v1_datamodule with separate test_none/test_soft/test_hard datasets;
-5. preserve dev as the distinct validation dataset;
-6. keep Test protocols separate from val_dataset.
+The new cache used by future training/evaluation must cover the complete canonical dataset:
 
-Do not wire the trainer/config to execute all four streams every epoch yet; that is the next atomic integration gate.
+- train: 6325
+- dev: 933
+- test: 1364
+- total: 8622
 
-## Established Test Protocol Semantics
+For fair Test comparison, TASK-002K2 passes only if all 1364 canonical Test rows have valid cache artifacts.
 
-Use the existing WSM semantics already used by frozen audio/common segment indexing:
+Target final coverage:
 
-- test_none: every canonical row with split == "test";
-- test_soft: canonical Test rows whose raw test metadata has soft_filter == 1;
-- test_hard: canonical Test rows whose raw test metadata has hard_filter == 1.
+    train=6325/6325
+    dev=933/933
+    test=1364/1364
+    total=8622/8622
 
-Use the same source fields as common.utils.segment_index / frozen audio.
+If any Test row remains failed after the fallback, stop and report TASK-002K2 as blocked with the exact segment IDs and non-YOLO failure reasons.
 
-Do not invent new filters.
+## Authoritative DEPART Compatibility Decision
 
-## Canonical Manifest Constraint
+Released DEPART preprocessing behavior:
 
-Do NOT add soft_filter or hard_filter to the canonical manifest schema in this task.
+- sample up to 60 temporal frames;
+- run YOLO body detection;
+- when a valid body box exists, use the body crop;
+- when no valid box exists, use the full RGB frame;
+- do not discard the frame solely because YOLO missed;
+- therefore do not discard a segment solely because all sampled frames missed YOLO.
 
-Reason:
+This task changes only the ROI fallback/cache contract.
 
-- the accepted TRAIN+DEV cache fingerprint uses the current canonical manifest serialization/fingerprint;
-- changing canonical columns would silently change that fingerprint and invalidate the accepted cache contract.
+Keep the currently accepted pinned detector/model parameters unchanged in this corrective task:
 
-Instead, join Test protocol membership from the existing raw test metadata / build_wsm_multitask_segment_index by canonical segment identity:
+- YOLO checkpoint SHA-256:
+  a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43
+- confidence=0.5
+- IoU=0.5
+- imgsz=640
+- CLIP:
+  openai/clip-vit-base-patch32
+- CLIP revision:
+  b97b0100e55e367c057773c2a614676470b0d575
+- target_frames=60
 
-    [corpus/task, video_id, segment_file]
+Do not silently change detector confidence, tracking/predict mode, CLIP revision, frame sampling, or model architecture here.
 
-and verify one-to-one matching for canonical Test rows.
+Record in PROGRESS_EN.md that the released DEPART repository has additional implementation/config provenance differences that are outside this atomic corrective task.
 
 ## Required Reading
 
 1. AGENTS.md
-2. docs/PROJECT_REQUIREMENTS.md Sections 2, 8, 9, 10, 13, 14
+2. docs/PROJECT_REQUIREMENTS.md Sections 7-10, 13-14
 3. Stage 2 in docs/PLAN.md
-4. docs/PROGRESS_EN.md through TASK-002J and MANAGER-DECISION-009
+4. docs/PROGRESS_EN.md through MANAGER-DECISION-010
 5. docs/NEXT_TASK_EN.md
-6. scripts/video/extract_clip_video_features.py
-7. scripts/video/audit_video_cache.py
-8. src/video/data/wsm_video_cache_datamodule.py
-9. src/common/data/wsm_manifest.py
-10. src/common/utils/segment_index.py
-11. src/audio/data/wsm_audio_segment_datamodule.py for established Test filter semantics only
+6. src/video/features/clip_video_features.py
+7. src/video/features/yolov8_body_roi.py
+8. scripts/video/extract_clip_video_features.py
+9. scripts/video/audit_video_cache.py
+10. src/video/data/wsm_video_cache_datamodule.py
 
 ## Allowed Tracked Files
 
+- src/video/features/clip_video_features.py
 - scripts/video/extract_clip_video_features.py
 - scripts/video/audit_video_cache.py
 - src/video/data/wsm_video_cache_datamodule.py
@@ -84,256 +94,264 @@ No other tracked file may be modified.
 
 Do not modify src/audio.
 
-## Fixed Runtime Inputs
+## New Cache Contract
 
-Pinned YOLO:
+Use a new cache root so the superseded zero-on-YOLO-miss cache remains preserved:
 
-- /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt
-- SHA-256:
-  a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43
+    /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache
 
-Pinned CLIP:
+Reports:
 
-- openai/clip-vit-base-patch32
-- revision:
-  b97b0100e55e367c057773c2a614676470b0d575
+    /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/extraction_report_all_task002k2.json
 
-Persistent cache root:
+    /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache_audit_all_task002k2.json
+
+Do not overwrite or delete the old cache root:
 
     /media/maxim/Programs/Features/WSM/video_depart_v1/cache
 
-Canonical Test rows expected from the accepted manifest:
-
-    1364
-
-Do not hardcode soft/hard subset counts; compute and record them from raw Test metadata.
-
 ## Implementation Requirements
 
-### 1. Correct extraction Test telemetry
+### 1. Version the fallback policy
 
-Update scripts/video/extract_clip_video_features.py.
+In src/video/features/clip_video_features.py, bump the preprocessing/ROI policy version so the new cache fingerprint is unambiguously distinct from the superseded policy.
 
-Current hard-coded Test flags must become truthful.
+The new version must explicitly encode the semantics:
 
-Report at least:
+    body ROI if detected, otherwise full RGB frame
 
-- requested_splits;
-- selected_count;
-- selected counts by split;
-- test_rows_selected;
-- test_rows_processed;
-- test_rows_indexed;
-- labels_passed_to_encoder=false;
-- test_metrics_inspected=false.
+The cache fingerprint must include the new preprocessing/ROI policy version as it already includes policy metadata.
 
-Semantics:
+### 2. Full-frame fallback per sampled frame
 
-- test_rows_selected = number of selected candidate rows whose split=="test";
-- test_rows_processed = test_rows_selected > 0 for a completed extraction attempt;
-- test_rows_indexed = number of Test records currently present in the shared cache index.
+For every sampled frame:
 
-Do not claim Test was not processed when --splits test is used.
+- call the configured YOLO detector;
+- if a valid body detection exists:
+  - crop that ROI;
+  - record selected box/confidence;
+  - mark frame source as body_roi;
+- otherwise:
+  - pass the complete RGB frame to CLIP;
+  - selected box/confidence remain null;
+  - mark frame source as full_frame_fallback.
 
-### 2. Generalize independent cache audit
+All readable sampled frames must produce CLIP features.
 
-Update scripts/video/audit_video_cache.py so --splits can accept an explicit subset/order from:
+Do not skip a sampled frame because YOLO returned no body.
 
-    train,dev,test
+Do not return failure_kind=no_body_detected.
 
-It must continue to validate TRAIN+DEV correctly and must also support:
+### 3. Temporal mask semantics
 
-    --splits test
+Because each readable sampled frame now has either ROI or full-frame CLIP input:
 
-For the requested split set:
+- output features shape remains [T,512], 1<=T<=60;
+- valid_mask must be all true for every readable sampled temporal position;
+- there must be no zero placeholder solely for a YOLO miss;
+- short videos retain their real T without frame duplication;
+- padding remains a DataModule/collate responsibility.
 
-- independently rebuild canonical expected IDs;
-- validate every selected index record/artifact;
-- count success/failure/missing;
-- validate variable-length [T,512], 1<=T<=60;
-- report coverage and temporal-length stats;
-- verify unique fingerprints among successful requested rows;
-- do not reject legitimate index records belonging to non-requested splits in the shared cache.
+A genuine video-read/model failure may still fail extraction.
 
-For --splits test, report:
+### 4. Detection/fallback provenance
 
-- expected Test total;
-- valid Test cache artifacts;
-- explicit Test failures;
-- no_body_detected count;
-- other failures;
-- missing records;
-- complete_for_requested_splits.
+Artifact/report/index metadata must distinguish detection from feature validity.
 
-Set test_rows_processed=true in the audit report because this task explicitly processed Test features.
+Record at least:
 
-Keep:
+- detected_body_count;
+- full_frame_fallback_count;
+- detection_coverage = detected_body_count / T;
+- fallback_coverage = full_frame_fallback_count / T;
+- per-frame source list or equivalent auditable representation:
+  - body_roi
+  - full_frame_fallback
 
-    test_usage.model_predictions_inspected=false
-    test_usage.performance_metrics_inspected=false
-    test_usage.selection_or_tuning_performed=false
+Require:
 
-Feature extraction is not model prediction evaluation.
+    detected_body_count + full_frame_fallback_count == T
 
-### 3. Build the full canonical Test cache
+Do not misuse valid_mask to represent YOLO detection coverage.
 
-Run the existing pinned V1 extractor with:
+### 5. Resume/index semantics
 
-    --splits test
-    --resume
-    --overwrite
+Use the new cache root.
 
-against the same persistent cache root.
+Existing old-cache artifacts must NOT be reused because their preprocessing/fingerprint contract is superseded.
 
-Do not use --limit.
+Within the new cache root, --resume must reuse only artifacts matching the new fingerprint/policy.
 
-Do not delete existing TRAIN+DEV cache/index rows.
+The final index must contain exactly one record for every canonical segment_id across train, dev, test.
 
-Expected canonical Test row count is 1364.
+### 6. Rebuild the full canonical cache
 
-Every Test row must end with exactly one index record:
+Run one full extraction over:
 
-- extracted/reused valid artifact; or
-- explicit failure record.
+    --splits train,dev,test
 
-No fake feature for no_body_detected.
+with no --limit.
 
-### 4. Independent Test cache audit
+Expected selected counts:
 
-Run audit_video_cache.py with:
+    train=6325
+    dev=933
+    test=1364
+    total=8622
 
-    --splits test
+Use the new cache root.
 
-and require:
+### 7. Strict full-coverage acceptance
 
-- expected_total == 1364;
-- missing_record_count == 0;
-- complete_for_requested_splits == true;
-- all successful Test artifacts structurally valid;
-- successful fingerprints unique;
-- pinned YOLO/CLIP metadata correct.
+The required final outcome is:
 
-Record the measured success/failure counts.
+    success train = 6325
+    success dev   = 933
+    success test  = 1364
+    success total = 8622
 
-### 5. Add Test protocol membership join
+and:
 
-In src/video/data/wsm_video_cache_datamodule.py, derive Test protocol membership from existing raw Test metadata without changing canonical manifest schema.
+    failure total = 0
+    missing total = 0
 
-Use common.utils.segment_index.build_wsm_multitask_segment_index or equivalent existing helper.
+In particular:
 
-For canonical Test rows:
+    test success = 1364
+    test failure = 0
 
-- join by corpus/task + video_id + segment_file;
-- require one raw metadata match per canonical Test segment;
-- require soft_filter/hard_filter values to be interpretable as 0/1 or missing according to existing audio semantics;
-- test_none membership = all canonical Test rows;
-- test_soft membership = soft_filter == 1;
-- test_hard membership = hard_filter == 1.
+If a non-YOLO fatal error remains:
 
-Do not use diagnosis to define filter membership.
+- do not fabricate features;
+- record the segment ID and exact reason;
+- TASK-002K2 is blocked if any Test row fails;
+- do not proceed to training integration.
 
-### 6. Extend the video DataModule
+### 8. Update independent audit
 
-Preserve:
+scripts/video/audit_video_cache.py must validate the new policy:
 
-    train_dataset
-    val_dataset
+For every successful artifact:
 
-with current accepted semantics.
+- features [T,512], 1<=T<=60;
+- valid_mask bool [T] and all true;
+- finite features;
+- chronological sampled indices;
+- new preprocessing/ROI policy version;
+- detected_body_count + full_frame_fallback_count == T;
+- fallback coverage consistent with counts;
+- selected_boxes null exactly where full-frame fallback was used, when applicable;
+- pinned model/detector metadata correct;
+- fingerprint matches new contract.
 
-Add separate:
+Report by split:
 
-    test_dataset = {
-        "test_none": ...,
-        "test_soft": ...,
-        "test_hard": ...,
-    }
+- expected;
+- success;
+- failure;
+- body detections;
+- full-frame fallbacks;
+- number of segments with >=1 fallback;
+- mean/min/max detection coverage;
+- mean/min/max fallback coverage.
 
-Do NOT merge these datasets into val_dataset.
+### 9. Repoint the V1 DataModule
 
-Each Test dataset must:
+Change the default V1 video cache root to:
 
-- include only rows belonging to the protocol;
-- include only valid cached video artifacts;
-- exclude no_body_detected rows as unavailable rather than fabricate zero videos;
-- retain [depression, parkinson] sparse targets and observed_mask;
-- use the same variable-length collate function;
-- preserve meta["split"] == "test";
-- expose a protocol field in sample metadata, e.g. meta["evaluation_protocol"].
+    /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache
 
-Track unavailable counts separately for test_none/test_soft/test_hard.
+The DataModule must require the new preprocessing/ROI policy metadata.
 
-### 7. Context contract
+Under the accepted full cache, expected datasets become:
 
-describe_context must additionally expose at least:
+    train_dataset = 6325
+    val_dataset = 933
 
-- data.test_protocols = ["test_none","test_soft","test_hard"];
-- data.video_test_none_rows;
-- data.video_test_soft_rows;
-- data.video_test_hard_rows;
-- data.video_test_none_unavailable;
-- data.video_test_soft_unavailable;
-- data.video_test_hard_unavailable;
-- data.video_test_rows_indexed;
-- data.video_epoch_test_monitoring_required = true.
+Raw Test protocol membership stays:
 
-Do not expose Test metric values.
+    test_none = 1364
+    test_soft = 1208
+    test_hard = 1014
 
-### 8. Keep Test separate from selection
+Because full Test cache coverage is required, valid dataset lengths must equal those raw protocol counts:
 
-This task creates the Test data streams only.
+    len(test_none) = 1364
+    len(test_soft) = 1208
+    len(test_hard) = 1014
 
-Do not:
+Unavailable counts must all be zero:
 
-- compare Test performance;
-- inspect predictions;
-- tune thresholds;
-- select checkpoints;
-- choose hyperparameters;
-- alter architecture based on Test.
+    train_unavailable = 0
+    dev_unavailable = 0
+    test_none_unavailable = 0
+    test_soft_unavailable = 0
+    test_hard_unavailable = 0
 
-The next task will wire these datasets into every-epoch evaluation while enforcing dev/mean_score as the only automatic selector.
+### 10. Preserve sparse target semantics
+
+This preprocessing correction must not change:
+
+- two-logit disease target order;
+- observed_mask;
+- unknown NaN labels;
+- split membership;
+- soft/hard Test membership;
+- DEV selector semantics.
 
 ## Acceptance Criteria
 
-Extractor/audit:
+Code:
 
-- --splits test runs truthfully with test_rows_processed=true;
-- full canonical Test selection count=1364;
-- all 1364 Test rows have final index records;
-- independent Test cache audit complete=true;
-- no missing Test records;
-- successful Test artifacts valid [T,512], 1<=T<=60;
-- failures explicit;
-- no fake features;
-- pinned YOLO/CLIP contract unchanged.
+- new versioned ROI/full-frame fallback contract implemented;
+- no_body_detected is no longer a failure mode for normal V1 extraction;
+- every readable sampled frame is encoded;
+- valid_mask is all true for extracted real positions;
+- detection and fallback provenance are separately auditable;
+- cache fingerprint changes with the new policy;
+- old cache is preserved.
+
+Full extraction:
+
+- train expected/success = 6325/6325;
+- dev expected/success = 933/933;
+- test expected/success = 1364/1364;
+- total expected/success = 8622/8622;
+- failures = 0;
+- missing = 0;
+- Test failures = 0.
+
+Audit:
+
+- complete_for_requested_splits=true;
+- all artifacts valid;
+- fingerprints unique;
+- fallback accounting valid;
+- Test rows processed/indexed=1364.
 
 DataModule:
 
-- train_dataset remains 6255;
-- val_dataset remains 907;
-- test_dataset has exactly keys test_none/test_soft/test_hard;
-- test_none is based on all canonical Test rows with valid video cache;
-- test_soft/hard exactly follow raw soft_filter/hard_filter membership;
-- protocol subsets are deterministic;
-- Test datasets are not merged into val_dataset;
-- no_body rows excluded and counted unavailable;
-- sparse targets/observed masks preserved;
-- variable-length collate works on Test;
-- context exposes protocol counts/unavailable counts;
-- no Test metric values computed.
+- train=6325;
+- dev=933;
+- test_none=1364;
+- test_soft=1208;
+- test_hard=1014;
+- every unavailable count=0;
+- Test streams remain separate from DEV;
+- variable-length collate still works.
 
 Safety:
 
 - no training;
-- no model selection;
-- no Test prediction/metric inspection;
+- no Test performance metrics/predictions inspected;
+- no model/checkpoint selection;
+- no dependency install;
 - src/audio unchanged;
 - python compilation passes;
 - git diff --check passes;
-- branch codex/task-002k committed and pushed;
+- branch codex/task-002k2 committed and pushed;
 - main/master untouched;
-- tracked diff contains only the four allowed paths.
+- tracked diff contains only the five allowed paths.
 
 ## Exact Verification Commands
 
@@ -346,126 +364,106 @@ Set environment:
 Compile:
 
     python3 -m py_compile \
+      src/video/features/clip_video_features.py \
       scripts/video/extract_clip_video_features.py \
       scripts/video/audit_video_cache.py \
       src/video/data/wsm_video_cache_datamodule.py
 
-Verify pinned YOLO:
+Run a focused fallback smoke with injected detector behavior:
 
-    sha256sum /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt
+- one frame with detection -> body ROI;
+- one frame with no detection -> full RGB frame;
+- both temporal positions must produce finite features;
+- valid_mask == [true,true];
+- detected_body_count == 1;
+- full_frame_fallback_count == 1;
+- detection_coverage == 0.5;
+- fallback_coverage == 0.5;
+- no failure.
 
-Expected:
+Fingerprint smoke:
 
-    a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43
+- old ROI-only policy version fingerprint != new fallback-policy fingerprint.
 
-Run full canonical Test extraction:
+Create the new output root:
+
+    mkdir -p /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback
+
+Run complete extraction:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
       scripts/video/extract_clip_video_features.py \
       --data-root /media/maxim/Databases/WSM_NEW \
-      --cache-root /media/maxim/Programs/Features/WSM/video_depart_v1/cache \
-      --report-output /media/maxim/Programs/Features/WSM/video_depart_v1/extraction_report_test_task002k.json \
-      --splits test \
+      --cache-root /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache \
+      --report-output /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/extraction_report_all_task002k2.json \
+      --splits train,dev,test \
       --resume \
-      --overwrite \
       --yolo-weights /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt \
       --model-name openai/clip-vit-base-patch32 \
       --model-revision b97b0100e55e367c057773c2a614676470b0d575 \
       --target-frames 60 \
       --device cuda
 
-If CUDA is unavailable, CPU fallback is allowed only for a pure device/runtime issue and must be recorded.
-
-Run independent Test audit:
+Run independent audit:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
       scripts/video/audit_video_cache.py \
       --data-root /media/maxim/Databases/WSM_NEW \
-      --cache-root /media/maxim/Programs/Features/WSM/video_depart_v1/cache \
-      --report-output /media/maxim/Programs/Features/WSM/video_depart_v1/cache_audit_test_task002k.json \
-      --splits test \
+      --cache-root /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache \
+      --report-output /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache_audit_all_task002k2.json \
+      --splits train,dev,test \
       --model-name openai/clip-vit-base-patch32 \
       --model-revision b97b0100e55e367c057773c2a614676470b0d575 \
       --yolo-weights /media/maxim/Programs/Models/WSM/depart_yolov8/best.pt \
       --target-frames 60
 
-Validate Test audit:
+Validate strict coverage:
 
     PYTHONDONTWRITEBYTECODE=1 .venv/bin/python - <<'PY'
     import json
     from pathlib import Path
 
-    p = Path("/media/maxim/Programs/Features/WSM/video_depart_v1/cache_audit_test_task002k.json")
+    p = Path("/media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache_audit_all_task002k2.json")
     r = json.loads(p.read_text(encoding="utf-8"))
 
-    assert r["requested_splits"] == ["test"]
-    assert r["expected_total"] == 1364
+    assert r["expected_by_split"] == {"train": 6325, "dev": 933, "test": 1364}
+    assert r["expected_total"] == 8622
+    assert r["success_by_split"] == {"train": 6325, "dev": 933, "test": 1364}
+    assert sum(r["failed_by_split"].values()) == 0
     assert r["missing_record_count"] == 0
     assert r["complete_for_requested_splits"] is True
     assert r["successful_artifacts_valid"] is True
     assert r["cache_fingerprints_unique"] is True
+    assert r["test_rows_indexed"] == 1364
     assert r["test_rows_processed"] is True
-    assert r["test_usage"]["model_predictions_inspected"] is False
-    assert r["test_usage"]["performance_metrics_inspected"] is False
-    assert r["test_usage"]["selection_or_tuning_performed"] is False
 
-    print("TASK-002K Test cache audit passed")
+    print("TASK-002K2 full DEPART-compatible cache coverage passed")
     PY
 
-DataModule/Test-protocol smoke:
+DataModule strict coverage smoke:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
-    import torch
-
     from video.data.wsm_video_cache_datamodule import WSMVideoCacheDataModule
 
     dm = WSMVideoCacheDataModule(
         data_root="/media/maxim/Databases/WSM_NEW",
-        cache_root="/media/maxim/Programs/Features/WSM/video_depart_v1/cache",
+        cache_root="/media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache",
     )
 
-    assert len(dm.train_dataset) == 6255
-    assert len(dm.val_dataset) == 907
-    assert set(dm.test_dataset) == {"test_none", "test_soft", "test_hard"}
+    assert len(dm.train_dataset) == 6325
+    assert len(dm.val_dataset) == 933
+    assert len(dm.test_dataset["test_none"]) == 1364
+    assert len(dm.test_dataset["test_soft"]) == 1208
+    assert len(dm.test_dataset["test_hard"]) == 1014
 
-    none_ds = dm.test_dataset["test_none"]
-    soft_ds = dm.test_dataset["test_soft"]
-    hard_ds = dm.test_dataset["test_hard"]
+    assert dm.train_unavailable_count == 0
+    assert dm.dev_unavailable_count == 0
+    assert dm.test_unavailable_count["test_none"] == 0
+    assert dm.test_unavailable_count["test_soft"] == 0
+    assert dm.test_unavailable_count["test_hard"] == 0
 
-    assert len(none_ds) > 0
-    assert len(soft_ds) > 0
-    assert len(hard_ds) > 0
-    assert len(soft_ds) <= len(none_ds)
-    assert len(hard_ds) <= len(none_ds)
-
-    for name, ds in dm.test_dataset.items():
-        sample = ds[0]
-        assert sample["meta"]["split"] == "test"
-        assert sample["meta"]["evaluation_protocol"] == name
-        assert tuple(sample["targets"].shape) == (2,)
-        assert tuple(sample["observed_mask"].shape) == (2,)
-
-    # Test collate must preserve the same variable-length/mask contract.
-    samples = [none_ds[0], none_ds[min(1, len(none_ds)-1)]]
-    batch = dm.collate_fn(samples)
-    assert batch.inputs["video"].ndim == 3
-    assert batch.inputs["video"].shape[-1] == 512
-    assert batch.get_masks("video_mask").dtype == torch.bool
-    assert tuple(batch.targets.shape) == (2,2)
-    assert tuple(batch.get_masks("observed_mask").shape) == (2,2)
-
-    # Test streams remain separate from DEV.
-    assert not isinstance(dm.val_dataset, dict) or not any(
-        key in dm.val_dataset for key in ("test_none","test_soft","test_hard")
-    )
-
-    print(
-        "TASK-002K DataModule Test streams passed",
-        len(none_ds), len(soft_ds), len(hard_ds),
-    )
+    print("TASK-002K2 full DataModule coverage passed")
     PY
-
-Add a raw-membership audit in the implementation verification proving every test_soft/test_hard dataset row corresponds exactly to soft_filter==1 / hard_filter==1 from the existing raw Test metadata.
 
 Finally:
 
@@ -476,6 +474,7 @@ Finally:
 Before commit inspect only:
 
     git diff -- \
+      src/video/features/clip_video_features.py \
       scripts/video/extract_clip_video_features.py \
       scripts/video/audit_video_cache.py \
       src/video/data/wsm_video_cache_datamodule.py \
@@ -496,22 +495,23 @@ Record:
 - branch;
 - implementation commit SHA;
 - push result;
-- corrected Test telemetry semantics;
-- full Test cache report/audit paths;
-- expected Test count;
-- Test extracted/reused/failure counts;
-- no_body and other failure counts;
-- Test temporal-length and coverage stats;
-- raw test_none/test_soft/test_hard membership counts before cache availability filtering;
-- valid dataset counts for test_none/test_soft/test_hard;
-- unavailable counts for each protocol;
-- one-to-one raw membership join evidence;
-- confirmation Test datasets remain separate from val_dataset;
-- confirmation no Test metrics/predictions were inspected;
-- confirmation no training/model selection;
+- new preprocessing and ROI policy versions;
+- DEPART full-frame fallback semantics;
+- new cache root;
+- old cache preservation;
+- exact train/dev/test expected and success counts;
+- exact total success/failure/missing counts;
+- Test full coverage result;
+- detection/fallback coverage statistics by split;
+- number of segments using at least one fallback;
+- temporal-length statistics;
+- Test protocol dataset counts;
+- all unavailable counts;
+- DataModule default/root update;
+- confirmation no training/Test performance inspection/model selection;
 - src/audio unchanged;
-- Stage 2 remains partial;
-- recommended next atomic step: wire dev/test_none/test_soft/test_hard into every-epoch evaluation with dev/mean_score as the sole automatic selector.
+- Stage 2 remains partial until the subsequent training-integration gate;
+- recommended next atomic step: TASK-002L training config + every-epoch DEV/TEST_NONE/SOFT/HARD wiring.
 
 ## Required Handoff
 
@@ -526,17 +526,17 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch codex/task-002k;
+- branch codex/task-002k2;
 - implementation commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
-- Test expected/success/failure counts;
-- test_none/test_soft/test_hard dataset counts;
-- unavailable counts;
-- Test cache audit path;
-- Test rows processed/indexed;
-- confirmation no Test metrics were inspected;
-- no training/model selection;
+- train/dev/test success counts;
+- total success/failure count;
+- Test success=1364 requirement;
+- fallback usage statistics;
+- cache audit path;
+- DataModule counts;
+- no training/Test performance metrics;
 - src/audio unchanged.
 
 Stop after this task.
