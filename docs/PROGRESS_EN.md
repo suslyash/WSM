@@ -1979,3 +1979,24 @@ Scope and status:
 Evidence commit SHA: b38b2897e5c82a805f9ec10564a99762f57071f2. Push result: successful after final branch push.
 
 Recommended next atomic task: begin the manager-assigned Stage 5 RAMPS contract only after preserving this DEV-selected F2 evidence; do not reinterpret Test metrics as selection evidence.
+
+
+### MANAGER-DECISION-023 — Accept TASK-004G, close Stage 4, and start RAMPS R1 with calibrated frozen-teacher targets
+
+Status: accepted.
+
+- TASK-004G is integrated through PR #29 as 7890ef19e9ec7aeeef953c4ab2b3be5cb6a0516b.
+- Stage 4 fixed F0/F1/F2 baseline ladder is complete.
+- F2 best epoch=5 by dev/mean_score=0.774569, with DEV depression Score=0.697035 and Parkinson Score=0.852104.
+- F2 exceeds F1 by only +0.000728 DEV Mean_Score at the fixed seed-42 comparison. This is the DEV-selected ordering for continuation, but it is not evidence of a robust/significant F2 advantage without the later required multi-seed ablations.
+- Test metrics remain monitoring-only and do not change that decision.
+- Stage 5 starts with R1. The first R1 step must NOT immediately train on pseudo-labels. It must first create an auditable, frozen-teacher calibration/target artifact using the DEV-selected F2 checkpoint.
+- The frozen teacher is the selected F2 checkpoint:
+  logs/wsm_mm_pd_dep_v1/av_f2_task_aware_directed_2026-09-24_18-18_wsm_av_f2_task_aware_directed_model_f1b9902d/checkpoints/epoch=5_dev_mean_score=0.7746.pt
+- Calibrate each disease head independently using only DEV rows where that disease label is observed. No Test row or Test metric may enter temperature fitting or acceptance-threshold fitting.
+- R1 base acceptance uses calibrated confidence only. Separate positive/negative thresholds are fit on the corresponding observed-task DEV labels to a manager-fixed precision target; later R2 adds uncertainty, multimodal agreement, and OOD evidence.
+- Cross-corpus TRAIN pseudo-targets remain soft calibrated probabilities. Only missing task entries are eligible. Observed truth must remain authoritative and never be overwritten.
+- Cached teacher targets are detached/offline by construction, satisfying stop-gradient teacher semantics for the later student loss.
+- Warm-up is not executed in TASK-005A; it will be enforced when the R1 pseudo-supervision loss/training contract is implemented.
+
+Recommended next atomic task: TASK-005A — implement the deterministic binary teacher calibration/threshold utilities and create an audited TRAIN missing-head soft-target cache from the frozen DEV-selected F2 teacher. No student training or Test evaluation.
