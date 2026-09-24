@@ -2147,3 +2147,39 @@ Status: corrective action required before training.
 - If TASK-004I2 passes, the next task is the real fixed TASK-004I training run using the repaired optimizer component, with no other experiment changes.
 
 Recommended next atomic task: TASK-004I2 — register the trainable-only AdamW optimizer, switch the fixed strong-audio config to it, and rerun all pre-training gates without starting training.
+
+### TASK-004I2 — Repair strong-audio optimizer filtering and rerun pre-training gates
+
+Status: blocked at the mandated production-model parameter-count gate before optimizer construction, batch smoke, DEV reproduction, or any Test-loader iteration.
+
+Branch: codex/task-004i2.
+
+Changed files:
+
+- src/common/optimizers.py;
+- src/chimera_plugin.py;
+- configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml;
+- docs/PROGRESS_EN.md.
+
+Implementation:
+
+- Confirmed the Chimera ML v0.2.4 root cause: built-in `adamw_optimizer` constructs AdamW from `model.parameters()` and includes frozen parameters.
+- Added registry key `wsm_trainable_adamw_optimizer` in `src/common/optimizers.py`. It selects exactly `parameter.requires_grad == true`, preserves AdamW kwargs, raises on zero trainable parameters, does not mutate flags, and does not special-case audio or parameter names.
+- Added the explicit `common.optimizers` plugin import. Registry smoke confirmed both `adamw_optimizer` and `wsm_trainable_adamw_optimizer` and no project-module warning.
+- Changed only the strong-audio config optimizer name to `wsm_trainable_adamw_optimizer`; `lr=0.0001` and `weight_decay=0.01` remain unchanged.
+
+Exact verification:
+
+- `python3 -m py_compile src/common/optimizers.py src/chimera_plugin.py` — passed.
+- Required registry smoke — passed: `trainable-only optimizer registry smoke passed`.
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config --config-path configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml` — passed: Config is valid.
+- Historical checkpoint SHA256 — passed: `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`.
+- Configured model frozen-audio gate — passed: 105 audio objects, 3,031,880 frozen audio scalars, and `model.train()` preserved `audio_adapter.audio_model.training == false`.
+- Required trainable-count gate — failed: model exposes 22 trainable objects and 286,530 trainable scalars; required total is 285,442. `video_projection=99,520` and `shared_fusion=111,744` match, but `residual_heads=75,266` versus required 74,178.
+- Per TASK-004I2, this count failure is a stop condition. The accepted F1-temporal model was not modified because model changes are forbidden in this corrective task. Actual optimizer-ID equality, DEV reproduction, and real TRAIN forward/loss/backward smoke were not run after the failure.
+- No `chimera-ml train`, MLflow run, epoch metrics, or Test-loader iteration occurred.
+- `git diff --check` passed; `src/audio` and `src/video` remained unchanged.
+
+Blocker: reconcile the mandated residual/trainable parameter counts with the accepted F1-temporal model in a separately authorized narrow task. Do not train until the exact count gate and subsequent optimizer-ID gate pass.
+
+Recommended next atomic task: manager-authorized investigation/correction of the residual-head parameter-count contract only; no training or Test evaluation.
