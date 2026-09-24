@@ -1,4 +1,4 @@
-# TASK-004A: Implement the Canonical Sparse Audio+Video Fusion DataModule
+# TASK-004B: Implement and Register the F0 Availability-Aware Gated A+V Late-Fusion Model
 
 ## Role
 
@@ -6,52 +6,115 @@ You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.
 
 Required branch:
 
-    codex/task-004a
+    codex/task-004b
 
-Do not implement or train a fusion model in this task.
-Do not modify src/audio.
+Do not create a training config.
+Do not run a real training experiment.
+Do not modify the accepted A+V DataModule contract.
+Do not modify src/audio or src/video.
 Do not start text/description work.
 
 ## Goal
 
-Start the now-active Stage 4 Fusion research with a correct audio+video data contract.
+Implement the first Stage 4 fusion baseline:
 
-Implement and register a canonical A+V fusion DataModule that joins:
+    F0 = availability-aware task-wise gated late fusion
 
-- frozen audio features from the accepted WavLM-base-plus layer 9 / pool 4 cache;
-- accepted full-coverage DEPART-compatible video features;
-- canonical sparse two-task targets.
+F0 must consume the accepted TASK-004A A+V Batch contract and return exactly two independent logits:
 
-The output must be ready for future F0/F1 fusion models and MUST NOT use the legacy task_id-selected single-task classification contract.
+    [depression, parkinson]
 
-## Active Research Order
+This is intentionally a simple lower-bound fusion model.
 
-Text/description is explicitly deferred until after the fusion/RAMPS/core-ablation research cycle.
+## Fixed F0 Architecture
 
-This task uses only:
+Inputs:
 
-    audio + video
+- audio_cls: [B,768]
+- video: [B,Tv,512]
+- video_mask: [B,Tv]
+- modality_available: [B,2] ordered [audio,video]
 
-No text or description input is required.
+Audio representation:
+
+    a = AudioProjection(audio_cls)
+
+Video representation:
+
+    v_raw = masked_mean(video, video_mask)
+    v = VideoProjection(v_raw)
+
+Use the same hidden width for both projected representations.
+
+For each task t in {depression, parkinson}:
+
+    audio_logit_t = AudioHead_t(a)
+    video_logit_t = VideoHead_t(v)
+
+Compute one scalar gate from both modality representations:
+
+    raw_gate_t = sigmoid(Gate_t(concat(a,v)))
+
+Interpret raw_gate_t as the audio weight before availability correction.
+
+Availability-aware normalized weights:
+
+- if both audio and video are available:
+      w_audio = raw_gate
+      w_video = 1 - raw_gate
+- if only audio is available:
+      w_audio = 1
+      w_video = 0
+- if only video is available:
+      w_audio = 0
+      w_video = 1
+- if neither modality is available:
+      raise ValueError
+
+Final task logit:
+
+    logit_t = w_audio_t * audio_logit_t
+            + w_video_t * video_logit_t
+
+Stack task logits into:
+
+    [B,2]
+
+## Important Baseline Boundary
+
+F0 MUST NOT contain:
+
+- temporal cross-attention;
+- synchrony blocks;
+- relation banks;
+- TACME-style directed experts;
+- a shared multimodal fusion trunk after concatenation;
+- task embeddings;
+- task_id/task_ids input;
+- corpus/split/Test-protocol IDs;
+- pseudo-labeling;
+- contrastive loss;
+- text/description;
+- prototype logic.
+
+F0 is only pooled frozen features + modality-specific heads + task-specific scalar late-fusion gates.
 
 ## Required Reading
 
 1. AGENTS.md
-2. docs/PROJECT_REQUIREMENTS.md Sections 2-10, 13-14
+2. docs/PROJECT_REQUIREMENTS.md Sections 2-9, 11, 13-14
 3. docs/PLAN.md Stage 4
-4. docs/PROGRESS_EN.md through MANAGER-DECISION-016
+4. docs/PROGRESS_EN.md through MANAGER-DECISION-017
 5. docs/NEXT_TASK_EN.md
-6. configs/wsm_mm_pd_dep_v1/audio/00_frozen_baseline.yaml
-7. src/audio/data/wsm_audio_segment_dataset.py for cache layout/feature payload semantics only
-8. src/video/data/wsm_video_cache_datamodule.py
-9. src/common/data/wsm_manifest.py
-10. src/common/utils/segment_index.py
-11. src/fusion/data/wsm_manifest_datamodule.py
+6. src/fusion/data/wsm_av_fusion_datamodule.py
+7. src/common/loss/wsm_masked_sparse_loss.py
+8. src/video/models/depart_v1.py for two-head output style only
+9. src/chimera_plugin.py
 
 ## Allowed Tracked Files
 
-- src/fusion/data/wsm_av_fusion_datamodule.py
-- src/fusion/data/__init__.py
+- src/fusion/models/av_f0_gated_late.py
+- src/fusion/models/__init__.py
 - src/chimera_plugin.py
 - docs/PROGRESS_EN.md
 
@@ -61,330 +124,201 @@ No other tracked file may be modified.
 
 Register:
 
-    wsm_av_fusion_datamodule
+    wsm_av_f0_gated_late_model
 
-Do not alter existing DataModule registry keys.
+Do not alter existing model registry keys.
 
-## Fixed Inputs
+## Fixed Constructor Defaults
 
-Data root:
+Use:
 
-    /media/maxim/Databases/WSM_NEW
+    audio_feature_dim=768
+    video_feature_dim=512
+    hidden_dim=192
+    gate_hidden_dim=64
+    dropout=0.2
+    num_tasks=2
 
-Frozen audio feature cache root:
+Require num_tasks == 2.
 
-    /media/maxim/Databases/WSM_NEW/features
+## Projection Blocks
 
-Frozen audio feature contract:
+Audio projection:
 
-- extractor type: transformers_ssl
-- model: microsoft/wavlm-base-plus
-- layer: 9
-- temporal_pool: 4
-- cache path convention identical to WSMAudioSegmentDataset
-- payload keys:
-  - audio_temporal
-  - audio_cls
+    LayerNorm(audio_feature_dim)
+    Linear(audio_feature_dim, hidden_dim)
+    GELU
+    Dropout(dropout)
 
-Accepted video cache root:
+Video projection:
 
-    /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache
+    LayerNorm(video_feature_dim)
+    Linear(video_feature_dim, hidden_dim)
+    GELU
+    Dropout(dropout)
 
-Video feature contract:
+No temporal encoder in F0.
 
-- feature dim: 512
-- temporal T in [1,60]
-- all real temporal positions valid
-- full canonical coverage
+## Unimodal Task Heads
 
-Expected canonical counts:
+For each task and each modality, use an independent scalar head:
 
-    train      = 6325
-    dev        = 933
-    test_none  = 1364
-    test_soft  = 1208
-    test_hard  = 1014
+    LayerNorm(hidden_dim)
+    Dropout(dropout)
+    Linear(hidden_dim, hidden_dim)
+    GELU
+    Dropout(dropout)
+    Linear(hidden_dim, 1)
 
-## Join Identity
+Required collections:
 
-Join modalities by the canonical segment identity corresponding to:
+- 2 audio task heads;
+- 2 video task heads.
 
-    corpus/task
-    video_id
-    segment_file
+## Gate Heads
 
-The canonical segment_id remains authoritative.
+For each task:
 
-Use the same canonical/raw mapping already established in Stage 1/2.
+    LayerNorm(2 * hidden_dim)
+    Linear(2 * hidden_dim, gate_hidden_dim)
+    GELU
+    Dropout(dropout)
+    Linear(gate_hidden_dim, 1)
+    Sigmoid
 
-Requirements:
+Gate input is only:
 
-- exactly one audio feature payload per canonical row;
-- exactly one video artifact per canonical row;
-- no duplicate identity;
-- no silent row dropping;
-- no positional/index-based join;
-- no corpus/task inference from filenames beyond the established canonical/raw index.
+    concat(audio_representation, video_representation)
 
-## Audio Cache Policy
+Do not use labels, observed_mask, task identity metadata, corpus, split, or evaluation protocol.
 
-Do NOT modify or regenerate src/audio.
+## Mask Semantics
 
-Do not silently run a new audio feature extractor in this task.
+Video:
 
-The DataModule must consume the already frozen cache and fail clearly if a required audio cache file is missing.
+- video [B,T,512];
+- video_mask [B,T] bool;
+- every sample marked video-available must have at least one valid video position;
+- masked positions must not affect pooled video representation.
 
-For each audio payload validate at least:
+Audio:
 
-- audio_temporal is Tensor [Ta,Da], Ta>=1;
-- audio_cls is Tensor [Da];
-- dimensions agree;
-- tensors are finite after the existing frozen cache contract;
-- Da is constant across the dataset;
-- payload identity/path corresponds to the expected canonical row.
+- F0 uses audio_cls, not audio temporal tokens;
+- audio_cls must be finite [B,768].
 
-Expose the detected frozen audio feature dimension via context.
+modality_available:
 
-## Video Cache Policy
+    [B,2] bool, ordered [audio,video]
 
-Consume the accepted full-coverage cache.
+Validation:
 
-You MAY reuse public constants/contracts from video.data.wsm_video_cache_datamodule, but do not mutate video code.
+- at least one modality must be available for every sample;
+- if audio_available=false, audio branch may still be numerically computed but its final weight MUST be exactly 0;
+- if video_available=false, video branch may still be numerically computed but its final weight MUST be exactly 0;
+- changing an unavailable modality's values must not change final logits in eval mode.
 
-Validate for every selected row:
-
-- one cache index record exists;
-- status is extracted/reused;
-- artifact segment_id matches;
-- features [Tv,512], 1<=Tv<=60;
-- valid_mask bool [Tv] and all true;
-- accepted CLIP/YOLO/preprocessing identities remain valid;
-- no unavailable row.
-
-If using shared validation logic requires a private helper, prefer a small local validation adapter over depending on an unstable private symbol.
-
-## Dataset Sample Contract
-
-Each sample must expose:
-
-    inputs["audio"]      -> float Tensor [Ta,Da]
-    inputs["audio_cls"]  -> float Tensor [Da]
-    inputs["video"]      -> float Tensor [Tv,512]
-
-    targets              -> float Tensor [2]
-    observed_mask        -> bool Tensor [2]
-    audio_mask           -> bool Tensor [Ta]
-    video_mask           -> bool Tensor [Tv]
-
-Metadata must include at least:
-
-- segment_id
-- video_id
-- corpus
-- split
-- segment_file
-- evaluation_protocol when applicable
-- audio_cache_path
-- video_cache_path
-- video_cache_fingerprint
-- audio_temporal_length
-- video_temporal_length
-
-Unknown disease target MUST remain NaN with observed_mask=false.
-
-Do not emit task_id as a model input.
-
-## Collate Contract
-
-Implement a fusion-local collate function returning chimera_ml.core.batch.Batch.
-
-Pad audio and video independently to their real batch maxima:
-
-    audio -> [B,max_Ta,Da]
-    video -> [B,max_Tv,512]
-
-Create:
-
-    audio_mask -> [B,max_Ta] bool
-    video_mask -> [B,max_Tv] bool
-    observed_mask -> [B,2] bool
-    modality_available -> [B,2] bool ordered [audio,video]
-
-For this complete A+V dataset, modality_available must currently be all true.
-
-Padded positions must be exact zero with mask=false.
+## ModelOutput Contract
 
 Return:
 
-    inputs={
-        "audio": ...,
-        "audio_cls": ...,
-        "video": ...,
+    preds -> [B,2]
+
+aux must contain at least:
+
+    features_audio      -> [B,H]
+    features_video      -> [B,H]
+    audio_logits        -> [B,2]
+    video_logits        -> [B,2]
+    raw_audio_gates     -> [B,2]
+    fusion_weights      -> [B,2,2]
+
+fusion_weights last dimension order:
+
+    [audio, video]
+
+Also expose:
+
+    task_logits = {
+        "depression": preds[:,0],
+        "parkinson": preds[:,1],
     }
 
-    targets=[B,2]
+No sigmoid on final logits.
 
-    masks={
-        "audio_mask": ...,
-        "video_mask": ...,
-        "observed_mask": ...,
-        "modality_available": ...,
-    }
+## Context-Aware Factory
 
-Do NOT include:
+Factory must:
 
-- task_ids
-- corpus id as numeric model input
-- split id
-- Test protocol id
-- labels inside inputs
+- read data.audio_feature_dim when available;
+- read data.video_feature_dim when available;
+- enforce data.num_tasks == 2 when present;
+- default to 768/512/2 otherwise.
 
-## DataModule Contract
+Update src/chimera_plugin.py with an explicit required import:
 
-Constructor parameters must include at least:
+    fusion.models.av_f0_gated_late
 
-    data_root
-    audio_feature_cache_root
-    video_cache_root
-
-Plus normal DataLoader parameters:
-
-    batch_size
-    num_workers
-    pin_memory
-    persistent_workers
-    shuffle_train
-    drop_last_train
-
-Datasets:
-
-    train_dataset
-    val_dataset
-    test_dataset={
-        "test_none": ...,
-        "test_soft": ...,
-        "test_hard": ...,
-    }
-
-Expected lengths:
-
-    len(train_dataset) == 6325
-    len(val_dataset) == 933
-    len(test_none) == 1364
-    len(test_soft) == 1208
-    len(test_hard) == 1014
-
-No unavailable rows are allowed under the currently accepted full audio/video cache contract.
-
-## Epoch-Level Evaluation Streams
-
-Override val_dataloader() to return exactly:
-
-    {
-        "dev": ...,
-        "test_none": ...,
-        "test_soft": ...,
-        "test_hard": ...,
-    }
-
-DEV remains val_dataset only.
-
-Test datasets remain separate and are not merged into val_dataset.
-
-All evaluation loaders:
-
-- shuffle=false
-- drop_last=false
-- fusion collate
-
-## Context Contract
-
-describe_context must expose at least:
-
-- data.num_tasks = 2
-- data.task_names = ["depression","parkinson"]
-- data.modality_names = ["audio","video"]
-- data.audio_feature_dim
-- data.video_feature_dim = 512
-- data.audio_video_fusion = true
-- data.train_rows = 6325
-- data.dev_rows = 933
-- data.test_none_rows = 1364
-- data.test_soft_rows = 1208
-- data.test_hard_rows = 1014
-- data.audio_unavailable = 0
-- data.video_unavailable = 0
-- data.test_protocols = ["test_none","test_soft","test_hard"]
-
-Do not expose Test metric values.
-
-## Required Audit
-
-At DataModule construction or via a reusable audit method, record/verify:
-
-- canonical count by split;
-- unique join count;
-- audio cache files found;
-- video cache records found;
-- audio feature dimension;
-- video feature dimension;
-- zero missing audio;
-- zero missing video;
-- zero duplicate joins;
-- exact Test raw membership counts;
-- no dropped rows.
-
-The audit may be kept as an in-memory dict attribute such as:
-
-    dm.audit
-
-No new tracked report file is required in this task.
+Do not hide a project import failure as an optional warning.
 
 ## Acceptance Criteria
 
-Registry/data:
+Registry/model:
 
-- DATAMODULES contains wsm_av_fusion_datamodule;
-- plugin imports it without project-module warning;
-- train/dev/test counts exactly match 6325/933/1364/1208/1014;
-- all 8622 canonical unique rows have both audio and video;
-- no missing audio cache file;
-- no missing video cache artifact;
-- no duplicate join;
-- unknown labels stay NaN+masked;
-- no task_id model input.
+- MODELS contains wsm_av_f0_gated_late_model;
+- plugin imports it without project warning;
+- F0 output is [B,2];
+- no task_id/task_ids input;
+- no 3-class softmax;
+- no text/description;
+- no pseudo-labeling;
+- no temporal fusion/cross-attention/TACME block.
 
-Batch:
+Weights/gates:
 
-- audio [B,max_Ta,Da];
-- audio_cls [B,Da];
-- video [B,max_Tv,512];
-- audio_mask/video_mask bool;
-- observed_mask [B,2];
-- modality_available [B,2] all true;
-- exact-zero padding;
-- batch metadata preserves canonical identity;
-- mixed variable-length audio/video batch collates successfully.
+- raw_audio_gates [B,2], each in [0,1];
+- fusion_weights [B,2,2];
+- fusion_weights sum to 1 over modality dimension;
+- both-available rows use [g,1-g];
+- audio-only rows use exactly [1,0];
+- video-only rows use exactly [0,1];
+- neither-available rows raise ValueError;
+- final logits exactly equal weighted audio/video logits.
 
-Streams:
+Mask invariance:
 
-- val_dataloader keys exactly dev/test_none/test_soft/test_hard;
-- DEV/Test remain separate;
-- no Test selector logic is introduced.
+- changing padded/masked video values does not change output;
+- changing audio values on audio-unavailable rows does not change output;
+- changing video values on video-unavailable rows does not change output.
+
+Sparse loss:
+
+- wsm_masked_sparse_loss accepts F0 output;
+- masked NaN targets remain unsupervised;
+- synthetic forward/loss/backward gives finite scalar loss;
+- audio projection/head parameters receive finite nonzero gradient when observed rows use audio;
+- video projection/head parameters receive finite nonzero gradient when observed rows use video;
+- at least one gate parameter receives finite gradient on both-available rows.
+
+Real DataModule smoke:
+
+- build WSMAVFusionDataModule;
+- get one real train batch;
+- run F0 forward + masked sparse loss + backward;
+- finite loss and gradients;
+- batch does not contain task_id input.
 
 Safety:
 
-- no fusion model implementation;
 - no training config;
-- no training run;
-- no Test metric computation;
-- no text/description work;
+- no real training run;
+- no Test metrics;
+- no DataModule changes;
 - src/audio unchanged;
-- video source unchanged;
+- src/video unchanged;
 - python compilation passes;
 - registry smoke passes;
 - git diff --check passes;
-- branch codex/task-004a committed and pushed;
+- branch codex/task-004b committed and pushed;
 - main/master untouched;
 - tracked diff contains only the four allowed paths.
 
@@ -393,38 +327,195 @@ Safety:
 Compile:
 
     python3 -m py_compile \
-      src/fusion/data/wsm_av_fusion_datamodule.py \
-      src/fusion/data/__init__.py \
+      src/fusion/models/av_f0_gated_late.py \
+      src/fusion/models/__init__.py \
       src/chimera_plugin.py
 
 Registry smoke:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
     import warnings
-    from chimera_ml.core.registry import DATAMODULES
+    from chimera_ml.core.registry import MODELS
     import chimera_plugin
 
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         chimera_plugin.register()
 
-    project_warnings = [
+    failures = [
         str(x.message)
         for x in caught
         if "Failed to import" in str(x.message)
-        and "fusion.data.wsm_av_fusion_datamodule" in str(x.message)
+        and "fusion.models.av_f0_gated_late" in str(x.message)
     ]
-    assert not project_warnings, project_warnings
-    assert "wsm_av_fusion_datamodule" in DATAMODULES.keys()
-    print("A+V fusion DataModule registry smoke passed")
+    assert not failures, failures
+    assert "wsm_av_f0_gated_late_model" in MODELS.keys()
+    print("F0 registry smoke passed")
     PY
 
-Full DataModule contract smoke:
+Synthetic contract smoke:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import math
     import torch
 
+    from chimera_ml.core.batch import Batch
+    from common.loss.wsm_masked_sparse_loss import WSMMaskedSparseLoss
+    from fusion.models.av_f0_gated_late import WSMAVGatedLateFusionF0Model
+
+    torch.manual_seed(17)
+
+    model = WSMAVGatedLateFusionF0Model(
+        audio_feature_dim=768,
+        video_feature_dim=512,
+        hidden_dim=64,
+        gate_hidden_dim=16,
+        dropout=0.0,
+    )
+
+    audio = torch.randn(4,768)
+    video = torch.randn(4,7,512)
+    video_mask = torch.tensor([
+        [1,1,1,1,1,0,0],
+        [1,1,1,1,1,1,1],
+        [1,1,1,0,0,0,0],
+        [1,1,1,1,0,0,0],
+    ], dtype=torch.bool)
+
+    available = torch.tensor([
+        [1,1],
+        [1,0],
+        [0,1],
+        [1,1],
+    ], dtype=torch.bool)
+
+    targets = torch.tensor([
+        [1.0, float("nan")],
+        [0.0, float("nan")],
+        [float("nan"), 1.0],
+        [float("nan"), 0.0],
+    ])
+    observed = torch.tensor([
+        [1,0],
+        [1,0],
+        [0,1],
+        [0,1],
+    ], dtype=torch.bool)
+
+    batch = Batch(
+        inputs={
+            "audio_cls": audio,
+            "video": video,
+        },
+        targets=targets,
+        masks={
+            "video_mask": video_mask,
+            "observed_mask": observed,
+            "modality_available": available,
+        },
+        meta={},
+    )
+
+    model.eval()
+    out = model(batch)
+
+    assert tuple(out.preds.shape) == (4,2)
+    assert tuple(out.aux["audio_logits"].shape) == (4,2)
+    assert tuple(out.aux["video_logits"].shape) == (4,2)
+    assert tuple(out.aux["raw_audio_gates"].shape) == (4,2)
+    assert tuple(out.aux["fusion_weights"].shape) == (4,2,2)
+
+    weights = out.aux["fusion_weights"]
+    assert torch.allclose(weights.sum(dim=-1), torch.ones_like(weights[...,0]))
+    assert torch.equal(weights[1], torch.tensor([[1.0,0.0],[1.0,0.0]]))
+    assert torch.equal(weights[2], torch.tensor([[0.0,1.0],[0.0,1.0]]))
+
+    expected = (
+        weights[...,0] * out.aux["audio_logits"]
+        + weights[...,1] * out.aux["video_logits"]
+    )
+    assert torch.allclose(out.preds, expected, atol=1e-6, rtol=1e-6)
+
+    # Masked video padding invariance.
+    changed = video.clone()
+    changed[~video_mask] = 1e6
+    changed_batch = Batch(
+        inputs={"audio_cls": audio, "video": changed},
+        targets=targets,
+        masks={
+            "video_mask": video_mask,
+            "observed_mask": observed,
+            "modality_available": available,
+        },
+        meta={},
+    )
+    changed_out = model(changed_batch)
+    assert torch.allclose(out.preds, changed_out.preds, atol=1e-5, rtol=1e-5)
+
+    # Unavailable audio invariance for row 2.
+    audio_changed = audio.clone()
+    audio_changed[2] = 1e6
+    audio_out = model(Batch(
+        inputs={"audio_cls": audio_changed, "video": video},
+        targets=targets,
+        masks={"video_mask": video_mask, "observed_mask": observed, "modality_available": available},
+        meta={},
+    ))
+    assert torch.allclose(out.preds[2], audio_out.preds[2], atol=1e-5, rtol=1e-5)
+
+    # Unavailable video invariance for row 1.
+    video_changed = video.clone()
+    video_changed[1] = 1e6
+    video_out = model(Batch(
+        inputs={"audio_cls": audio, "video": video_changed},
+        targets=targets,
+        masks={"video_mask": video_mask, "observed_mask": observed, "modality_available": available},
+        meta={},
+    ))
+    assert torch.allclose(out.preds[1], video_out.preds[1], atol=1e-5, rtol=1e-5)
+
+    bad_available = available.clone()
+    bad_available[0] = False
+    try:
+        model(Batch(
+            inputs={"audio_cls": audio, "video": video},
+            targets=targets,
+            masks={"video_mask": video_mask, "observed_mask": observed, "modality_available": bad_available},
+            meta={},
+        ))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("neither-available sample must fail")
+
+    model.train()
+    train_out = model(batch)
+    loss = WSMMaskedSparseLoss()(train_out, batch)
+    assert loss.ndim == 0 and math.isfinite(float(loss.detach()))
+    loss.backward()
+
+    grads = {
+        name: p.grad
+        for name,p in model.named_parameters()
+        if p.requires_grad and p.grad is not None
+    }
+    assert any("audio_projection" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert any("video_projection" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert any("gate" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert all(torch.isfinite(g).all() for g in grads.values())
+
+    print("F0 synthetic forward/loss/backward smoke passed", float(loss.detach()))
+    PY
+
+Real A+V DataModule smoke:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import math
+    import torch
+
+    from common.loss.wsm_masked_sparse_loss import WSMMaskedSparseLoss
     from fusion.data.wsm_av_fusion_datamodule import WSMAVFusionDataModule
+    from fusion.models.av_f0_gated_late import WSMAVGatedLateFusionF0Model
 
     dm = WSMAVFusionDataModule(
         data_root="/media/maxim/Databases/WSM_NEW",
@@ -436,77 +527,44 @@ Full DataModule contract smoke:
         persistent_workers=False,
     )
 
-    assert len(dm.train_dataset) == 6325
-    assert len(dm.val_dataset) == 933
-    assert len(dm.test_dataset["test_none"]) == 1364
-    assert len(dm.test_dataset["test_soft"]) == 1208
-    assert len(dm.test_dataset["test_hard"]) == 1014
-
-    assert dm.audit["canonical_total"] == 8622
-    assert dm.audit["joined_total"] == 8622
-    assert dm.audit["missing_audio"] == 0
-    assert dm.audit["missing_video"] == 0
-    assert dm.audit["duplicate_join"] == 0
-
-    loaders = dm.val_dataloader()
-    assert list(loaders.keys()) == ["dev", "test_none", "test_soft", "test_hard"]
-
-    # Build a real mixed batch.
     batch = next(iter(dm.train_dataloader()))
+    assert "task_id" not in batch.inputs and "task_ids" not in batch.inputs
 
-    audio = batch.inputs["audio"]
-    audio_cls = batch.inputs["audio_cls"]
-    video = batch.inputs["video"]
-    audio_mask = batch.get_masks("audio_mask")
-    video_mask = batch.get_masks("video_mask")
-    observed = batch.get_masks("observed_mask")
-    available = batch.get_masks("modality_available")
-
-    assert audio.ndim == 3
-    assert audio_cls.ndim == 2
-    assert video.ndim == 3 and video.shape[-1] == 512
-    assert audio.shape[0] == video.shape[0] == 4
-    assert audio_cls.shape[0] == 4
-    assert tuple(audio_mask.shape) == tuple(audio.shape[:2])
-    assert tuple(video_mask.shape) == tuple(video.shape[:2])
-    assert tuple(observed.shape) == (4,2)
-    assert tuple(available.shape) == (4,2)
-    assert available.dtype == torch.bool and bool(available.all())
-    assert tuple(batch.targets.shape) == (4,2)
-
-    # Padding must be exact zero.
-    assert torch.equal(audio[~audio_mask], torch.zeros_like(audio[~audio_mask]))
-    assert torch.equal(video[~video_mask], torch.zeros_like(video[~video_mask]))
-
-    # Unknown targets remain masked NaN.
-    assert torch.isnan(batch.targets[~observed]).all()
-
-    # No legacy task-id model input.
-    assert "task_ids" not in batch.inputs
-    assert "task_id" not in batch.inputs
-
-    print(
-        "A+V fusion DataModule smoke passed",
-        audio.shape,
-        video.shape,
-        dm.audio_feature_dim,
+    model = WSMAVGatedLateFusionF0Model(
+        audio_feature_dim=dm.audio_feature_dim,
+        video_feature_dim=512,
+        hidden_dim=64,
+        gate_hidden_dim=16,
+        dropout=0.0,
     )
-    PY
+    out = model(batch)
+    loss = WSMMaskedSparseLoss()(out, batch)
 
-Add a deterministic identity audit proving that sampled rows map to the same canonical segment across audio and video paths, including at least one row from each corpus and each split/protocol.
+    assert tuple(out.preds.shape) == (4,2)
+    assert math.isfinite(float(loss.detach()))
+    loss.backward()
+
+    assert all(
+        p.grad is None or torch.isfinite(p.grad).all()
+        for p in model.parameters()
+    )
+
+    print("F0 real DataModule smoke passed", float(loss.detach()))
+    PY
 
 Then:
 
     git diff --check
     git diff -- src/audio
     git diff -- src/video
+    git diff -- src/fusion/data/wsm_av_fusion_datamodule.py
     git status --short
 
 Before commit inspect only:
 
     git diff -- \
-      src/fusion/data/wsm_av_fusion_datamodule.py \
-      src/fusion/data/__init__.py \
+      src/fusion/models/av_f0_gated_late.py \
+      src/fusion/models/__init__.py \
       src/chimera_plugin.py \
       docs/PROGRESS_EN.md
 
@@ -526,19 +584,17 @@ Record:
 - implementation commit SHA;
 - push result;
 - registry key;
-- exact frozen audio cache contract/path;
-- exact video cache contract/path;
-- canonical/join counts;
-- detected audio feature dim;
-- video feature dim;
-- missing/duplicate counts;
-- train/dev/Test protocol dataset counts;
-- batch shapes from a real batch;
-- sparse target/observed-mask verification;
-- no-task-id verification;
-- four evaluation stream keys;
-- confirmation no model/config/training/Test metrics;
-- confirmation text/description remains deferred;
+- fixed F0 equation/architecture;
+- fixed constructor defaults;
+- availability-weight semantics;
+- aux output shapes;
+- synthetic mask/modality invariance results;
+- synthetic masked loss/backward result;
+- real DataModule forward/loss/backward result;
+- no task_id verification;
+- confirmation no config/training/Test metrics;
+- confirmation DataModule unchanged;
+- confirmation text/description deferred;
 - src/audio unchanged;
 - src/video unchanged;
 - Stage 4 status;
@@ -557,16 +613,14 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch codex/task-004a;
+- branch codex/task-004b;
 - implementation commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
 - registry key;
-- audio feature dim;
-- train/dev/test counts;
-- join completeness;
-- real batch audio/video shapes;
-- no task_id input;
+- output/aux shapes;
+- availability-aware gate checks;
+- synthetic and real DataModule loss/backward results;
 - no training/Test metrics;
 - text/description deferred;
 - src/audio unchanged;
