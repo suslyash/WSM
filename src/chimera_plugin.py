@@ -13,6 +13,7 @@ _MODULES_TO_REGISTER: tuple[str, ...] = (
     "audio.loss.wsm_audio_loss",
     "fusion.models.av_sync_mamba_segment",
     "fusion.models.av_f0_gated_late",
+    "fusion.models.av_f1_shared_mtl",
     "fusion.data.wsm_manifest_datamodule",
     "fusion.data.wsm_av_fusion_datamodule",
     "video.models.depart_v1",

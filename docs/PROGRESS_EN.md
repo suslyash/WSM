@@ -1672,3 +1672,49 @@ Status: accepted.
 - F1 continues to use wsm_masked_sparse_loss only.
 
 Recommended next atomic task: TASK-004D — implement/register the F1 availability-aware shared-representation sparse two-head MTL model and verify forward/loss/backward on synthetic and real TASK-004A batches. Do not create a training config or run training yet.
+
+
+### TASK-004D — Implement and register the F1 availability-aware shared-representation sparse A+V MTL model
+
+Status: complete. Branch: codex/task-004d. No training config, real training run, Test metrics, pseudo-labeling, or text/description work was performed.
+
+Changed files:
+
+- src/fusion/models/av_f1_shared_mtl.py
+- src/fusion/models/__init__.py
+- src/chimera_plugin.py
+- docs/PROGRESS_EN.md
+
+Implementation commit SHA: e5d83bec73f0a6a2615ab464f9ff1fa9db3a4775. Push result: pending push.
+
+Registry and architecture:
+
+- Registered `wsm_av_f1_shared_mtl_model`; the required plugin import is explicit and does not emit a project-module warning.
+- Fixed defaults are audio_feature_dim=768, video_feature_dim=512, hidden_dim=192, fusion_hidden_dim=192, dropout=0.2, num_tasks=2; num_tasks other than 2 is rejected.
+- Audio and video each use LayerNorm -> Linear -> GELU -> Dropout projections. Video is masked-mean pooled over video_mask.
+- Unavailable audio/video rows are zeroed before projection and zeroed again after projection. The shared trunk is exactly LayerNorm(2H) -> Linear(2H,F) -> GELU -> Dropout -> Linear(F,H) -> GELU -> Dropout.
+- Two independent disease heads use LayerNorm -> Linear -> GELU -> Dropout -> Linear and return un-sigmoided logits `[B,2]` ordered depression, Parkinson.
+- No F0 gate, per-modality disease logits, task IDs/embeddings, corpus or protocol IDs, temporal cross-attention, TACME/relation bank, pseudo-labeling, prototype logic, contrastive loss, text, or description is present.
+
+ModelOutput contract:
+
+- `preds`: `[B,2]`;
+- `features_audio`, `features_video`, `features_shared`, `effective_audio_features`, `effective_video_features`: `[B,H]`;
+- `task_logits.depression=preds[:,0]` and `task_logits.parkinson=preds[:,1]`.
+
+Exact verification commands and results:
+
+- `python3 -m py_compile src/fusion/models/av_f1_shared_mtl.py src/fusion/models/__init__.py src/chimera_plugin.py` — passed.
+- Required registry smoke — passed: `wsm_av_f0_gated_late_model` and `wsm_av_f1_shared_mtl_model` registered; no F1 project-module warning.
+- Synthetic availability/mask/loss/backward smoke — passed, finite loss=`0.7417997122`. Verified exact unavailable-modality zeroing, unavailable audio/video invariance, masked-video padding invariance, available-video all-false rejection, neither-modality rejection, masked NaN sparse supervision, finite nonzero audio/video projection and shared-trunk gradients, finite nonzero gradients for both disease heads, and finite gradients throughout.
+- Real A+V DataModule smoke — passed, finite loss=`0.6640226841`, output `[4,2]`, finite gradients, no `task_id`/`task_ids` input, and counts train/dev/test_none/test_soft/test_hard=`6325/933/1364/1208/1014`.
+- `git diff --check` and frozen-source checks passed; no training or Test metrics ran.
+
+Safety and scope:
+
+- Accepted A+V DataModule and F0 model were unchanged.
+- `src/audio` and `src/video` are unchanged.
+- Text/description remains deferred. No training config was created.
+- Stage 4 remains partial: F0 and F1 contracts are complete; F2 and later RAMPS work remain.
+
+Recommended next atomic task: define and implement the fixed F2 task-aware directed fusion baseline only after manager assignment; do not train F1/F2 in this task.
