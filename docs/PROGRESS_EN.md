@@ -2072,3 +2072,25 @@ Evidence commit SHA: fe41bdc6d7e3b32b48e492d4f1cda0f358127880. Push result: succ
 Stage status: Stage 4 is reopened for the strong temporal-audio controlled ablation before RAMPS. TASK-005A/RAMPS remains deferred; text/description remains deferred.
 
 Recommended next atomic task: run the fixed seed-42 F1-temporal residual training experiment, using DEV/Mean_Score as the sole selector and preserving the Test firewall.
+
+
+### MANAGER-DECISION-025 — Accept TASK-004H and authorize the fixed strong-audio F1 residual run
+
+Status: accepted.
+
+- TASK-004H is integrated through PR #30 as 7ea9efb81b460eb2e39c31b06b4765813b397031.
+- The exact historical selected audio checkpoint was uniquely recovered:
+  `logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt`
+  with SHA256 `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`.
+- The archived epoch-4 graph predates four normalization modules now present in `src/audio`. The fusion-side adapter reconstructs that archived graph by replacing only those four adapter-owned instantiated modules with Identity before strict state loading. This compatibility deviation is accepted because the checkpoint loads with zero missing/unexpected state keys and reproduces the historical canonical DEV scores essentially exactly without modifying `src/audio`.
+- Reproduced DEV: depression Score=0.7479183895, Parkinson Score=0.8277353635, Mean_Score=0.7878268765. All deltas to the rounded historical reference are far below the 0.0005 gate.
+- The strong-audio F1 residual model is accepted as `wsm_av_f1_temporal_audio_residual_model`.
+- The audio adapter remains eval-only and stop-gradient under parent train mode. No external task_id/task_ids are consumed; fixed disease task indices exist only inside the frozen historical adapter.
+- Synthetic and real A+V sparse forward/loss/backward checks pass, with gradients confined to the trainable video/shared/residual branch.
+- The next experiment is a fixed seed-42 strong-audio F1 residual run. The frozen audio checkpoint and architecture are not tunable.
+- The primary comparison is final strong-audio+video DEV metrics versus the same frozen audio base logits on the same canonical DEV rows. This directly measures the incremental value of video while preserving the historical temporal audio system.
+- Training loss is diagnostic only. Checkpointing/early stopping remain strictly `dev/mean_score` in max mode. DEV, TEST_NONE, TEST_SOFT, and TEST_HARD remain mandatory every epoch; Test is monitoring-only.
+- Because the temporal audio model is run twice internally and frozen, batch_size=8 is fixed for this run to match the historical audio operational scale and avoid a memory-driven tuning loop. Optimizer/lr/weight decay, epoch budget, seed, and selector remain fixed.
+- RAMPS remains deferred. After the fixed F1-temporal run, proceed to the analogous F2-temporal directed residual contract unless a concrete implementation/reproduction blocker appears.
+
+Recommended next atomic task: TASK-004I — create the fixed strong-audio F1 residual training config and run the real seed-42 experiment, selecting only by DEV/Mean_Score and recording same-DEV-row frozen-base versus final-fusion deltas.
