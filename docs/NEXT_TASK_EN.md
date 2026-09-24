@@ -1,4 +1,4 @@
-# TASK-004E: Run the Fixed F1 Shared-Representation Sparse A+V MTL Baseline
+# TASK-004F: Implement and Register the F2 Availability-Aware Task-Specific Directed A+V Relation-Bank Model
 
 ## Role
 
@@ -6,419 +6,746 @@ You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.
 
 Required branch:
 
-    codex/task-004e
+    codex/task-004f
 
-This task explicitly authorizes the real F1 Stage 4 baseline run.
-
-Do not modify source code, the accepted A+V DataModule, F0/F1 model code, frozen audio/video caches, loss, callbacks, or Test protocol definitions.
-Do not add pseudo-labeling.
-Do not start F2.
-Do not start text/description work.
+Do not create a training config.
+Do not run a real training experiment.
+Do not modify the accepted A+V DataModule.
+Do not modify F0 or F1.
+Do not modify src/audio or src/video.
+Do not add pseudo-labeling, flow matching, PAGB, or text/description.
 
 ## Goal
 
-Create the fixed F1 production config and run the real seed-42 shared-representation sparse A+V multitask baseline.
+Implement the third Stage 4 fusion baseline:
 
-Use:
+    F2 = F1 shared representation
+         + shared directed A<->V relation bank
+         + task-specific expert gating
+         + two independent sparse disease heads
 
-    data: wsm_av_fusion_datamodule
-    model: wsm_av_f1_shared_mtl_model
-    loss: wsm_masked_sparse_loss
+F2 must consume the accepted TASK-004A A+V Batch contract and return exactly:
 
-Evaluate every epoch on:
+    [depression, parkinson]
 
-    dev
-    test_none
-    test_soft
-    test_hard
+The purpose is to isolate task-aware directed fusion relative to the already measured F1 baseline.
 
-Select the checkpoint ONLY by:
+## Manager-Fixed F2 Contract
 
-    dev/mean_score
+F2 is a minimal pooled-feature TACME-like adaptation.
 
-The purpose is to measure the DEV gain/loss of F1 shared representation relative to the already measured F0 baseline before implementing F2.
+It MUST retain the same raw inputs and base representation path as F1:
+
+- audio_cls [B,768]
+- masked-mean video [B,512]
+- modality-specific projection to H
+- hard availability zeroing
+- F1-style shared_fusion trunk over concat(audio,video)
+
+Then add exactly two SHARED directed relation experts:
+
+    expert 0 = audio_to_video
+    expert 1 = video_to_audio
+
+The relation expert bank is shared by both disease tasks.
+
+Each disease has its own learned gate over this same two-expert bank.
+
+No external task_id/task_ids are allowed.
 
 ## Required Reading
 
 1. AGENTS.md
-2. docs/PROJECT_REQUIREMENTS.md Sections 5, 8, 9, 10, 13, 14
+2. docs/PROJECT_REQUIREMENTS.md Sections 2-9, 11, 13-14
 3. docs/PLAN.md Stage 4
-4. docs/PROGRESS_EN.md through MANAGER-DECISION-020
+4. docs/PROGRESS_EN.md through MANAGER-DECISION-021
 5. docs/NEXT_TASK_EN.md
 6. src/fusion/data/wsm_av_fusion_datamodule.py
-7. src/fusion/models/av_f0_gated_late.py
-8. src/fusion/models/av_f1_shared_mtl.py
-9. configs/wsm_mm_pd_dep_v1/fusion/00_f0_gated_late.yaml
+7. src/fusion/models/av_f1_shared_mtl.py
+8. src/fusion/models/av_f0_gated_late.py
+9. src/common/loss/wsm_masked_sparse_loss.py
+10. src/chimera_plugin.py
 
 ## Allowed Tracked Files
 
-- configs/wsm_mm_pd_dep_v1/fusion/01_f1_shared_mtl.yaml
+- src/fusion/models/av_f2_task_aware_directed.py
+- src/fusion/models/__init__.py
+- src/chimera_plugin.py
 - docs/PROGRESS_EN.md
 
 No other tracked file may be modified.
 
-Generated runtime artifacts under logs/ are expected and must remain untracked unless already tracked by repository policy.
+## Registry Key
 
-## 1. Create the Fixed F1 Config
+Register:
 
-Create:
+    wsm_av_f2_task_aware_directed_model
 
-    configs/wsm_mm_pd_dep_v1/fusion/01_f1_shared_mtl.yaml
+Do not alter existing model registry keys.
 
-It must mirror the accepted F0 production config except for the planned F1 model-family changes.
+## Fixed Constructor Defaults
 
-Use exactly:
+Use:
 
-    seed: 42
+    audio_feature_dim=768
+    video_feature_dim=512
+    hidden_dim=192
+    fusion_hidden_dim=192
+    relation_hidden_dim=192
+    dropout=0.2
+    num_tasks=2
 
-Experiment:
+Require num_tasks == 2.
 
-    experiment_name: wsm_mm_pd_dep_v1
-    run_name: av_f1_shared_mtl
+## 1. Base F1 Path — Preserve Exactly
 
-Data:
+Use the same effective-input semantics as F1.
 
-    name: wsm_av_fusion_datamodule
+Audio:
 
-Data params must match F0 exactly:
+    audio_input = zero unavailable audio rows
+    a = AudioProjection(audio_input)
+    a_eff = zero unavailable audio rows after projection
 
-    data_root: /media/maxim/Databases/WSM_NEW
-    audio_feature_cache_root: /media/maxim/Databases/WSM_NEW/features
-    video_cache_root: /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache
-    batch_size: 32
-    num_workers: 4
-    pin_memory: true
-    persistent_workers: true
-    shuffle_train: true
-    drop_last_train: false
+Video:
 
-Model:
+    v_raw = masked_mean(video, video_mask)
+    v_raw = zero unavailable video rows
+    v = VideoProjection(v_raw)
+    v_eff = zero unavailable video rows after projection
 
-    name: wsm_av_f1_shared_mtl_model
+Shared F1 base:
 
-Model params:
+    base_shared = SharedFusion(concat(a_eff, v_eff))
 
-    audio_feature_dim: 768
-    video_feature_dim: 512
-    hidden_dim: 192
-    fusion_hidden_dim: 192
-    dropout: 0.2
-    num_tasks: 2
+Projection blocks and SharedFusion MUST match F1 architecture/capacity exactly.
 
-Loss:
+Do not import/reuse F1 by calling its forward; implement the F2 module self-contained so its aux contract is explicit.
 
-    name: wsm_masked_sparse_loss
+## 2. Shared Directed Relation Expert Bank
 
-Optimizer must match F0 exactly:
+Implement a reusable local module such as DirectedRelationExpert.
 
-    name: adamw_optimizer
-    lr: 0.0001
-    weight_decay: 0.01
+For ordered query q and context c, both [B,H]:
 
-Training must match F0 exactly:
+    relation_input = concat(q,c)
 
-    epochs: 30
-    device: cuda
-    mixed_precision: true
-    grad_clip_norm: 0.5
-    log_every_steps: 25
-    collect_cache: true
+Use:
 
-Metrics:
+    LayerNorm(2H)
+    Linear(2H, relation_hidden_dim)
+    GELU
+    Dropout
+    Linear(relation_hidden_dim, H)
+    Dropout
 
-    []
+Then add a query residual and normalize:
 
-Do not add a scheduler, auxiliary loss, pseudo-labeling, contrastive objective, task weights, or any tuning parameter.
+    expert(q,c) = LayerNorm(q + RelationMLP(concat(q,c)))
 
-## 2. Required Instrumentation
+Create exactly two independently parameterized experts:
 
-Use the same instrumentation and durable paths as F0:
+    audio_to_video = expert(a_eff, v_eff)
+    video_to_audio = expert(v_eff, a_eff)
 
-- wsm_segment_metrics_callback with splits=[auto]
-- checkpoint_callback
-- snapshot_callback
-- early_stopping_callback
-- wsm_summary_callback
-- console_file_logger
-- mlflow_logger
+The direction is encoded by:
 
-Checkpoint:
+- ordered query/context arguments;
+- separate expert parameters.
 
-    log_path: logs
-    monitor: dev/mean_score
-    mode: max
-    save_top_k: 2
-    save_last: true
+Do not create task-specific expert banks.
 
-Use the same filename_template as F0.
+## 3. Relation Validity
 
-Early stopping:
+modality_available:
 
-    monitor: dev/mean_score
-    mode: max
-    patience: 6
-    min_delta: 0.0005
+    [B,2] bool ordered [audio,video]
 
-Snapshot:
+A directed cross-modal relation requires BOTH modalities.
 
-    log_path: logs
-    include:
-      - src
-      - configs
-    save_code_zip: true
-    save_config: true
+Therefore for each sample:
 
-Console:
+- both modalities available:
+    relation_valid = [true,true]
+- audio-only:
+    relation_valid = [false,false]
+- video-only:
+    relation_valid = [false,false]
+- neither:
+    raise ValueError
 
-    log_path: logs
-    log_file: train.log
-    console_level: INFO
-    file_level: INFO
+For invalid relation rows:
 
-MLflow:
+- effective relation expert outputs exposed to downstream task fusion MUST be exactly zero;
+- task relation weights MUST be exactly zero;
+- final task representation falls back to the F1 base_shared path.
 
-    tracking_uri: sqlite:///logs/mlflow.db
+Changing raw values of an unavailable modality must not change final logits.
 
-No Test metric may appear in any selector, monitor, scheduler, threshold, or tuning field.
+## 4. Task-Specific Expert Gates
 
-## 3. F0/F1 Config Equivalence Audit
+For each task t in:
 
-Before training, parse:
+    depression
+    parkinson
 
-    configs/wsm_mm_pd_dep_v1/fusion/00_f0_gated_late.yaml
-    configs/wsm_mm_pd_dep_v1/fusion/01_f1_shared_mtl.yaml
+use a separate gate module shared across the two expert positions:
 
-Assert all non-model training/data/instrumentation semantics are identical.
+    Linear(H,H)
+    LayerNorm(H)
+    GELU
+    Dropout(dropout)
+    Linear(H,1)
 
-The intentional semantic differences are only:
+Apply the task gate independently to each expert output:
 
-- experiment_info.params.run_name;
-- model.name;
-- F0 model param gate_hidden_dim is absent in F1;
-- F1 model param fusion_hidden_dim=192 is present;
-- remaining common model params are identical.
+    scores_t = [gate_t(E_A2V), gate_t(E_V2A)]  -> [B,2]
 
-No data, optimizer, training, callback, logger, selector, seed, or loss difference is allowed.
+For rows where both relations are valid:
 
-## 4. Pre-Run Validation
+    weights_t = softmax(scores_t, dim=expert)
 
-Run:
+For rows with no valid cross-modal relation:
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config \
-      --config-path configs/wsm_mm_pd_dep_v1/fusion/01_f1_shared_mtl.yaml
+    weights_t = [0,0]
 
-Build through actual Chimera registries and verify:
+Required task expert-weight tensor:
 
-- DataModule builds;
-- F1 model builds;
-- masked sparse loss builds;
-- optimizer builds;
-- callbacks/loggers build;
-- no project-module warnings;
-- CUDA is available;
-- dataset counts:
-  - train=6325
-  - dev=933
-  - test_none=1364
-  - test_soft=1208
-  - test_hard=1014
-- joined_total=8622;
-- missing audio/video=0/0;
-- val_dataloader keys exactly dev/test_none/test_soft/test_hard;
-- checkpoint and early stopping monitor only dev/mean_score.
+    [B,2,2]
 
-Run one real production-size batch forward/loss/backward smoke before the full run.
+dimensions:
 
-If CUDA is unavailable or config/build/smoke fails, stop as blocked. Do not change source/config to work around it in this task.
+    batch, task, expert
 
-## 5. Real F1 Training
+task order:
 
-Run from repository root:
+    [depression, parkinson]
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/fusion/01_f1_shared_mtl.yaml
+expert order:
 
-Do not interrupt a healthy run.
+    [audio_to_video, video_to_audio]
 
-If it fails:
+For both-available rows, weights sum exactly to 1 for each task.
 
-- preserve traceback/logs/artifacts;
-- do not modify source or the fixed config;
-- record the exact blocker;
-- update PROGRESS_EN.md;
-- commit/push evidence;
-- stop as blocked.
+## 5. Task-Specific Relation Fusion
 
-## 6. Epoch-Level Monitoring
+For each task:
 
-For EVERY completed epoch record at minimum:
+    relation_t =
+        w_t,A2V * E_A2V
+        + w_t,V2A * E_V2A
 
-- train loss;
-- DEV depression UAR/MF1/Score;
-- DEV Parkinson UAR/MF1/Score;
-- DEV Mean_Score;
-- TEST_NONE depression/Parkinson UAR/MF1/Score and Mean_Score;
-- TEST_SOFT depression/Parkinson UAR/MF1/Score and Mean_Score;
-- TEST_HARD depression/Parkinson UAR/MF1/Score and Mean_Score.
+Then:
 
-All required metrics must be finite.
+    task_feature_t =
+        LayerNorm(base_shared + relation_t)
 
-All four evaluation streams must appear every completed epoch.
+Use an independent LayerNorm(H) per task.
 
-Test metrics are monitoring-only.
+No learnable residual scalar is added in this baseline.
 
-Do NOT:
+For single-modality rows relation_t is exactly zero, so task_feature_t is simply the normalized F1 base representation.
 
-- select an epoch from Test;
-- tune shared fusion using Test;
-- alter threshold using Test;
-- manually stop because of Test;
-- change any hyperparameter based on Test.
+## 6. Disease Heads
 
-## 7. Best Checkpoint Selection
+Use two independent heads with the same capacity as F1:
 
-After training or configured early stopping:
+    LayerNorm(H)
+    Linear(H,H)
+    GELU
+    Dropout(dropout)
+    Linear(H,1)
 
-1. choose best epoch ONLY by maximum dev/mean_score;
-2. record exact best checkpoint path;
-3. record DEV task UAR/MF1/Score and DEV Mean_Score;
-4. record Test protocol metrics from that SAME DEV-selected epoch;
-5. record top-2 checkpoints and last.pt;
-6. record train.log, summary.txt, code.zip;
-7. record the exact MLflow experiment name, run ID, and final run status.
+Return:
 
-Do not omit the MLflow run ID/status.
+    preds [B,2]
 
-## 8. F1 Shared-Task Gradient Diagnostic
+ordered:
 
-At the DEV-selected checkpoint, perform one deterministic diagnostic only; do not update model parameters.
+    [depression, parkinson]
 
-Use a deterministic small TRAIN sample containing at least:
+Do not apply sigmoid to final logits.
 
-- observed depression-positive/negative rows;
-- observed Parkinson-positive/negative rows.
+## 7. ModelOutput Contract
 
-Using the selected checkpoint:
+Return ModelOutput with:
 
-1. compute the depression-only BCE-with-logits loss on rows with observed depression labels;
-2. compute the Parkinson-only BCE-with-logits loss on rows with observed Parkinson labels;
-3. compute gradients of each task loss separately with respect to ONLY the shared_fusion trainable parameters;
-4. flatten each gradient vector;
-5. report:
-   - depression shared-gradient L2 norm;
-   - Parkinson shared-gradient L2 norm;
-   - cosine similarity between the two shared-gradient vectors.
+    preds -> [B,2]
 
-Requirements:
+aux must contain at least:
 
-- gradients finite;
-- no optimizer step;
-- no parameter update;
-- do not use Test data;
-- diagnostics must not alter checkpoint/model selection.
+    features_audio              -> [B,H]
+    features_video              -> [B,H]
+    effective_audio_features    -> [B,H]
+    effective_video_features    -> [B,H]
+    features_shared             -> [B,H]
+    relation_experts            -> [B,2,H]
+    relation_valid              -> [B,2] bool
+    task_expert_weights         -> [B,2,2]
+    task_relation_features      -> [B,2,H]
+    task_features               -> [B,2,H]
+    task_logits = {
+        "depression": preds[:,0],
+        "parkinson": preds[:,1],
+    }
 
-If a deterministic 32-row batch does not contain both classes for both observed tasks, use the smallest deterministic sample needed and record its size.
+The aux contract must make later expert-weight and gradient diagnostics possible without changing forward.
 
-## 9. DEV Comparison
+## 8. Important F2 Boundary
 
-Compare the DEV-selected F1 result to:
+F2 MUST NOT contain:
 
-F0:
-- DEV Mean_Score=0.744211
-- depression Score=0.642220
-- Parkinson Score=0.846201
+- external task_id/task_ids input;
+- task/corpus/split/Test protocol metadata input;
+- task-specific expert banks;
+- pseudo-labeling;
+- teacher/student logic;
+- flow matching;
+- PAGB;
+- learned loss balancing;
+- auxiliary relation loss;
+- contrastive loss;
+- prototype logic;
+- temporal cross-attention over raw sequences;
+- new temporal encoders;
+- text/description;
+- semantic label embeddings.
 
-Frozen historical audio:
-- DEV Mean_Score=0.787827
-- depression Score=0.747918
-- Parkinson Score=0.827735
+F2 uses ONLY:
 
-Selected video V2:
-- DEV Mean_Score=0.706572
-- depression Score=0.620101
-- Parkinson Score=0.793043
+    existing pooled frozen A+V features
+    + F1 base path
+    + shared ordered relation experts
+    + task-specific expert gates
+    + observed sparse BCE
 
-Report:
+## 9. Availability and Mask Semantics
 
-    F1 - F0 DEV Mean_Score delta
-    F1 - audio DEV Mean_Score delta
-    F1 - V2 DEV Mean_Score delta
+Preserve F1 semantics:
 
-and task-level DEV Score deltas.
+- every sample needs at least one available modality;
+- available video requires >=1 true video_mask position;
+- unavailable video may have all-false video_mask;
+- masked video values do not affect output;
+- unavailable audio/video raw values do not affect output;
+- neither modality available raises ValueError.
 
-The primary Stage 4 F1 conclusion is F1 versus F0 on DEV.
+For single-modality rows:
 
-Test deltas may be reported descriptively but MUST NOT determine the conclusion or next architecture.
+- relation_valid is all false;
+- relation_experts after validity masking are exact zero;
+- task_expert_weights are exact zero;
+- task_relation_features are exact zero.
 
-F2 remains the next planned model regardless of Test behavior.
+## 10. Context-Aware Factory
+
+Factory must:
+
+- read data.audio_feature_dim when available;
+- read data.video_feature_dim when available;
+- enforce data.num_tasks == 2 when present;
+- default to 768/512/2 otherwise.
+
+Update src/chimera_plugin.py with explicit required import:
+
+    fusion.models.av_f2_task_aware_directed
+
+Do not hide a project import failure as an optional warning.
 
 ## Acceptance Criteria
 
-The task passes if:
+Registry/model:
 
-- F1 YAML is self-contained and valid;
-- F0/F1 config equivalence audit passes;
-- CUDA gate passes;
-- production registry/build/forward/backward smoke passes;
-- real run completes or configured early stopping ends it;
-- all four streams are evaluated every completed epoch;
-- all required metrics are finite;
-- best checkpoint selected strictly by dev/mean_score;
-- Test metrics never influence selection/tuning;
-- exact MLflow run ID/status is recorded;
-- selected-checkpoint shared-task gradient norm/cosine diagnostic is finite and recorded;
-- F1 versus F0 DEV delta is recorded;
-- no source changes;
-- no dependency installation;
+- MODELS contains wsm_av_f2_task_aware_directed_model;
+- F0/F1 registry keys remain intact;
+- plugin imports F2 without project warning;
+- preds [B,2];
+- no task_id/task_ids;
+- no 3-class softmax;
 - no pseudo-labeling;
-- no F2 work;
-- text/description remains deferred;
+- no flow matching/PAGB;
+- no text/description.
+
+Architecture:
+
+- F1-equivalent modality projections and shared_fusion exist;
+- exactly two shared directed relation experts exist;
+- experts are independently parameterized;
+- there is NOT one expert bank per task;
+- task-specific gates are independent;
+- relation_experts [B,2,H];
+- task_expert_weights [B,2,2];
+- task_relation_features [B,2,H];
+- task_features [B,2,H].
+
+Gate/availability semantics:
+
+- both-available weights are finite, in [0,1], and sum to 1 per task;
+- single-modality rows have exactly zero relation weights;
+- single-modality rows have exactly zero relation features;
+- relation_valid correctly marks both experts valid only when A+V are both available;
+- neither available raises ValueError.
+
+Directionality:
+
+- swapping the ordered expert inputs while keeping expert parameters fixed must not be treated as the same operation;
+- verify audio_to_video and video_to_audio are separate modules/parameter sets;
+- on generic unequal synthetic a/v features, their outputs should not be identically equal.
+
+Invariance:
+
+- masked video padding changes do not change logits;
+- unavailable audio changes do not change logits;
+- unavailable video changes do not change logits.
+
+Sparse loss/backward:
+
+- wsm_masked_sparse_loss accepts output;
+- masked NaN labels remain unsupervised;
+- finite scalar loss;
+- both modality projections get finite nonzero gradients;
+- shared_fusion gets finite nonzero gradient;
+- BOTH directed experts get finite nonzero gradients on a both-available synthetic batch with observed labels;
+- both task gates get finite nonzero gradients;
+- both task heads get finite nonzero gradients.
+
+Real DataModule smoke:
+
+- build WSMAVFusionDataModule;
+- use a real train batch;
+- F2 forward + masked sparse loss + backward;
+- preds [B,2];
+- finite gradients;
+- task_expert_weights finite and normalized because current canonical rows are both-modal;
+- no task_id input.
+
+Safety:
+
+- no training config;
+- no real training run;
+- no Test metrics;
+- no DataModule changes;
+- no F0/F1 changes;
 - src/audio unchanged;
 - src/video unchanged;
-- accepted A+V DataModule unchanged;
-- F0 model unchanged;
+- text/description remains deferred;
+- python compilation passes;
+- registry smoke passes;
 - git diff --check passes;
-- tracked diff contains only:
-  - configs/wsm_mm_pd_dep_v1/fusion/01_f1_shared_mtl.yaml
-  - docs/PROGRESS_EN.md
-- branch codex/task-004e committed and pushed;
-- main/master untouched.
+- branch codex/task-004f committed and pushed;
+- main/master untouched;
+- tracked diff contains only the four allowed paths.
+
+## Exact Verification Commands
+
+Compile:
+
+    python3 -m py_compile \
+      src/fusion/models/av_f2_task_aware_directed.py \
+      src/fusion/models/__init__.py \
+      src/chimera_plugin.py
+
+Registry smoke:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import warnings
+    from chimera_ml.core.registry import MODELS
+    import chimera_plugin
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        chimera_plugin.register()
+
+    failures = [
+        str(x.message)
+        for x in caught
+        if "Failed to import" in str(x.message)
+        and "fusion.models.av_f2_task_aware_directed" in str(x.message)
+    ]
+    assert not failures, failures
+    assert "wsm_av_f0_gated_late_model" in MODELS.keys()
+    assert "wsm_av_f1_shared_mtl_model" in MODELS.keys()
+    assert "wsm_av_f2_task_aware_directed_model" in MODELS.keys()
+    print("F2 registry smoke passed")
+    PY
+
+Synthetic F2 contract smoke:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import math
+    import torch
+
+    from chimera_ml.core.batch import Batch
+    from common.loss.wsm_masked_sparse_loss import WSMMaskedSparseLoss
+    from fusion.models.av_f2_task_aware_directed import WSMAVTaskAwareDirectedF2Model
+
+    torch.manual_seed(31)
+
+    model = WSMAVTaskAwareDirectedF2Model(
+        audio_feature_dim=768,
+        video_feature_dim=512,
+        hidden_dim=64,
+        fusion_hidden_dim=64,
+        relation_hidden_dim=64,
+        dropout=0.0,
+    )
+
+    audio = torch.randn(6,768)
+    video = torch.randn(6,7,512)
+    video_mask = torch.tensor([
+        [1,1,1,1,1,0,0],
+        [1,1,1,1,1,1,1],
+        [1,1,1,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [1,1,1,1,0,0,0],
+        [1,1,1,1,1,0,0],
+    ], dtype=torch.bool)
+
+    available = torch.tensor([
+        [1,1],
+        [1,1],
+        [0,1],
+        [1,0],
+        [1,1],
+        [1,1],
+    ], dtype=torch.bool)
+
+    targets = torch.tensor([
+        [1.0, float("nan")],
+        [0.0, float("nan")],
+        [float("nan"), 1.0],
+        [float("nan"), 0.0],
+        [1.0, float("nan")],
+        [float("nan"), 1.0],
+    ])
+    observed = ~torch.isnan(targets)
+
+    def make_batch(a, v, vm, av):
+        return Batch(
+            inputs={"audio_cls": a, "video": v},
+            targets=targets,
+            masks={
+                "video_mask": vm,
+                "observed_mask": observed,
+                "modality_available": av,
+            },
+            meta={},
+        )
+
+    batch = make_batch(audio, video, video_mask, available)
+
+    model.eval()
+    out = model(batch)
+
+    assert tuple(out.preds.shape) == (6,2)
+    assert tuple(out.aux["features_audio"].shape) == (6,64)
+    assert tuple(out.aux["features_video"].shape) == (6,64)
+    assert tuple(out.aux["features_shared"].shape) == (6,64)
+    assert tuple(out.aux["relation_experts"].shape) == (6,2,64)
+    assert tuple(out.aux["relation_valid"].shape) == (6,2)
+    assert tuple(out.aux["task_expert_weights"].shape) == (6,2,2)
+    assert tuple(out.aux["task_relation_features"].shape) == (6,2,64)
+    assert tuple(out.aux["task_features"].shape) == (6,2,64)
+
+    both = available.all(dim=1)
+    single = ~both
+
+    weights = out.aux["task_expert_weights"]
+    assert torch.isfinite(weights).all()
+    assert torch.all(weights >= 0) and torch.all(weights <= 1)
+    assert torch.allclose(
+        weights[both].sum(dim=-1),
+        torch.ones_like(weights[both, :, 0]),
+        atol=1e-6,
+        rtol=1e-6,
+    )
+    assert torch.equal(weights[single], torch.zeros_like(weights[single]))
+
+    rel = out.aux["task_relation_features"]
+    assert torch.equal(rel[single], torch.zeros_like(rel[single]))
+
+    valid = out.aux["relation_valid"]
+    assert bool(valid[both].all())
+    assert not bool(valid[single].any())
+
+    experts = out.aux["relation_experts"]
+    assert not torch.allclose(experts[0,0], experts[0,1])
+
+    # Separate expert parameter sets.
+    a2v_ids = {id(p) for p in model.audio_to_video_expert.parameters()}
+    v2a_ids = {id(p) for p in model.video_to_audio_expert.parameters()}
+    assert a2v_ids and v2a_ids and a2v_ids.isdisjoint(v2a_ids)
+
+    # Masked padding invariance.
+    video_pad_changed = video.clone()
+    video_pad_changed[~video_mask] = 1e6
+    out_pad = model(make_batch(audio, video_pad_changed, video_mask, available))
+    assert torch.allclose(out.preds, out_pad.preds, atol=1e-5, rtol=1e-5)
+
+    # Unavailable audio invariance row 2.
+    audio_changed = audio.clone()
+    audio_changed[2] = 1e6
+    out_audio = model(make_batch(audio_changed, video, video_mask, available))
+    assert torch.allclose(out.preds[2], out_audio.preds[2], atol=1e-5, rtol=1e-5)
+
+    # Unavailable video invariance row 3.
+    video_changed = video.clone()
+    video_changed[3] = 1e6
+    out_video = model(make_batch(audio, video_changed, video_mask, available))
+    assert torch.allclose(out.preds[3], out_video.preds[3], atol=1e-5, rtol=1e-5)
+
+    # Available video with no valid frames must fail.
+    bad_mask = video_mask.clone()
+    bad_mask[0] = False
+    try:
+        model(make_batch(audio, video, bad_mask, available))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("available video with all-false mask must fail")
+
+    # Neither modality available must fail.
+    bad_available = available.clone()
+    bad_available[0] = False
+    try:
+        model(make_batch(audio, video, video_mask, bad_available))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("neither-available sample must fail")
+
+    model.train()
+    train_out = model(batch)
+    loss = WSMMaskedSparseLoss()(train_out, batch)
+    assert loss.ndim == 0 and math.isfinite(float(loss.detach()))
+    loss.backward()
+
+    grads = {
+        name: p.grad
+        for name,p in model.named_parameters()
+        if p.requires_grad and p.grad is not None
+    }
+    assert all(torch.isfinite(g).all() for g in grads.values())
+    assert any("audio_projection" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert any("video_projection" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert any("shared_fusion" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert any("audio_to_video_expert" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert any("video_to_audio_expert" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert any("task_gates.0" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert any("task_gates.1" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert any("task_heads.0" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert any("task_heads.1" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+
+    print("F2 synthetic forward/loss/backward smoke passed", float(loss.detach()))
+    PY
+
+Real A+V DataModule smoke:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import math
+    import torch
+
+    from common.loss.wsm_masked_sparse_loss import WSMMaskedSparseLoss
+    from fusion.data.wsm_av_fusion_datamodule import WSMAVFusionDataModule
+    from fusion.models.av_f2_task_aware_directed import WSMAVTaskAwareDirectedF2Model
+
+    dm = WSMAVFusionDataModule(
+        data_root="/media/maxim/Databases/WSM_NEW",
+        audio_feature_cache_root="/media/maxim/Databases/WSM_NEW/features",
+        video_cache_root="/media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache",
+        batch_size=4,
+        num_workers=0,
+        pin_memory=False,
+        persistent_workers=False,
+    )
+
+    batch = next(iter(dm.train_dataloader()))
+    assert "task_id" not in batch.inputs and "task_ids" not in batch.inputs
+
+    model = WSMAVTaskAwareDirectedF2Model(
+        audio_feature_dim=dm.audio_feature_dim,
+        video_feature_dim=512,
+        hidden_dim=64,
+        fusion_hidden_dim=64,
+        relation_hidden_dim=64,
+        dropout=0.0,
+    )
+
+    out = model(batch)
+    loss = WSMMaskedSparseLoss()(out, batch)
+    assert tuple(out.preds.shape) == (4,2)
+    assert math.isfinite(float(loss.detach()))
+    assert torch.isfinite(out.aux["task_expert_weights"]).all()
+    assert torch.allclose(
+        out.aux["task_expert_weights"].sum(dim=-1),
+        torch.ones_like(out.aux["task_expert_weights"][...,0]),
+        atol=1e-6,
+        rtol=1e-6,
+    )
+    loss.backward()
+    assert all(
+        p.grad is None or torch.isfinite(p.grad).all()
+        for p in model.parameters()
+    )
+
+    print("F2 real DataModule smoke passed", float(loss.detach()))
+    PY
+
+Then:
+
+    git diff --check
+    git diff -- src/audio
+    git diff -- src/video
+    git diff -- src/fusion/data/wsm_av_fusion_datamodule.py
+    git diff -- src/fusion/models/av_f0_gated_late.py
+    git diff -- src/fusion/models/av_f1_shared_mtl.py
+    git status --short
+
+Before commit inspect only:
+
+    git diff -- \
+      src/fusion/models/av_f2_task_aware_directed.py \
+      src/fusion/models/__init__.py \
+      src/chimera_plugin.py \
+      docs/PROGRESS_EN.md
+
+After commit/push:
+
+    git status --short
+    git rev-parse --abbrev-ref HEAD
+    git rev-parse HEAD
+    git diff --stat origin/main...HEAD
+    git diff --name-only origin/main...HEAD
 
 ## Required PROGRESS_EN Update
-
-Append TASK-004E evidence without erasing prior records.
 
 Record:
 
 - branch;
-- evidence commit SHA;
+- implementation commit SHA;
 - push result;
-- config path;
-- config equivalence result;
-- exact training command;
-- GPU/device;
-- dataset/join counts;
-- epochs completed;
-- early-stopping status;
-- best epoch;
-- best dev/mean_score;
-- best DEV depression/Parkinson UAR/MF1/Score;
-- same-epoch Test task metrics and Mean_Scores;
-- full epoch table;
-- top-2/last checkpoint paths;
-- run directory, train.log, summary.txt, code.zip;
-- MLflow experiment name, run ID, and final status;
-- shared_fusion gradient norms and cosine diagnostic plus diagnostic sample size;
-- F1 vs F0 DEV deltas;
-- F1 vs frozen audio/video V2 DEV deltas;
-- explicit Test-selector firewall confirmation;
-- confirmation no source changes;
-- confirmation F2 not started;
+- registry key;
+- exact F2 relation/expert/gating equations;
+- fixed constructor defaults;
+- confirmation base modality/shared path matches F1;
+- expert parameter-sharing structure;
+- expert order and task order;
+- aux output shapes;
+- availability/relation-validity semantics;
+- both/single modality gate checks;
+- directionality and separate-parameter checks;
+- synthetic masked loss/backward result;
+- gradient checks for projections/shared trunk/both experts/both gates/both heads;
+- real DataModule forward/loss/backward result;
+- no task_id verification;
+- confirmation no config/training/Test metrics;
+- confirmation no pseudo-labeling/flow matching/PAGB;
+- confirmation F0/F1/DataModule unchanged;
 - confirmation text/description deferred;
 - src/audio unchanged;
 - src/video unchanged;
 - Stage 4 status;
-- recommended next atomic step: TASK-004F implement/register the fixed F2 task-aware directed fusion baseline, with observed loss only and no pseudo-labeling.
+- recommended next atomic step only.
 
 ## Required Handoff
 
@@ -433,22 +760,20 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch codex/task-004e;
-- evidence commit SHA;
+- branch codex/task-004f;
+- implementation commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
-- config path;
-- epochs completed;
-- best epoch;
-- best dev/mean_score;
-- DEV depression/Parkinson Scores;
-- same-epoch TEST_NONE/SOFT/HARD Mean_Scores;
-- F1-F0 DEV delta;
-- shared-task gradient norm/cosine diagnostic;
-- exact MLflow run ID/status;
-- selector firewall confirmation;
-- no source changes;
-- F2 not started;
+- registry key;
+- output/aux shapes;
+- relation expert order;
+- task gate-weight semantics;
+- directionality check;
+- availability fallback checks;
+- synthetic and real DataModule loss/backward results;
+- both-expert/both-gate gradient result;
+- no training/Test metrics;
+- no pseudo-labeling/flow matching/PAGB;
 - text/description deferred;
 - src/audio unchanged;
 - src/video unchanged.
