@@ -1246,3 +1246,54 @@ Status: accepted; Stage 2 V1 is training-ready.
 - No further pre-training implementation gate is required unless the real run exposes a concrete runtime blocker.
 
 Recommended next atomic task: TASK-002M — run the real V1 video training experiment from the accepted production config, preserve all run artifacts, report the full epoch history, and identify the best checkpoint strictly by dev/mean_score.
+
+
+### TASK-002M — Run the first real V1 video training experiment
+
+Status: complete; fixed V1 baseline completed 14 epochs and stopped by DEV-only early stopping. No Stage 3 work started.
+
+Changed files: docs/PROGRESS_EN.md only. Production YAML and implementation were unchanged.
+
+Exact command: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/video/00_depart_v1.yaml
+
+Run evidence:
+- Run: depart_v1_clip_yolo_transformer_2026-09-24_13-34_wsm_video_depart_v1_model_e9cde9fd.
+- Counts: train=6325, dev=933, test_none=1364, test_soft=1208, test_hard=1014, unavailable=0.
+- Log: logs/wsm_mm_pd_dep_v1/depart_v1_clip_yolo_transformer_2026-09-24_13-34_wsm_video_depart_v1_model_e9cde9fd/train.log; summary: same run directory summary.txt.
+- Checkpoints: epoch=3_dev_mean_score=0.7001.pt, epoch=8_dev_mean_score=0.7033.pt, last.pt; no interruption snapshot was emitted on clean completion.
+- MLflow: experiment wsm_mm_pd_dep_v1, run ID 1f2633beced04bfd968e7e5d2ac15ee4, FINISHED; artifact URI /media/maxim/Programs/Projects/WSM/mlruns/5/1f2633beced04bfd968e7e5d2ac15ee4/artifacts.
+
+Selection and results:
+- Best epoch 8/14 by dev/mean_score=0.703274.
+- DEV depression UAR/MF1/Score = 0.662558/0.661287/0.661923.
+- DEV Parkinson UAR/MF1/Score = 0.737474/0.751778/0.744626.
+- Same-epoch Test monitoring means: TEST_NONE=0.732454, TEST_SOFT=0.742796, TEST_HARD=0.751864.
+- Early stopping fired at epoch 14 after 6 non-improvements: best=0.703274, last=0.692042.
+- Checkpointing and early stopping used only dev/mean_score, mode=max; Test metrics were not used for selection, thresholds, tuning, or any training decision.
+
+Full epoch history columns: epoch, train loss, dev loss, dev depression Score, dev Parkinson Score, dev mean, TEST_NONE mean, TEST_SOFT mean, TEST_HARD mean.
+1  0.359359 0.759393 0.643363 0.655827 0.649595 0.764822 0.765683 0.760719
+2  0.157187 0.905957 0.651858 0.726369 0.689113 0.715322 0.723687 0.705126
+3 0.090825 1.193548 0.629418 0.770788 0.700103 0.727745 0.740446 0.722583
+4 0.054059 1.724009 0.659387 0.581093 0.620240 0.731773 0.729263 0.715235
+5 0.041549 2.168214 0.561860 0.726848 0.644354 0.733222 0.748827 0.747734
+6 0.021682 2.665032 0.613540 0.521200 0.567370 0.711610 0.707076 0.708113
+7 0.016442 2.364358 0.643758 0.577880 0.610819 0.700421 0.690317 0.697961
+8 0.005727 2.148851 0.661923 0.744626 0.703274 0.732454 0.742796 0.751864
+9 0.013382 2.409531 0.649532 0.681959 0.665745 0.705762 0.697193 0.684827
+10 0.003416 2.305925 0.653087 0.710092 0.681590 0.706720 0.708924 0.691096
+11 0.003263 2.961955 0.649068 0.604235 0.626652 0.697392 0.693086 0.680729
+12 0.002424 2.717513 0.685051 0.660688 0.672870 0.711463 0.707892 0.691361
+13 0.012868 2.671262 0.677363 0.724416 0.700889 0.711706 0.705701 0.690203
+14 0.002024 2.835912 0.640882 0.743202 0.692042 0.722380 0.723205 0.707417
+
+Verification:
+- chimera-ml validate-config --config-path configs/wsm_mm_pd_dep_v1/video/00_depart_v1.yaml passed; CUDA passed on NVIDIA GeForce RTX 4080.
+- DataModule pre/post counts and validation keys dev,test_none,test_soft,test_hard passed; all 14 epochs emitted finite metrics for all four streams.
+- Registry/build, selector, and plugin checks passed; no project-module warning.
+- git diff --check passed; git diff -- src/audio empty; frozen src/audio unchanged.
+- No Test evaluation outside configured per-epoch monitoring ran, and no training rerun or tuning ran.
+
+Deviation/blocker: no runtime blocker. No interruption snapshot is expected from clean completion; checkpoint, last-state, console, summary, code archive, and MLflow artifacts were retained.
+
+Recommended next atomic task: manager review of the fixed V1 baseline and selection of the next PLAN-authorized experiment; do not use Test metrics to alter the selected epoch or tune the baseline.
