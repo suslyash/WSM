@@ -2,7 +2,7 @@
 
 ## 1. Execution Contract
 
-Stages are sequential. Advance only after the current gate is met and evidence is recorded in PROGRESS_EN.md.
+Stages are normally sequential, but the owner explicitly overrides the research execution order after Stage 2: execute Stage 4 (Fusion), Stage 5 (RAMPS), and Stage 6 (core ablations/research) before returning to the deferred Stage 3 (Text/Description). Advance only after the active stage gate is met and evidence is recorded in PROGRESS_EN.md.
 
 Authority: latest user instruction → PROJECT_REQUIREMENTS.md → this plan → BASELINES.md/SOTA_REVIEW_EN.md → existing code.
 
@@ -201,7 +201,7 @@ V2: V1 plus task-specific class prototypes, classwise prototype/MLP gating, and 
 
 Gate: reproducible preprocessing/cache, extraction failure report, one DEV winner selected without Test.
 
-### Stage 3 — At most two text/description families
+### Stage 3 — At most two text/description families [DEFERRED UNTIL AFTER STAGES 4-6]
 
 T1: audited-language transcript encoder with mask-aware pooling and two heads.
 
@@ -209,7 +209,7 @@ T2: T1 plus cached observable description/semantic feature and simple T/D gating
 
 Gate: at most two configs, diagnosis-free prompt, one DEV-selected representation.
 
-### Stage 4 — Honest multimodal baselines
+### Stage 4 — Honest multimodal baselines [ACTIVE AFTER STAGE 2]
 
 - F0: simple masked late/gated fusion.
 - F1: sparse masked two-head MTL with no pseudo-labeling.
