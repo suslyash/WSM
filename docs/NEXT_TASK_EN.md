@@ -1,4 +1,4 @@
-# TASK-004C: Run the Fixed F0 Audio+Video Gated Late-Fusion Baseline
+# TASK-004D: Implement and Register the F1 Availability-Aware Shared-Representation Sparse A+V MTL Model
 
 ## Role
 
@@ -6,416 +6,587 @@ You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.
 
 Required branch:
 
-    codex/task-004c
+    codex/task-004d
 
-This task explicitly authorizes the first real Stage 4 fusion training run.
-
-Do not modify source code, the accepted A+V DataModule, frozen audio/video caches, loss, callbacks, or Test protocol definitions.
+Do not create a training config.
+Do not run a real training experiment.
+Do not modify the accepted A+V DataModule.
+Do not modify src/audio or src/video.
+Do not start text/description work.
+Do not add pseudo-labeling.
 
 ## Goal
 
-Create the fixed F0 production config and run the real seed-42 A+V gated late-fusion baseline.
+Implement the second Stage 4 fusion baseline:
 
-Use:
+    F1 = availability-aware shared A+V representation
+         + sparse two-head multitask classification
 
-    data: wsm_av_fusion_datamodule
-    model: wsm_av_f0_gated_late_model
-    loss: wsm_masked_sparse_loss
+F1 must consume the accepted TASK-004A A+V Batch contract and return exactly two independent logits:
 
-Evaluate every epoch on:
+    [depression, parkinson]
 
-    dev
-    test_none
-    test_soft
-    test_hard
+The purpose of F1 is to isolate shared-representation gain relative to F0 while keeping the same pooled frozen modality inputs and sparse observed-label supervision.
 
-Select the checkpoint ONLY by:
+## Fixed F1 Architecture
 
-    dev/mean_score
+Inputs:
 
-Test metrics are mandatory monitoring outputs only.
+- audio_cls: [B,768]
+- video: [B,Tv,512]
+- video_mask: [B,Tv]
+- modality_available: [B,2] ordered [audio,video]
+
+Audio path:
+
+    audio_input = zero unavailable rows
+    a = AudioProjection(audio_input)
+    a = zero unavailable rows after projection
+
+Video path:
+
+    v_raw = masked_mean(video, video_mask)
+    v_raw = zero unavailable rows
+    v = VideoProjection(v_raw)
+    v = zero unavailable rows after projection
+
+Shared fusion:
+
+    joined = concat(a,v)                 # [B,2H]
+    shared = SharedFusion(joined)        # [B,H]
+
+Task heads:
+
+    depression_logit = DepressionHead(shared)
+    parkinson_logit  = ParkinsonHead(shared)
+
+Final output:
+
+    preds = stack([depression_logit, parkinson_logit]) -> [B,2]
+
+There is NO late-fusion gate in F1.
+
+## Availability Semantics
+
+modality_available is required:
+
+    [B,2] bool ordered [audio,video]
+
+Rules:
+
+- every sample must have at least one available modality;
+- if audio is unavailable, its effective representation must be exactly zero before shared fusion;
+- if video is unavailable, its effective representation must be exactly zero before shared fusion;
+- changing an unavailable modality's finite raw values must not change final logits in eval mode;
+- an available video sample must have at least one valid video temporal position;
+- an unavailable video sample MAY have an all-false video_mask;
+- neither modality available MUST raise ValueError.
+
+Do not add an availability embedding or availability-bit feature in this baseline. Availability acts only as hard masking.
+
+## Important Baseline Boundary
+
+F1 MUST NOT contain:
+
+- F0 late-fusion gates;
+- per-modality disease logits;
+- task_id/task_ids;
+- task embeddings/tokens;
+- corpus/split/Test-protocol IDs;
+- temporal cross-attention;
+- synchrony blocks;
+- TACME/relation banks;
+- pseudo-labeling;
+- prototype logic;
+- contrastive loss;
+- text/description.
+
+F1 is only:
+
+    pooled modality features
+    -> modality projections
+    -> hard availability masking
+    -> one shared fusion MLP
+    -> two independent disease heads
 
 ## Required Reading
 
 1. AGENTS.md
-2. docs/PROJECT_REQUIREMENTS.md Sections 5, 8, 9, 10, 13, 14
+2. docs/PROJECT_REQUIREMENTS.md Sections 2-9, 11, 13-14
 3. docs/PLAN.md Stage 4
-4. docs/PROGRESS_EN.md through MANAGER-DECISION-018
+4. docs/PROGRESS_EN.md through MANAGER-DECISION-019
 5. docs/NEXT_TASK_EN.md
 6. src/fusion/data/wsm_av_fusion_datamodule.py
 7. src/fusion/models/av_f0_gated_late.py
-8. configs/wsm_mm_pd_dep_v1/video/00_depart_v1.yaml
-9. configs/wsm_mm_pd_dep_v1/video/01_depart_v2_prototype.yaml
-10. configs/wsm_mm_pd_dep_v1/audio/00_frozen_baseline.yaml
+8. src/common/loss/wsm_masked_sparse_loss.py
+9. src/chimera_plugin.py
 
 ## Allowed Tracked Files
 
-- configs/wsm_mm_pd_dep_v1/fusion/00_f0_gated_late.yaml
+- src/fusion/models/av_f1_shared_mtl.py
+- src/fusion/models/__init__.py
+- src/chimera_plugin.py
 - docs/PROGRESS_EN.md
 
 No other tracked file may be modified.
 
-Generated runtime artifacts under logs/ are expected and must remain untracked unless the repository already tracks a specific runtime artifact type.
+## Registry Key
 
-Do not modify src/audio.
-Do not modify src/video.
-Do not modify src/fusion source.
+Register:
 
-## 1. Fixed F0 Config
+    wsm_av_f1_shared_mtl_model
 
-Create:
+Do not alter existing model registry keys.
 
-    configs/wsm_mm_pd_dep_v1/fusion/00_f0_gated_late.yaml
+## Fixed Constructor Defaults
+
+Use:
+
+    audio_feature_dim=768
+    video_feature_dim=512
+    hidden_dim=192
+    fusion_hidden_dim=192
+    dropout=0.2
+    num_tasks=2
+
+Require num_tasks == 2.
+
+## Projection Blocks
+
+Audio projection:
+
+    LayerNorm(audio_feature_dim)
+    Linear(audio_feature_dim, hidden_dim)
+    GELU
+    Dropout(dropout)
+
+Video projection:
+
+    LayerNorm(video_feature_dim)
+    Linear(video_feature_dim, hidden_dim)
+    GELU
+    Dropout(dropout)
+
+These match the F0 representation width/capacity before fusion.
+
+## Video Pooling
+
+Use masked mean over the cached video temporal features.
+
+For available video rows:
+
+- at least one video_mask position must be true.
+
+For unavailable video rows:
+
+- all-false video_mask is allowed;
+- the effective pooled video representation must be zero.
+
+Masked/padded values must not affect pooled output.
+
+## Shared Fusion Trunk
 
 Use exactly:
 
-    seed: 42
+    LayerNorm(2 * hidden_dim)
+    Linear(2 * hidden_dim, fusion_hidden_dim)
+    GELU
+    Dropout(dropout)
+    Linear(fusion_hidden_dim, hidden_dim)
+    GELU
+    Dropout(dropout)
 
-Experiment:
+Output:
 
-    experiment_name: wsm_mm_pd_dep_v1
-    run_name: av_f0_gated_late
+    shared_features [B,hidden_dim]
 
-Data:
+No residual branch is required.
 
-    name: wsm_av_fusion_datamodule
+## Disease Heads
 
-Data params:
+Use two independent heads, one per disease:
 
-    data_root: /media/maxim/Databases/WSM_NEW
-    audio_feature_cache_root: /media/maxim/Databases/WSM_NEW/features
-    video_cache_root: /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache
-    batch_size: 32
-    num_workers: 4
-    pin_memory: true
-    persistent_workers: true
-    shuffle_train: true
-    drop_last_train: false
+    LayerNorm(hidden_dim)
+    Linear(hidden_dim, hidden_dim)
+    GELU
+    Dropout(dropout)
+    Linear(hidden_dim,1)
 
-Model:
+Return stacked logits [B,2].
 
-    name: wsm_av_f0_gated_late_model
+Do not apply sigmoid to final logits.
 
-Model params:
+## ModelOutput Contract
 
-    audio_feature_dim: 768
-    video_feature_dim: 512
-    hidden_dim: 192
-    gate_hidden_dim: 64
-    dropout: 0.2
-    num_tasks: 2
+Return:
 
-Loss:
+    preds -> [B,2]
 
-    name: wsm_masked_sparse_loss
+aux must contain at least:
 
-Optimizer:
+    features_audio           -> [B,H]
+    features_video           -> [B,H]
+    features_shared          -> [B,H]
+    effective_audio_features -> [B,H]
+    effective_video_features -> [B,H]
+    task_logits = {
+        "depression": preds[:,0],
+        "parkinson": preds[:,1],
+    }
 
-    name: adamw_optimizer
-    lr: 0.0001
-    weight_decay: 0.01
+No per-modality logits are required in F1.
 
-Training:
+The shared representation MUST be suitable for later gradient norm/cosine diagnostics without changing the forward contract.
 
-    epochs: 30
-    device: cuda
-    mixed_precision: true
-    grad_clip_norm: 0.5
-    log_every_steps: 25
-    collect_cache: true
+## Context-Aware Factory
 
-Metrics:
+Factory must:
 
-    []
+- read data.audio_feature_dim when available;
+- read data.video_feature_dim when available;
+- enforce data.num_tasks == 2 when present;
+- default to 768/512/2 otherwise.
 
-Do not add a scheduler.
-Do not add a different loss.
-Do not add any pseudo-label, contrastive, prototype, or auxiliary objective.
+Update src/chimera_plugin.py with an explicit required import:
 
-## 2. Required Instrumentation
+    fusion.models.av_f1_shared_mtl
 
-Include exactly the accepted project instrumentation:
-
-- wsm_segment_metrics_callback with splits=[auto]
-- checkpoint_callback
-- snapshot_callback
-- early_stopping_callback
-- wsm_summary_callback
-- console_file_logger
-- mlflow_logger
-
-Checkpoint:
-
-    log_path: logs
-    monitor: dev/mean_score
-    mode: max
-    save_top_k: 2
-    save_last: true
-
-Use the same filename_template as the accepted video configs.
-
-Snapshot:
-
-    log_path: logs
-    include:
-      - src
-      - configs
-    save_code_zip: true
-    save_config: true
-
-Early stopping:
-
-    monitor: dev/mean_score
-    mode: max
-    patience: 6
-    min_delta: 0.0005
-
-Console:
-
-    log_path: logs
-    log_file: train.log
-    console_level: INFO
-    file_level: INFO
-
-MLflow:
-
-    tracking_uri: sqlite:///logs/mlflow.db
-
-No Test metric may appear in any selector/monitor/scheduler field.
-
-## 3. Pre-Run Validation
-
-Run:
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config \
-      --config-path configs/wsm_mm_pd_dep_v1/fusion/00_f0_gated_late.yaml
-
-Build through the actual Chimera registries and verify:
-
-- DataModule builds;
-- F0 model builds;
-- masked sparse loss builds;
-- optimizer builds;
-- callbacks/loggers build;
-- no project-module warnings;
-- CUDA is available;
-- dataset counts are exactly:
-  - train=6325
-  - dev=933
-  - test_none=1364
-  - test_soft=1208
-  - test_hard=1014
-- joined_total=8622;
-- missing audio/video=0/0;
-- val_dataloader keys are exactly:
-  - dev
-  - test_none
-  - test_soft
-  - test_hard;
-- checkpoint and early stopping monitor only dev/mean_score.
-
-Run one real-batch forward/loss/backward smoke from the production config before the full run.
-
-If CUDA is unavailable, stop as blocked. Do not silently switch the real run to CPU.
-
-If the config/build/forward smoke fails, do not modify source code in this task. Preserve the exact blocker and stop.
-
-## 4. Real F0 Training
-
-Run from repository root:
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/fusion/00_f0_gated_late.yaml
-
-Do not interrupt a healthy run.
-
-If the run fails:
-
-- preserve traceback/logs/artifacts;
-- do not modify source/config beyond the already-created fixed config;
-- record the exact runtime blocker;
-- update PROGRESS_EN.md;
-- commit/push evidence;
-- stop as blocked.
-
-## 5. Epoch-Level Monitoring
-
-For EVERY completed epoch, record at minimum:
-
-DEV:
-
-- depression UAR/MF1/Score;
-- Parkinson UAR/MF1/Score;
-- Mean_Score.
-
-TEST_NONE:
-
-- depression UAR/MF1/Score;
-- Parkinson UAR/MF1/Score;
-- Mean_Score.
-
-TEST_SOFT:
-
-- depression UAR/MF1/Score;
-- Parkinson UAR/MF1/Score;
-- Mean_Score.
-
-TEST_HARD:
-
-- depression UAR/MF1/Score;
-- Parkinson UAR/MF1/Score;
-- Mean_Score.
-
-Also record:
-
-- train loss;
-- DEV loss if emitted;
-- epoch duration if available.
-
-All required metrics must be finite.
-
-All four streams must appear on every completed epoch.
-
-Test metrics are monitoring-only.
-
-Do NOT:
-
-- choose an epoch because of Test;
-- tune gates using Test;
-- change the threshold using Test;
-- manually stop because of Test;
-- alter any hyperparameter based on Test.
-
-## 6. Best Checkpoint Selection
-
-After training/early stopping:
-
-1. select the best epoch ONLY by maximum dev/mean_score;
-2. record best epoch and exact checkpoint path;
-3. record DEV depression/Parkinson UAR/MF1/Score and DEV Mean_Score;
-4. record TEST_NONE/SOFT/HARD task metrics and Mean_Scores from that SAME DEV-selected epoch;
-5. record top-2 checkpoints and last.pt;
-6. record train.log, summary.txt, code.zip, and MLflow run ID/status.
-
-Do not select another epoch because its Test values are better.
-
-## 7. F0 Gate Diagnostics
-
-At the DEV-selected checkpoint, run a DEV-only diagnostic pass without changing model parameters.
-
-Report for each task:
-
-- mean audio fusion weight;
-- mean video fusion weight;
-- standard deviation of audio fusion weight;
-- min/max audio fusion weight.
-
-Since current canonical A+V rows have both modalities available, these weights should correspond to:
-
-    [raw_audio_gate, 1 - raw_audio_gate]
-
-Report diagnostics only.
-
-Do not tune or select based on gate statistics.
-
-## 8. Descriptive DEV Comparison
-
-Compare the DEV-selected F0 result to the accepted references:
-
-Frozen historical audio:
-
-- DEV Mean_Score = 0.787827
-- depression Score = 0.747918
-- Parkinson Score = 0.827735
-
-Selected video V2:
-
-- DEV Mean_Score = 0.706572
-- depression Score = 0.620101
-- Parkinson Score = 0.793043
-
-Report:
-
-    F0 - audio DEV Mean_Score delta
-    F0 - V2 DEV Mean_Score delta
-
-and task-level Score deltas.
-
-This comparison is descriptive Stage 4 evidence.
-
-Do not use Test metrics to decide whether F0 is successful or whether to proceed to F1.
-
-F1 remains the next planned Stage 4 baseline regardless of F0's Test values.
+Do not hide a required project import failure as an optional warning.
 
 ## Acceptance Criteria
 
-The task passes if:
+Registry/model:
 
-- F0 YAML is self-contained and validates;
-- config contains the fixed F0 contract above;
-- CUDA gate passes;
-- production DataModule/model/loss/optimizer/callback/logger build passes;
-- full run completes or ends via configured early stopping;
-- all four streams are evaluated every completed epoch;
-- all required metrics are finite;
-- best checkpoint selected strictly by dev/mean_score;
-- Test metrics never drive selection/tuning;
-- DEV-selected gate diagnostics are recorded;
-- durable checkpoints/log/summary/code archive/MLflow artifacts are retained;
-- no source code changes;
-- no dependency installation;
-- text/description remains deferred;
+- MODELS contains wsm_av_f1_shared_mtl_model;
+- plugin imports it without project warning;
+- output.preds is [B,2];
+- no task_id/task_ids input;
+- no 3-class softmax;
+- no late-fusion gate;
+- no per-modality disease logits;
+- no pseudo-labeling;
+- no text/description;
+- no TACME/cross-attention/relation bank.
+
+Availability/masks:
+
+- effective unavailable modality representation is exactly zero;
+- both-available rows use both projected representations;
+- audio-only rows zero the video representation;
+- video-only rows zero the audio representation;
+- neither-available rows raise ValueError;
+- changing unavailable audio values does not change logits;
+- changing unavailable video values does not change logits;
+- changing padded/masked video positions does not change logits;
+- available video with all-false mask raises ValueError;
+- unavailable video with all-false mask is accepted.
+
+Sparse loss/backward:
+
+- wsm_masked_sparse_loss accepts output;
+- masked NaN labels remain unsupervised;
+- synthetic forward/loss/backward produces finite scalar loss;
+- audio projection receives finite nonzero gradient on observed rows with audio available;
+- video projection receives finite nonzero gradient on observed rows with video available;
+- shared fusion trunk receives finite nonzero gradient;
+- both disease heads receive finite nonzero gradients when their task has observed labels.
+
+Real DataModule smoke:
+
+- build WSMAVFusionDataModule;
+- get one real train batch;
+- run F1 forward + wsm_masked_sparse_loss + backward;
+- output [B,2];
+- finite loss/gradients;
+- no task_id/task_ids input.
+
+Safety:
+
+- no training config;
+- no real training run;
+- no Test metrics;
+- no DataModule changes;
+- no F0 changes;
 - src/audio unchanged;
 - src/video unchanged;
-- A+V DataModule source unchanged;
+- text/description remains deferred;
+- python compilation passes;
+- registry smoke passes;
 - git diff --check passes;
-- tracked diff contains only:
-  - configs/wsm_mm_pd_dep_v1/fusion/00_f0_gated_late.yaml
-  - docs/PROGRESS_EN.md
-- branch codex/task-004c committed and pushed;
-- main/master untouched.
+- branch codex/task-004d committed and pushed;
+- main/master untouched;
+- tracked diff contains only the four allowed paths.
+
+## Exact Verification Commands
+
+Compile:
+
+    python3 -m py_compile \
+      src/fusion/models/av_f1_shared_mtl.py \
+      src/fusion/models/__init__.py \
+      src/chimera_plugin.py
+
+Registry smoke:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import warnings
+    from chimera_ml.core.registry import MODELS
+    import chimera_plugin
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        chimera_plugin.register()
+
+    failures = [
+        str(x.message)
+        for x in caught
+        if "Failed to import" in str(x.message)
+        and "fusion.models.av_f1_shared_mtl" in str(x.message)
+    ]
+    assert not failures, failures
+    assert "wsm_av_f0_gated_late_model" in MODELS.keys()
+    assert "wsm_av_f1_shared_mtl_model" in MODELS.keys()
+    print("F1 registry smoke passed")
+    PY
+
+Synthetic contract smoke:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import math
+    import torch
+
+    from chimera_ml.core.batch import Batch
+    from common.loss.wsm_masked_sparse_loss import WSMMaskedSparseLoss
+    from fusion.models.av_f1_shared_mtl import WSMAVSharedMTLF1Model
+
+    torch.manual_seed(23)
+
+    model = WSMAVSharedMTLF1Model(
+        audio_feature_dim=768,
+        video_feature_dim=512,
+        hidden_dim=64,
+        fusion_hidden_dim=64,
+        dropout=0.0,
+    )
+
+    audio = torch.randn(4,768)
+    video = torch.randn(4,7,512)
+    video_mask = torch.tensor([
+        [1,1,1,1,1,0,0],
+        [0,0,0,0,0,0,0],
+        [1,1,1,0,0,0,0],
+        [1,1,1,1,0,0,0],
+    ], dtype=torch.bool)
+
+    available = torch.tensor([
+        [1,1],
+        [1,0],
+        [0,1],
+        [1,1],
+    ], dtype=torch.bool)
+
+    targets = torch.tensor([
+        [1.0, float("nan")],
+        [0.0, float("nan")],
+        [float("nan"), 1.0],
+        [float("nan"), 0.0],
+    ])
+    observed = torch.tensor([
+        [1,0],
+        [1,0],
+        [0,1],
+        [0,1],
+    ], dtype=torch.bool)
+
+    def make_batch(a, v, vm, av):
+        return Batch(
+            inputs={"audio_cls": a, "video": v},
+            targets=targets,
+            masks={
+                "video_mask": vm,
+                "observed_mask": observed,
+                "modality_available": av,
+            },
+            meta={},
+        )
+
+    batch = make_batch(audio, video, video_mask, available)
+
+    model.eval()
+    out = model(batch)
+
+    assert tuple(out.preds.shape) == (4,2)
+    assert tuple(out.aux["features_audio"].shape) == (4,64)
+    assert tuple(out.aux["features_video"].shape) == (4,64)
+    assert tuple(out.aux["features_shared"].shape) == (4,64)
+    assert tuple(out.aux["effective_audio_features"].shape) == (4,64)
+    assert tuple(out.aux["effective_video_features"].shape) == (4,64)
+
+    # Hard availability zeroing.
+    assert torch.equal(
+        out.aux["effective_video_features"][1],
+        torch.zeros_like(out.aux["effective_video_features"][1]),
+    )
+    assert torch.equal(
+        out.aux["effective_audio_features"][2],
+        torch.zeros_like(out.aux["effective_audio_features"][2]),
+    )
+
+    # Masked video padding invariance.
+    video_pad_changed = video.clone()
+    video_pad_changed[video_mask == 0] = 1e6
+    out_pad = model(make_batch(audio, video_pad_changed, video_mask, available))
+    assert torch.allclose(out.preds, out_pad.preds, atol=1e-5, rtol=1e-5)
+
+    # Unavailable audio invariance.
+    audio_changed = audio.clone()
+    audio_changed[2] = 1e6
+    out_audio = model(make_batch(audio_changed, video, video_mask, available))
+    assert torch.allclose(out.preds[2], out_audio.preds[2], atol=1e-5, rtol=1e-5)
+
+    # Unavailable video invariance; all-false mask is accepted for row 1.
+    video_changed = video.clone()
+    video_changed[1] = 1e6
+    out_video = model(make_batch(audio, video_changed, video_mask, available))
+    assert torch.allclose(out.preds[1], out_video.preds[1], atol=1e-5, rtol=1e-5)
+
+    # Available video with no valid frames must fail.
+    bad_mask = video_mask.clone()
+    bad_mask[0] = False
+    try:
+        model(make_batch(audio, video, bad_mask, available))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("available video with all-false mask must fail")
+
+    # Neither modality available must fail.
+    bad_available = available.clone()
+    bad_available[0] = False
+    try:
+        model(make_batch(audio, video, video_mask, bad_available))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("neither-available sample must fail")
+
+    model.train()
+    train_out = model(batch)
+    loss = WSMMaskedSparseLoss()(train_out, batch)
+    assert loss.ndim == 0 and math.isfinite(float(loss.detach()))
+    loss.backward()
+
+    grads = {
+        name: p.grad
+        for name,p in model.named_parameters()
+        if p.requires_grad and p.grad is not None
+    }
+
+    assert any("audio_projection" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert any("video_projection" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert any("shared_fusion" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert any("task_heads.0" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert any("task_heads.1" in n and float(g.abs().sum()) > 0 for n,g in grads.items())
+    assert all(torch.isfinite(g).all() for g in grads.values())
+
+    print("F1 synthetic forward/loss/backward smoke passed", float(loss.detach()))
+    PY
+
+Real A+V DataModule smoke:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import math
+    import torch
+
+    from common.loss.wsm_masked_sparse_loss import WSMMaskedSparseLoss
+    from fusion.data.wsm_av_fusion_datamodule import WSMAVFusionDataModule
+    from fusion.models.av_f1_shared_mtl import WSMAVSharedMTLF1Model
+
+    dm = WSMAVFusionDataModule(
+        data_root="/media/maxim/Databases/WSM_NEW",
+        audio_feature_cache_root="/media/maxim/Databases/WSM_NEW/features",
+        video_cache_root="/media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache",
+        batch_size=4,
+        num_workers=0,
+        pin_memory=False,
+        persistent_workers=False,
+    )
+
+    batch = next(iter(dm.train_dataloader()))
+    assert "task_id" not in batch.inputs and "task_ids" not in batch.inputs
+
+    model = WSMAVSharedMTLF1Model(
+        audio_feature_dim=dm.audio_feature_dim,
+        video_feature_dim=512,
+        hidden_dim=64,
+        fusion_hidden_dim=64,
+        dropout=0.0,
+    )
+
+    out = model(batch)
+    loss = WSMMaskedSparseLoss()(out, batch)
+
+    assert tuple(out.preds.shape) == (4,2)
+    assert math.isfinite(float(loss.detach()))
+    loss.backward()
+
+    assert all(
+        p.grad is None or torch.isfinite(p.grad).all()
+        for p in model.parameters()
+    )
+
+    print("F1 real DataModule smoke passed", float(loss.detach()))
+    PY
+
+Then:
+
+    git diff --check
+    git diff -- src/audio
+    git diff -- src/video
+    git diff -- src/fusion/data/wsm_av_fusion_datamodule.py
+    git diff -- src/fusion/models/av_f0_gated_late.py
+    git status --short
+
+Before commit inspect only:
+
+    git diff -- \
+      src/fusion/models/av_f1_shared_mtl.py \
+      src/fusion/models/__init__.py \
+      src/chimera_plugin.py \
+      docs/PROGRESS_EN.md
+
+After commit/push:
+
+    git status --short
+    git rev-parse --abbrev-ref HEAD
+    git rev-parse HEAD
+    git diff --stat origin/main...HEAD
+    git diff --name-only origin/main...HEAD
 
 ## Required PROGRESS_EN Update
-
-Append TASK-004C evidence without erasing prior records.
 
 Record:
 
 - branch;
-- evidence commit SHA;
+- implementation commit SHA;
 - push result;
-- exact config path;
-- exact training command;
-- config validation/build results;
-- GPU/device;
-- dataset/join counts;
-- epochs completed;
-- early-stopping status;
-- best epoch;
-- best dev/mean_score;
-- best DEV depression/Parkinson UAR/MF1/Score;
-- same-epoch Test protocol task metrics and Mean_Scores;
-- full epoch table containing at minimum:
-  - epoch
-  - train loss
-  - DEV depression Score
-  - DEV Parkinson Score
-  - DEV Mean_Score
-  - TEST_NONE Mean_Score
-  - TEST_SOFT Mean_Score
-  - TEST_HARD Mean_Score
-- top-2/last checkpoint paths;
-- log/summary/code archive/MLflow locations;
-- DEV-selected F0 gate statistics;
-- F0 vs historical audio DEV deltas;
-- F0 vs video V2 DEV deltas;
-- explicit Test-selector firewall confirmation;
-- confirmation no source changes;
-- confirmation text/description remains deferred;
+- registry key;
+- exact F1 architecture/equations;
+- fixed constructor defaults;
+- availability zeroing semantics;
+- aux output shapes;
+- synthetic mask/unavailable-modality invariance results;
+- synthetic masked loss/backward result;
+- real DataModule forward/loss/backward result;
+- shared-trunk and both-head gradient checks;
+- no task_id verification;
+- confirmation no config/training/Test metrics;
+- confirmation F0 and DataModule unchanged;
+- confirmation text/description deferred;
 - src/audio unchanged;
 - src/video unchanged;
 - Stage 4 status;
-- recommended next atomic step: implement the F1 sparse shared-representation two-head MTL model contract, without pseudo-labeling and without text/description.
+- recommended next atomic step only.
 
 ## Required Handoff
 
@@ -430,20 +601,16 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch codex/task-004c;
-- evidence commit SHA;
+- branch codex/task-004d;
+- implementation commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
-- config path;
-- epochs completed;
-- best epoch;
-- best dev/mean_score;
-- DEV depression/Parkinson Scores;
-- same-epoch TEST_NONE/SOFT/HARD Mean_Scores;
-- DEV gate diagnostics;
-- F0 vs audio/V2 DEV deltas;
-- selector firewall confirmation;
-- no source changes;
+- registry key;
+- output/aux shapes;
+- availability-zeroing checks;
+- synthetic and real DataModule loss/backward results;
+- shared-trunk/both-head gradient result;
+- no training/Test metrics;
 - text/description deferred;
 - src/audio unchanged;
 - src/video unchanged.
