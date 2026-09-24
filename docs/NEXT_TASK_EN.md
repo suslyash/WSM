@@ -1,202 +1,130 @@
-# TASK-004I2: Repair Strong-Audio Optimizer Filtering and Re-Run All Pre-Training Gates
+# TASK-004I2B: Re-Run the Strong-Audio Pre-Training Firewall with Corrected Parameter Counts
 
 ## Role
 
-You are the implementing Codex. Execute only this corrective task, update docs/PROGRESS_EN.md, commit on the required task branch, push to origin, then stop. Follow AGENTS.md.
+You are the implementing Codex. Execute only this evidence-only corrective task, update docs/PROGRESS_EN.md, commit on the required task branch, push to origin, then stop. Follow AGENTS.md.
 
 Required branch:
 
-    codex/task-004i2
+    codex/task-004i2b
 
-Do not start the real 30-epoch training run.
+Do not modify source code.
+Do not modify any config.
 Do not modify Chimera ML.
 Do not modify src/audio or src/video.
-Do not modify the accepted A+V DataModule.
-Do not modify the frozen audio adapter or F1-temporal model.
+Do not start the real 30-epoch training run.
+Do not iterate any Test loader.
 Do not start F2-temporal, RAMPS, text, or description work.
 
 ## Goal
 
-Repair the exact blocker found in TASK-004I.
+Re-run every strong-temporal-audio pre-training firewall after correcting the manager-side parameter-count arithmetic error.
 
-Chimera ML v0.2.4 built-in:
+The accepted production implementation is already on main:
 
-    adamw_optimizer
+    optimizer = wsm_trainable_adamw_optimizer
+    model = wsm_av_f1_temporal_audio_residual_model
+    config = configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml
 
-constructs AdamW from:
+Do not change any of them.
 
-    model.parameters()
-
-and therefore includes all 105 frozen audio parameter objects even though they have:
-
-    requires_grad = false
-
-The strong-temporal-audio ablation requires frozen audio parameters to be completely absent from optimizer parameter groups.
-
-Implement one project-side Chimera optimizer:
-
-    wsm_trainable_adamw_optimizer
-
-that includes exactly the parameters where:
-
-    parameter.requires_grad == true
-
-Switch only the fixed strong-audio config to that optimizer and rerun every TASK-004I pre-training gate.
-
-Do not train beyond a bounded one-batch forward/loss/backward smoke.
+This task only verifies that the production optimizer/config/model now satisfy all gates required before the real TASK-004I3 training run.
 
 ## Required Reading
 
 1. AGENTS.md
 2. docs/PROJECT_REQUIREMENTS.md Sections 3, 5, 6, 8, 9, 13, 14
 3. docs/PLAN.md Stage 4
-4. docs/PROGRESS_EN.md through MANAGER-DECISION-026
+4. docs/PROGRESS_EN.md through MANAGER-DECISION-027
 5. docs/NEXT_TASK_EN.md
-6. configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml
-7. src/fusion/models/frozen_audio_temporal_adapter.py
-8. src/fusion/models/av_f1_temporal_audio_residual.py
-9. src/fusion/data/wsm_av_fusion_datamodule.py
-10. src/chimera_plugin.py
-11. Chimera ML v0.2.4 installed/source behavior for training.optimizers and training.builders
-
-## Confirmed Root Cause
-
-Manager-confirmed Chimera ML v0.2.4 behavior:
-
-    @OPTIMIZERS.register("adamw_optimizer")
-    def adamw_optimizer(*, model, lr=..., weight_decay=..., **kwargs):
-        return torch.optim.AdamW(
-            model.parameters(),
-            lr=...,
-            weight_decay=...,
-            **kwargs,
-        )
-
-and build_optimizer injects the model into the registered optimizer factory.
-
-Do not patch or monkey-patch Chimera ML.
+6. src/common/optimizers.py
+7. src/chimera_plugin.py
+8. configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml
+9. src/fusion/models/frozen_audio_temporal_adapter.py
+10. src/fusion/models/av_f1_temporal_audio_residual.py
+11. src/fusion/data/wsm_av_fusion_datamodule.py
+12. src/common/callbacks/wsm_segment_callback.py
+13. src/common/loss/wsm_masked_sparse_loss.py
 
 ## Allowed Tracked Files
 
-- src/common/optimizers.py
-- src/chimera_plugin.py
-- configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml
 - docs/PROGRESS_EN.md
 
 No other tracked file may be modified.
 
-## 1. Register the Project Optimizer
+If any source/config file differs from origin/main at task start, stop and report the dirty/conflicting path instead of overwriting it.
 
-Create:
+## Corrected Fixed Parameter Counts
+
+The accepted residual head is:
+
+    LayerNorm(192)
+    Linear(192,192)
+    GELU
+    Dropout
+    Linear(192,1)
+
+Correct scalar arithmetic:
+
+    one LayerNorm(192) = 384
+    one Linear(192,192) = 37,056
+    one Linear(192,1) = 193
+    one residual head = 37,633
+    two residual heads = 75,266
+
+Correct production scalar counts:
+
+    frozen audio = 3,031,880
+    video_projection = 99,520
+    shared_fusion = 111,744
+    residual_heads = 75,266
+    total trainable = 286,530
+
+Correct parameter-object counts:
+
+    frozen = 105
+    trainable = 22
+    optimizer = 22
+
+The earlier manager requirements:
+
+    residual_heads = 74,178
+    total trainable = 285,442
+
+are revoked and MUST NOT be used.
+
+Do not modify the model to reduce its parameter count.
+
+## 1. Repository / Scope Gate
+
+Start from current origin/main.
+
+Verify:
+
+    git status --short
+
+is clean before task work.
+
+Verify these files are unchanged during the task:
 
     src/common/optimizers.py
-
-Register exactly:
-
-    wsm_trainable_adamw_optimizer
-
-through:
-
-    chimera_ml.core.registry.OPTIMIZERS
-
-Factory signature must explicitly accept:
-
-    model
-    lr
-    weight_decay
-
-so Chimera smart injection passes the model.
-
-Required semantics:
-
-    trainable_parameters = [
-        parameter
-        for parameter in model.parameters()
-        if parameter.requires_grad
-    ]
-
-Then construct:
-
-    torch.optim.AdamW(
-        trainable_parameters,
-        lr=float(lr),
-        weight_decay=float(weight_decay),
-        **kwargs,
-    )
-
-Requirements:
-
-- preserve normal AdamW kwargs from config;
-- raise ValueError if there are zero trainable parameters;
-- do not mutate requires_grad;
-- do not select parameters by fragile name substring inside the optimizer factory;
-- do not special-case the audio model;
-- do not include any requires_grad=false parameter;
-- do not alter built-in adamw_optimizer.
-
-This optimizer is a generic project utility for models containing intentionally frozen submodules.
-
-## 2. Plugin Registration
-
-Update:
-
     src/chimera_plugin.py
-
-with explicit required import module:
-
-    common.optimizers
-
-It must register without a project-module warning.
-
-After plugin registration, OPTIMIZERS must contain both:
-
-    adamw_optimizer
-    wsm_trainable_adamw_optimizer
-
-Do not replace or shadow the built-in key.
-
-## 3. Switch Only the Strong-Audio Config
-
-Edit:
-
     configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml
+    src/fusion/models/frozen_audio_temporal_adapter.py
+    src/fusion/models/av_f1_temporal_audio_residual.py
+    src/fusion/data/wsm_av_fusion_datamodule.py
+    src/audio
+    src/video
 
-Change only:
+Only docs/PROGRESS_EN.md may become tracked-dirty.
 
-    optimizer.name
-
-from:
-
-    adamw_optimizer
-
-to:
-
-    wsm_trainable_adamw_optimizer
-
-Preserve exactly:
-
-    lr: 0.0001
-    weight_decay: 0.01
-
-Preserve every other accepted TASK-004I config field unchanged.
-
-No scheduler.
-No new optimizer hyperparameter.
-No training change.
-
-## 4. Compile and Registry Validation
+## 2. Registry / Config Gate
 
 Run:
 
-    python3 -m py_compile \
-      src/common/optimizers.py \
-      src/chimera_plugin.py
-
-Then:
-
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
     import warnings
-    from chimera_ml.core.registry import OPTIMIZERS
+    from chimera_ml.core.registry import OPTIMIZERS, MODELS, DATAMODULES, LOSSES
     import chimera_plugin
 
     with warnings.catch_warnings(record=True) as caught:
@@ -207,35 +135,40 @@ Then:
         str(x.message)
         for x in caught
         if "Failed to import" in str(x.message)
-        and "common.optimizers" in str(x.message)
     ]
     assert not project_failures, project_failures
 
     assert "adamw_optimizer" in OPTIMIZERS.keys()
     assert "wsm_trainable_adamw_optimizer" in OPTIMIZERS.keys()
+    assert "wsm_av_f1_temporal_audio_residual_model" in MODELS.keys()
+    assert "wsm_av_fusion_datamodule" in DATAMODULES.keys()
+    assert "wsm_masked_sparse_loss" in LOSSES.keys()
 
-    print("trainable-only optimizer registry smoke passed")
+    print("registry gate passed")
     PY
-
-## 5. Config Validation
 
 Run:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config \
       --config-path configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml
 
-Assert the resolved optimizer is:
+Assert the config still resolves:
 
-    wsm_trainable_adamw_optimizer
-
-with exactly:
-
+    optimizer.name = wsm_trainable_adamw_optimizer
     lr = 0.0001
     weight_decay = 0.01
+    seed = 42
+    batch_size = 8
+    epochs = 30
+    checkpoint monitor = dev/mean_score
+    early stopping monitor = dev/mean_score
+    mode = max
 
-## 6. Checkpoint SHA and Frozen-Audio Gate
+No config edit is permitted.
 
-Exact historical checkpoint:
+## 3. Historical Checkpoint Gate
+
+Exact checkpoint:
 
     logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt
 
@@ -245,17 +178,56 @@ Required SHA256:
 
 Recompute and assert exact equality.
 
-Build the configured model and assert:
+## 4. Production Model Parameter Gate
 
-- all 105 audio parameter objects have requires_grad=false;
-- frozen audio scalar parameter count remains 3,031,880;
-- calling model.train() leaves:
-      model.audio_adapter.audio_model.training == false;
-- no incoming real A+V batch contains task_id/task_ids.
+Build the configured model through actual Chimera.
 
-## 7. Exact Optimizer Firewall
+Call:
 
-Build the optimizer through the actual Chimera:
+    model.train()
+
+and require:
+
+    model.audio_adapter.audio_model.training == false
+
+Collect named parameters.
+
+Require:
+
+    frozen object count = 105
+    trainable object count = 22
+
+Require scalar counts:
+
+    frozen audio = 3,031,880
+    video_projection = 99,520
+    shared_fusion = 111,744
+    residual_heads = 75,266
+    total trainable = 286,530
+
+Require every trainable parameter name to belong to exactly one of:
+
+    video_projection
+    shared_fusion
+    residual_heads
+
+Require every parameter under:
+
+    audio_adapter.audio_model
+
+to have:
+
+    requires_grad == false
+
+If any corrected count fails:
+
+    STOP BLOCKED.
+
+Do not modify the model.
+
+## 5. Exact Production Optimizer-ID Firewall
+
+Build the optimizer through:
 
     chimera_ml.training.builders.build_optimizer
 
@@ -281,43 +253,37 @@ Define:
         for p in group["params"]
     }
 
-Require:
+Require exactly:
+
+    len(trainable_ids) == 22
+    len(frozen_ids) == 105
+    len(optimizer_ids) == 22
 
     optimizer_ids == trainable_ids
     optimizer_ids.isdisjoint(frozen_ids)
 
-Also require:
+Also verify the optimizer instance is:
 
-    len(frozen_ids) == 105
-    len(trainable_ids) == 22
-    len(optimizer_ids) == 22
+    torch.optim.AdamW
 
-Required scalar parameter counts:
+and its effective hyperparameters are:
 
-    frozen audio = 3,031,880
-    trainable total = 285,442
+    lr = 0.0001
+    weight_decay = 0.01
 
-Trainable parameters must still belong only to:
+This is the decisive repair gate.
 
-    video_projection
-    shared_fusion
-    residual_heads
-
-Record per-block scalar counts:
-
-    video_projection = 99,520
-    shared_fusion = 111,744
-    residual_heads = 74,178
-
-If any optimizer object/count assertion fails:
+If optimizer_ids differs from trainable_ids in either direction:
 
     STOP BLOCKED.
 
-Do not start training.
+## 6. Data / Protocol-Key Gate
 
-## 8. Data / Evaluation-Stream Gate
+Build the production:
 
-Build the accepted A+V DataModule through Chimera.
+    WSMAVFusionDataModule
+
+through the configured Chimera path.
 
 Require:
 
@@ -330,34 +296,42 @@ Require:
     missing_audio = 0
     missing_video = 0
 
-Require val_dataloader keys exactly:
+Construct the validation-loader mapping only far enough to verify keys:
 
     dev
     test_none
     test_soft
     test_hard
 
-Do not iterate any Test loader in TASK-004I2.
+Do NOT iterate:
 
-It is acceptable to construct the mapping only to verify keys/counts.
+    test_none
+    test_soft
+    test_hard
 
-## 9. DEV Frozen-Base Reproduction Gate
+in this task.
 
-Before any training, iterate ONLY:
+## 7. Canonical DEV Frozen-Base Reproduction
+
+Iterate ONLY the canonical DEV dataset:
 
     dm.val_dataset
 
-with a deterministic DEV loader using the accepted fusion collate.
+with a deterministic DataLoader and the accepted fusion collate.
 
-Using the configured strong-audio model, collect only:
+Use the production configured model.
+
+Collect:
 
     output.aux["audio_base_logits"]
+    targets
+    observed_mask
 
-and compute:
+Compute metrics through:
 
     common.callbacks.wsm_segment_callback.compute_sparse_two_task_metrics
 
-Required reproduction:
+Required reference:
 
     depression UAR/MF1/Score =
       0.7480392157 / 0.7477975633 / 0.7479183895
@@ -368,132 +342,156 @@ Required reproduction:
     DEV Mean_Score =
       0.7878268765
 
-Required tolerance on each task Score and Mean_Score:
+Acceptance:
 
     abs(delta) <= 0.0005
 
-Do not threshold-tune.
+for depression Score, Parkinson Score, and Mean_Score.
+
+Do not tune a threshold.
+
 Do not iterate Test.
 
 If reproduction fails:
 
     STOP BLOCKED.
 
-## 10. Real Production-Batch Forward/Loss/Backward Smoke
+## 8. Real TRAIN Batch Forward/Loss/Backward Gate
 
-Use one real TRAIN batch of size 8.
+Use one real production TRAIN batch with batch size 8.
 
-Use a fresh configured model and build the repaired optimizer through actual Chimera.
+Use a fresh configured model and build its optimizer through the actual production Chimera path.
 
-Run:
+Before backward assert again:
+
+    optimizer_ids == trainable_ids
+    optimizer_ids.isdisjoint(frozen_ids)
+
+Run only:
 
     optimizer.zero_grad(set_to_none=True)
     output = model(batch)
     loss = wsm_masked_sparse_loss(output, batch)
     loss.backward()
 
-Do NOT call optimizer.step().
+Do NOT call:
+
+    optimizer.step()
 
 Require:
 
-- output.preds shape [8,2];
-- finite scalar loss;
-- all frozen audio grads are None;
-- finite nonzero gradient exists in:
-  - video_projection;
-  - shared_fusion;
-  - depression residual head;
-  - Parkinson residual head;
-- optimizer ID set still equals exact trainable ID set after backward;
-- frozen audio model remains eval-only.
+    output.preds shape == [8,2]
+    loss finite scalar
 
-The smoke loss is structural only and must not be interpreted as model quality.
+Frozen audio:
 
-## 11. No-Training Boundary
+- every frozen audio parameter grad is None;
+- audio model remains eval-only.
 
-TASK-004I2 MUST NOT run:
+Trainable branch:
+
+- video_projection has finite nonzero gradient;
+- shared_fusion has finite nonzero gradient;
+- depression residual head has finite nonzero gradient;
+- Parkinson residual head has finite nonzero gradient;
+- all present trainable gradients are finite.
+
+After backward re-check:
+
+    optimizer_ids == trainable_ids
+    optimizer_ids.isdisjoint(frozen_ids)
+
+Record smoke loss as structural only.
+
+## 9. No-Training / No-Test Boundary
+
+TASK-004I2B MUST NOT run:
 
     chimera-ml train
 
-It must not create a new MLflow training run.
+It MUST NOT:
 
-It must not produce epoch metrics.
-
-It must not iterate TEST_NONE/SOFT/HARD.
-
-The goal is only to prove that the repaired production optimizer/config passes every pre-run firewall.
+- call optimizer.step();
+- create a new training MLflow run;
+- produce epoch metrics;
+- iterate TEST_NONE;
+- iterate TEST_SOFT;
+- iterate TEST_HARD;
+- modify source/config;
+- begin TASK-004I3.
 
 ## Acceptance Criteria
 
-Pass only if:
+Pass only if all are true:
 
-- src/common/optimizers.py exists and registers wsm_trainable_adamw_optimizer;
-- built-in adamw_optimizer remains registered and untouched;
-- project optimizer includes exactly requires_grad=true parameters;
-- strong-audio config uses only wsm_trainable_adamw_optimizer as the intentional config change;
-- config validates;
-- checkpoint SHA matches;
-- frozen audio remains 105 objects / 3,031,880 scalar parameters;
-- trainable set remains 22 objects / 285,442 scalar parameters;
-- optimizer object IDs equal trainable object IDs exactly;
-- optimizer contains zero frozen audio parameter objects;
-- trainable block scalar counts match expected values;
-- DataModule/count/four-stream-key gate passes;
-- DEV frozen-base reproduction passes;
-- real TRAIN batch forward/loss/backward smoke passes;
-- frozen audio gets no gradients;
-- trainable residual branch gets finite nonzero gradients;
-- no Test loader is iterated;
-- no full training/MLflow run occurs;
+- repository starts clean;
+- no source/config change occurs;
+- registry/config gates pass;
+- checkpoint SHA exact;
+- frozen audio = 105 objects / 3,031,880 scalars;
+- trainable = 22 objects / 286,530 scalars;
+- video_projection = 99,520;
+- shared_fusion = 111,744;
+- residual_heads = 75,266;
+- optimizer = exactly 22 objects;
+- optimizer_ids == trainable_ids;
+- optimizer/frozen intersection empty;
+- AdamW effective lr/weight_decay correct;
+- dataset/protocol counts and keys correct;
+- canonical DEV frozen-base reproduction passes;
+- real TRAIN batch forward/loss/backward passes;
+- frozen audio gradients all None;
+- trainable gradients finite/nonzero in all required branches;
+- no optimizer step;
+- no full training;
+- no Test iteration;
 - src/audio unchanged;
 - src/video unchanged;
-- accepted fusion model/DataModule source unchanged;
 - git diff --check passes;
-- tracked diff contains only:
-  - src/common/optimizers.py
-  - src/chimera_plugin.py
-  - configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml
-  - docs/PROGRESS_EN.md
-- branch codex/task-004i2 committed and pushed;
+- tracked diff against origin/main contains only docs/PROGRESS_EN.md;
+- branch codex/task-004i2b committed and pushed;
 - main/master untouched.
 
 ## Required PROGRESS_EN Update
 
-Append TASK-004I2 evidence without erasing blocked TASK-004I.
+Append TASK-004I2B evidence without erasing TASK-004I/TASK-004I2 history.
 
 Record:
 
 - branch;
-- implementation commit SHA;
+- evidence commit SHA;
 - push result;
-- confirmed Chimera v0.2.4 root cause;
-- new optimizer registry key;
-- exact filtering semantics;
-- config optimizer-name correction;
-- registry/config validation;
+- corrected parameter-count derivation;
 - checkpoint SHA verification;
-- frozen/trainable object and scalar parameter counts;
-- exact optimizer/trainable ID-set equality result;
-- zero frozen-parameter optimizer result;
-- DataModule counts and four stream keys;
-- DEV base reproduction metrics/deltas;
+- registry/config validation;
+- frozen object/scalar counts;
+- trainable object/scalar counts;
+- per-block scalar counts;
+- optimizer object count;
+- exact optimizer_ids == trainable_ids result;
+- zero frozen optimizer intersection;
+- optimizer effective lr/weight_decay;
+- DataModule counts and protocol keys;
+- DEV base reproduction UAR/MF1/Score/Mean_Score and deltas;
 - real TRAIN batch smoke loss labeled structural only;
 - gradient checks;
-- explicit no-training statement;
-- explicit no-Test-iteration statement;
-- confirmation src/audio unchanged;
-- confirmation src/video unchanged;
+- explicit no optimizer.step statement;
+- explicit no full training/MLflow run statement;
+- explicit no Test iteration statement;
+- confirmation no source/config changes;
+- src/audio unchanged;
+- src/video unchanged;
 - confirmation F2-temporal/RAMPS/text remain deferred;
 - Stage 4 status;
-- recommended next atomic task only.
+- recommended next atomic step only.
 
-If TASK-004I2 passes:
+If every gate passes:
 
-    recommended next = TASK-004I3 run the fixed seed-42 strong-temporal-audio F1 residual experiment using the repaired optimizer, with no architecture/config changes except the accepted optimizer key.
+    recommended next = TASK-004I3 run the fixed seed-42 strong-temporal-audio F1 residual training experiment with the already accepted production config and optimizer.
 
-If TASK-004I2 is blocked:
+If any gate fails:
 
-    recommend only the narrow corrective task for the exact failed pre-run gate.
+    recommend only a narrow correction for that exact failed gate.
 
 ## Required Handoff
 
@@ -508,20 +506,22 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch codex/task-004i2;
-- implementation commit SHA;
+- branch codex/task-004i2b;
+- evidence commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
-- optimizer registry key;
-- frozen/trainable/optimizer parameter-object counts;
-- frozen/trainable scalar parameter counts;
-- exact optimizer ID-set equality result;
+- corrected residual/trainable counts;
+- frozen/trainable/optimizer object counts;
+- optimizer_ids == trainable_ids result;
+- zero frozen optimizer intersection;
 - checkpoint SHA verification;
 - reproduced DEV depression/Parkinson Scores and Mean_Score;
-- real batch smoke loss;
-- frozen audio no-gradient result;
+- real TRAIN batch smoke loss;
+- frozen-audio no-gradient result;
+- no optimizer.step;
 - no full training;
 - no Test iteration;
+- no source/config changes;
 - F2-temporal/RAMPS/text deferred;
 - src/audio unchanged;
 - src/video unchanged.
