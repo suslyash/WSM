@@ -1121,3 +1121,17 @@ Exact verification commands/results:
 - No training, Test performance metrics, Test predictions, or model/checkpoint selection ran.
 
 Recommended next atomic task: TASK-002L training config plus every-epoch DEV/TEST_NONE/TEST_SOFT/TEST_HARD wiring, with dev/mean_score as the only selector.
+
+
+### MANAGER-DECISION-011 — Accept TASK-002K2 full-coverage DEPART-compatible cache
+
+Status: accepted.
+
+- TASK-002K2 is integrated through PR #17 as bf6e6364a6c7673d7dc84a1611a7a1c469571371.
+- Full canonical cache coverage is accepted: train=6325/6325, dev=933/933, test=1364/1364, total=8622/8622, failures=0, missing=0.
+- ROI-if-detected/full-RGB-frame-fallback semantics are now the authoritative V1 video preprocessing contract.
+- The accepted V1 DataModule exposes full protocol coverage: train=6325, dev=933, test_none=1364, test_soft=1208, test_hard=1014, with all unavailable counts zero.
+- The superseded cache remains preserved only as historical evidence and must not be used for V1 training.
+- The remaining pre-training requirement is integration wiring only: every epoch must evaluate dev/test_none/test_soft/test_hard while checkpointing/early stopping use only dev/mean_score.
+
+Recommended next atomic task: TASK-002L final pre-training config/integration gate. After TASK-002L passes, proceed directly to TASK-002M real V1 video training run.
