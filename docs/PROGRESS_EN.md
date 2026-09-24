@@ -1181,3 +1181,17 @@ Exact verification commands/results:
 Deviation: an initial bounded smoke subset selected only depression-owned rows and correctly raised the sparse-metric zero-observation guard for DEV/Parkinson. The final deterministic smoke used the smallest balanced 2+2 ownership subset for every stream and passed.
 
 Recommended next atomic task: TASK-002M real V1 video training run.
+
+
+### MANAGER-DECISION-012 — Accept TASK-002L wiring but keep pre-training gate blocked on durable artifact paths
+
+Status: partially accepted for integration; not yet training-ready.
+
+- TASK-002L is integrated through PR #18 as 0d0b81899d213758189e9d41f9fa73f197c46feb.
+- The four-stream DataModule wiring is accepted: every fit epoch can evaluate dev, test_none, test_soft, and test_hard through the native Chimera Mapping[str, DataLoader] validation path.
+- The selector firewall is accepted: checkpointing and early stopping monitor only dev/mean_score in max mode.
+- The bounded one-epoch integration smoke is accepted as structural evidence only.
+- One production-config defect remains: configs/wsm_mm_pd_dep_v1/video/00_depart_v1.yaml writes checkpoint, snapshot, console logs, and MLflow state under /tmp/wsm_task002l. Those paths were appropriate only for the bounded smoke and are not acceptable for the real 30-epoch experiment because /tmp is ephemeral and the run artifacts must remain durable and traceable.
+- Real training remains blocked until the YAML uses durable repository/project log paths following the existing WSM config convention and passes config/build/selector validation again.
+
+Recommended next atomic task: TASK-002L2 — replace only the temporary production artifact/logging paths with durable WSM log paths, revalidate the config, and do not run the full experiment. After TASK-002L2 passes, proceed directly to TASK-002M real V1 video training.
