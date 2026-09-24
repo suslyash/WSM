@@ -1647,3 +1647,28 @@ Comparison using the fixed DEV references: F0 DEV mean 0.744211 versus frozen au
 Deviations/blockers: none for the authorized F0 run. The legacy AV YAML remains non-runnable and was not repaired. Test metrics were inspected only as mandatory per-epoch monitoring. Text/description remains deferred; F1/F2 and later RAMPS work were not started.
 
 Implementation commit and push are recorded in the manager handoff after the final evidence update.
+
+
+### MANAGER-DECISION-019 — Accept TASK-004C and define the F1 shared-representation sparse MTL baseline
+
+Status: accepted.
+
+- TASK-004C is integrated through PR #25 as e8600da2e60ac7fd5a130b948f7195793fba2c2b.
+- The fixed seed-42 F0 run completed 9 epochs with DEV-only early stopping; best epoch=3 by dev/mean_score=0.744211.
+- Best DEV task Scores: depression=0.642220, Parkinson=0.846201.
+- Same DEV-selected epoch monitoring values: test_none=0.764716, test_soft=0.772471, test_hard=0.763449.
+- F0 is +0.037639 above selected video V2 on DEV Mean_Score and -0.043616 below the frozen historical audio reference. These comparisons are descriptive.
+- DEV-only gate diagnostics are accepted as descriptive evidence: mean audio weight depression=0.613509 and Parkinson=0.442834.
+- Minor provenance gap: PROGRESS_EN records the MLflow backend but not the exact F0 MLflow run ID/status requested by TASK-004C. This does not invalidate the run or block Stage 4 because checkpoints, summary, logs, code archive, full epoch history, and DEV-only selector evidence are preserved. Do not infer or fabricate the missing run ID.
+- Stage 4 now proceeds to F1, whose purpose is to isolate shared-representation gain relative to F0 under the same pooled frozen A+V inputs and sparse observed-label supervision.
+- F1 is fixed as:
+  - the same audio_cls and masked-mean video inputs used by F0;
+  - modality-specific projection to a common hidden width;
+  - hard zero masking of unavailable modality representations using modality_available;
+  - concatenation of the two projected modality representations;
+  - one shared fusion MLP trunk producing a single shared A+V representation;
+  - two independent disease heads from that shared representation;
+  - no task_id/task embeddings, no late-fusion gate, no per-modality disease logits, no pseudo-labeling, no TACME/relation bank, and no text/description.
+- F1 continues to use wsm_masked_sparse_loss only.
+
+Recommended next atomic task: TASK-004D — implement/register the F1 availability-aware shared-representation sparse two-head MTL model and verify forward/loss/backward on synthetic and real TASK-004A batches. Do not create a training config or run training yet.
