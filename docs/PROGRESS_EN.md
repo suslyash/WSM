@@ -2362,3 +2362,42 @@ Plan status: Stage 4 strong-temporal-audio ablation run is complete. The result 
 Blockers and risks: selected DEV Mean_Score decreased by `0.0276065064` versus frozen audio and depression introduced errors exceeded corrected errors. Test outputs remain monitoring-only; existing firewall and frozen-audio invariants held.
 
 Recommended next atomic task: manager review of TASK-004I3 and its negative result; do not start F2-temporal/RAMPS/text/description work in this task.
+
+
+### MANAGER-DECISION-029 — Accept TASK-004I3 negative result and require one zero-initialized residual control before F2-temporal
+
+Status: TASK-004I3 accepted as a negative result for the random-initialized residual recipe; interpretation remains incomplete.
+
+- TASK-004I3 is integrated through PR #34 as `17a5e48aa087f9f893671e4994c3490fe2232dde`.
+- The run is valid: 11 epochs, DEV-only selection, full four-stream monitoring, complete MLflow provenance, frozen-audio firewall preserved, and no source/config drift.
+- Selected epoch 5 DEV:
+  - depression Score=0.7092713671;
+  - Parkinson Score=0.8111693731;
+  - Mean_Score=0.7602203701.
+- Same-row frozen audio base:
+  - depression Score=0.7479183895;
+  - Parkinson Score=0.8277353635;
+  - Mean_Score=0.7878268765.
+- Final-minus-base DEV deltas are therefore:
+  - depression=-0.0386470223;
+  - Parkinson=-0.0165659904;
+  - Mean=-0.0276065064.
+- Error audit confirms net harm: depression corrected 52 but introduced 76 errors; Parkinson corrected 12 and introduced 13.
+- This is a genuine negative result for the exact TASK-004I3 training recipe and must be preserved.
+- However, source audit found a methodological confound for the broader question “does video add value to the strong frozen audio model?”:
+  - the accepted `wsm_av_f1_temporal_audio_residual_model` uses standard PyTorch random initialization for the final residual-head Linear layers;
+  - therefore at model construction the final logits are `audio_base_logits + random_residual`, not the exact frozen audio baseline;
+  - the exact frozen baseline exists only in `aux["audio_base_logits"]` and was never the initialized forward behavior of the trainable fusion model.
+- Because every trained epoch in TASK-004I3 is below the frozen audio DEV Mean_Score, the result shows the random-init residual optimization path failed to preserve/improve the base. It does not cleanly test whether a residual branch initialized at exactly zero can learn a beneficial video correction.
+- Before F2-temporal, one controlled variant is authorized:
+  `wsm_av_f1_temporal_audio_residual_zero_init_model`.
+- This variant must preserve the accepted architecture/parameter count and differ only by zero-initializing the final Linear weight and bias of each residual head at construction.
+- At initialization, for any audio+video row, `residual_logits` must be exactly zero and `preds` must equal `audio_base_logits` exactly.
+- No training config/run is authorized in TASK-004I4. It is implementation/registry/smoke only.
+- Because zero final weights block first-step gradients to upstream residual features by design, TASK-004I4 must verify the expected two-step behavior:
+  - first backward: final residual output layers receive nonzero gradients while upstream video/shared layers may remain zero;
+  - after exactly one bounded optimizer step, a second backward must produce finite nonzero gradients in video_projection, shared_fusion, and both residual branches.
+- Existing random-init model/key and TASK-004I3 artifacts must remain unchanged for reproducibility.
+- If TASK-004I4 passes, run exactly one fixed zero-init training experiment before deciding whether F2-temporal is still warranted.
+
+Recommended next atomic task: TASK-004I4 — implement/register the zero-initialized strong-audio F1 residual control and prove exact baseline-at-initialization plus two-step learnability without running a full experiment.
