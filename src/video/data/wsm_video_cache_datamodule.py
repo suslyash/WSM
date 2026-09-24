@@ -196,7 +196,7 @@ def collate_wsm_video_cache(samples: list[dict[str, Any]]) -> Batch:
 
 
 class WSMVideoCacheDataModule(DataModule):
-    def __init__(self, data_root: str = '/media/maxim/Databases/WSM_NEW', cache_root: str = DEFAULT_CACHE_ROOT, cache_index_path: str | None = None, batch_size: int = 32, num_workers: int = 0, pin_memory: bool = True, shuffle_train: bool = True, drop_last_train: bool = False) -> None:
+    def __init__(self, data_root: str = '/media/maxim/Databases/WSM_NEW', cache_root: str = DEFAULT_CACHE_ROOT, cache_index_path: str | None = None, batch_size: int = 32, num_workers: int = 0, pin_memory: bool = True, persistent_workers: bool = False, shuffle_train: bool = True, drop_last_train: bool = False) -> None:
         self.data_root = str(Path(data_root).expanduser().resolve())
         self.cache_root = str(Path(cache_root).expanduser().resolve())
         self.cache_index_path = str(Path(cache_index_path).expanduser().resolve()) if cache_index_path else str(Path(self.cache_root) / 'cache_index.jsonl')
@@ -289,7 +289,15 @@ class WSMVideoCacheDataModule(DataModule):
         self.collate_fn = collate_wsm_video_cache
         self.video_cache_success_total = len(train_samples) + len(dev_samples) + len(test_samples['test_none'])
         self.video_cache_failure_total = self.train_unavailable_count + self.dev_unavailable_count + self.test_unavailable_count['test_none']
-        super().__init__(train_dataset=self.train_dataset, val_dataset=self.val_dataset, test_dataset=self.test_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory, shuffle_train=shuffle_train, drop_last_train=drop_last_train, collate_fn=self.collate_fn)
+        super().__init__(train_dataset=self.train_dataset, val_dataset=self.val_dataset, test_dataset=self.test_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory, persistent_workers=persistent_workers, shuffle_train=shuffle_train, drop_last_train=drop_last_train, collate_fn=self.collate_fn)
+
+    def val_dataloader(self) -> dict[str, Any]:
+        return {
+            'dev': self._make_loader(self.val_dataset, shuffle=False, drop_last=False),
+            'test_none': self._make_loader(self.test_dataset['test_none'], shuffle=False, drop_last=False),
+            'test_soft': self._make_loader(self.test_dataset['test_soft'], shuffle=False, drop_last=False),
+            'test_hard': self._make_loader(self.test_dataset['test_hard'], shuffle=False, drop_last=False),
+        }
 
     def describe_context(self, context: Any) -> None:
         context.set('data.num_tasks', 2)
