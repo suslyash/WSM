@@ -1059,3 +1059,65 @@ Status: accepted; supersedes the prior policy that treated no_body_detected as v
 - Training configuration/integration is paused until this full-coverage cache gate is cleared.
 
 Recommended next atomic task: implement the ROI-or-full-frame fallback, version/fingerprint it, rebuild and independently audit the full 8622-row TRAIN+DEV+TEST cache in a new cache root, and repoint the video DataModule to that cache with full protocol coverage. Do not train yet.
+
+
+### TASK-002K2 - Rebuild the DEPART-compatible full-coverage video cache with full-frame fallback
+
+Status: complete; Stage 2 remains partial pending TASK-002L training/evaluation integration.
+
+Branch: codex/task-002k2.
+Implementation commit: 1b5e7c27c86c9dd3aec1b21c0c7b0cca7a659864.
+Push result: pending at documentation time; the implementation branch will be pushed after this evidence update.
+
+Changed files:
+
+- src/video/features/clip_video_features.py;
+- scripts/video/extract_clip_video_features.py;
+- scripts/video/audit_video_cache.py;
+- src/video/data/wsm_video_cache_datamodule.py;
+- docs/PROGRESS_EN.md.
+
+Implementation facts:
+
+- Replaced the superseded ROI-only policy with preprocessing_version=depart-v1-fullframe-fallback and roi_policy_version=depart-body-roi-if-detected-otherwise-full-rgb-frame-v2.
+- Each sampled frame now uses body_roi when YOLO returns a valid box, otherwise full_frame_fallback. Every readable sampled frame is encoded; YOLO misses are not failures.
+- Artifacts record frame_sources, selected_boxes, detected_body_count, full_frame_fallback_count, detection_coverage, and fallback_coverage. valid_mask is all true for every readable temporal position.
+- The V1 DataModule default cache root is now /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache and requires the new policy metadata. The superseded /media/maxim/Programs/Features/WSM/video_depart_v1/cache was preserved and not reused or modified.
+- The released DEPART repository has additional implementation/config provenance differences; those are outside this atomic ROI/fallback correction and were not changed here.
+
+Full extraction result:
+
+- New cache root: /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache.
+- Expected/success: train=6325/6325, dev=933/933, test=1364/1364, total=8622/8622.
+- Failure total=0; missing total=0; Test failures=0.
+- Extraction report: /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/extraction_report_all_task002k2.json.
+- Preprocessing/model reports: extracted_success_count=8622, reused_success_count=0, no_body_detected_count=0, other_failure_count=0.
+
+Independent audit statistics:
+
+- Audit report: /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache_audit_all_task002k2.json.
+- complete_for_requested_splits=true, artifacts valid, fingerprints unique, test_rows_processed=true, test_rows_indexed=1364.
+- train: body detections=332131, full-frame fallbacks=44150, segments with fallback=3041, detection coverage mean/min/max=0.8808096312/0.0/1.0, fallback coverage mean/min/max=0.1191903688/0.0/1.0, temporal length mean/min/max=59.4910672/3/60, shorter-than-60=120.
+- dev: body detections=48727, full-frame fallbacks=6596, segments with fallback=405, detection coverage mean/min/max=0.8763821497/0.0/1.0, fallback coverage mean/min/max=0.1236178503/0.0/1.0, temporal length mean/min/max=59.2958199/2/60, shorter-than-60=25.
+- test: body detections=68066, full-frame fallbacks=12963, segments with fallback=637, detection coverage mean/min/max=0.8351923528/0.0/1.0, fallback coverage mean/min/max=0.1648076472/0.0/1.0, temporal length mean/min/max=59.4054252/4/60, shorter-than-60=25.
+
+DataModule result:
+
+- train_dataset=6325 and val_dataset=933.
+- Raw and valid Test protocol counts: test_none=1364, test_soft=1208, test_hard=1014.
+- Unavailable counts: train=0, dev=0, test_none=0, test_soft=0, test_hard=0.
+- Separate Test streams and variable-length collate passed.
+
+Exact verification commands/results:
+
+- python3 -m py_compile src/video/features/clip_video_features.py scripts/video/extract_clip_video_features.py scripts/video/audit_video_cache.py src/video/data/wsm_video_cache_datamodule.py - passed.
+- Focused injected detector smoke - passed: body ROI plus full-frame fallback produced finite [2,512] features, valid_mask=[true,true], detected=1, fallback=1, and both coverage values=0.5.
+- Fingerprint smoke - passed: old ROI-only fingerprint differs from the new fallback-policy fingerprint.
+- Full extraction with --splits train,dev,test --resume and pinned YOLO/CLIP identities - passed with 8622/8622 success and zero failures.
+- Independent audit and strict coverage assertions - passed.
+- DataModule strict coverage and variable-length collate smoke - passed.
+- .venv/bin/chimera-ml plugins list and DATAMODULES.get("wsm_video_depart_v1_datamodule") - passed without project-module warning.
+- git diff --check - passed; git diff -- src/audio - empty; src/audio remained unchanged.
+- No training, Test performance metrics, Test predictions, or model/checkpoint selection ran.
+
+Recommended next atomic task: TASK-002L training config plus every-epoch DEV/TEST_NONE/TEST_SOFT/TEST_HARD wiring, with dev/mean_score as the only selector.
