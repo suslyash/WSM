@@ -2300,3 +2300,65 @@ Status: accepted; training authorized.
 - The primary result is the selected-checkpoint same-row DEV delta between final A+V logits and frozen `audio_base_logits`, including task Scores and corrected-versus-introduced error counts.
 
 Recommended next atomic task: TASK-004I3 — run the fixed strong-temporal-audio F1 residual experiment using the accepted production config with no source/config changes.
+
+
+### TASK-004I3 — Run the fixed strong-temporal-audio F1 residual A+V experiment
+
+Outcome: complete. The fixed seed-42 production experiment ran to early stopping with the accepted configuration unchanged. Selection used only maximum `dev/mean_score`; Test streams were monitoring-only.
+
+Branch: `codex/task-004i3`.
+
+Changed files:
+
+- `docs/PROGRESS_EN.md` only.
+
+Training:
+
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml` — passed; early stopping after epoch 11 (patience 6, min_delta 0.0005).
+- Config remained unchanged: seed=42, batch_size=8, 30-epoch ceiling, repaired trainable-only AdamW, and `dev/mean_score` max monitor.
+- 11 epochs completed; selected epoch 5, best `dev/mean_score=0.760220`.
+
+Full epoch table. Task tuples are UAR/MF1/Score.
+
+| epoch | train loss | DEV dep | DEV P | DEV mean | TEST_NONE dep | TEST_NONE P | TEST_NONE mean | TEST_SOFT dep | TEST_SOFT P | TEST_SOFT mean | TEST_HARD dep | TEST_HARD P | TEST_HARD mean |
+|---:|---:|---|---|---:|---|---|---:|---|---|---:|---|---|---:|
+| 1 | 0.228957 | 0.725910/0.725935/0.725922 | 0.771014/0.789189/0.780102 | 0.753012 | 0.767826/0.769193/0.768509 | 0.798835/0.801105/0.799970 | 0.784240 | 0.778304/0.778528/0.778416 | 0.797720/0.800203/0.798962 | 0.788689 | 0.790730/0.789791/0.790261 | 0.812531/0.805042/0.808787 | 0.799524 |
+| 2 | 0.190093 | 0.716387/0.716421/0.716404 | 0.735611/0.759464/0.747538 | 0.731971 | 0.774590/0.778264/0.776427 | 0.813454/0.842816/0.828135 | 0.802281 | 0.786157/0.788319/0.787238 | 0.809034/0.842005/0.825519 | 0.806379 | 0.798554/0.800393/0.799474 | 0.842922/0.866667/0.854794 | 0.827134 |
+| 3 | 0.147774 | 0.728711/0.728397/0.728554 | 0.728433/0.751025/0.739729 | 0.734142 | 0.770905/0.767785/0.769345 | 0.807173/0.838528/0.822850 | 0.796098 | 0.772880/0.769460/0.771170 | 0.802167/0.837230/0.819698 | 0.795434 | 0.783184/0.778108/0.780646 | 0.834952/0.861410/0.848181 | 0.814414 |
+| 4 | 0.124129 | 0.668768/0.668083/0.668425 | 0.783023/0.803497/0.793260 | 0.730843 | 0.749439/0.752207/0.750823 | 0.813500/0.839307/0.826404 | 0.788613 | 0.751670/0.753523/0.752596 | 0.811911/0.839305/0.825608 | 0.789102 | 0.754495/0.756036/0.755265 | 0.839061/0.860288/0.849675 | 0.802470 |
+| 5 | 0.101437 | 0.709430/0.709112/0.709271 | 0.799793/0.822546/0.811169 | 0.760220 | 0.732159/0.722513/0.727336 | 0.831060/0.852879/0.841969 | 0.784653 | 0.718559/0.709407/0.713983 | 0.828305/0.853187/0.840746 | 0.777365 | 0.720078/0.708496/0.714287 | 0.858863/0.876767/0.867815 | 0.791051 |
+| 6 | 0.085847 | 0.666573/0.666580/0.666577 | 0.745066/0.768399/0.756732 | 0.711654 | 0.752994/0.751630/0.752312 | 0.819688/0.850618/0.835153 | 0.793733 | 0.739263/0.738139/0.738701 | 0.822659/0.855180/0.838919 | 0.788810 | 0.737257/0.734813/0.736035 | 0.864655/0.886436/0.875546 | 0.805790 |
+| 7 | 0.074805 | 0.681419/0.681139/0.681279 | 0.797378/0.819217/0.808297 | 0.744788 | 0.754805/0.756330/0.755568 | 0.810979/0.838313/0.824646 | 0.790107 | 0.750820/0.751789/0.751304 | 0.809143/0.838203/0.823673 | 0.787488 | 0.752685/0.752818/0.752752 | 0.848962/0.868592/0.858777 | 0.805764 |
+| 8 | 0.064253 | 0.686601/0.685664/0.686133 | 0.797447/0.821317/0.809382 | 0.747757 | 0.736576/0.736576/0.736576 | 0.817213/0.846056/0.831635 | 0.784105 | 0.730257/0.730069/0.730163 | 0.811802/0.843112/0.827457 | 0.778810 | 0.730155/0.729011/0.729583 | 0.852823/0.874995/0.863909 | 0.796746 |
+| 9 | 0.052036 | 0.655789/0.647942/0.651865 | 0.844859/0.857876/0.851367 | 0.751616 | 0.738260/0.739781/0.739021 | 0.772798/0.763287/0.768043 | 0.753532 | 0.728233/0.728939/0.728586 | 0.765587/0.756143/0.760865 | 0.744726 | 0.724890/0.724771/0.724830 | 0.781643/0.761384/0.771514 | 0.748172 |
+| 10 | 0.044494 | 0.664659/0.661589/0.663124 | 0.797378/0.819217/0.808297 | 0.735711 | 0.741943/0.740511/0.741227 | 0.814738/0.841545/0.828141 | 0.784684 | 0.732665/0.730466/0.731566 | 0.813241/0.841743/0.827492 | 0.779529 | 0.728095/0.724708/0.726401 | 0.847032/0.865421/0.856226 | 0.791314 |
+| 11 | 0.047416 | 0.632680/0.628217/0.630448 | 0.823533/0.842492/0.833013 | 0.731730 | 0.760014/0.763243/0.761628 | 0.827300/0.849760/0.838530 | 0.800079 | 0.753329/0.755686/0.754508 | 0.824206/0.849754/0.836980 | 0.795744 | 0.752907/0.755147/0.754027 | 0.853913/0.872695/0.863304 | 0.808665 |
+
+Selected checkpoint/artifacts:
+
+- `logs/wsm_mm_pd_dep_v1/av_f1_temporal_audio_residual_2026-09-24_21-03_wsm_av_f1_temporal_audio_residual_model_47bf8a17/checkpoints/epoch=5_dev_mean_score=0.7602.pt`
+- SHA256=`f3d66bfd1ab31d00ac156d1bcf81767e6cdaf1cd5461a92a0025314084f697ae`.
+- Run directory contains `train.log`, `summary.txt`, `code.zip`, resolved config, epoch-1 checkpoint, selected epoch-5 checkpoint, and `last.pt`.
+- MLflow run ID=`1ae82ca58bbe4eae84d6d48d4aa78527`; status=`FINISHED`; artifact URI=`/media/maxim/Programs/Projects/WSM/mlruns/5/1ae82ca58bbe4eae84d6d48d4aa78527/artifacts`.
+
+Selected-checkpoint same-DEV-row audit (final A+V logits versus frozen `audio_base_logits`):
+
+- Frozen base: depression UAR/MF1/Score=`0.7480392157/0.7477975633/0.7479183895`; Parkinson=`0.8209799862/0.8344907407/0.8277353635`; Mean=`0.7878268765`.
+- Final epoch 5: depression=`0.7094304388/0.7091122955/0.7092713671`; Parkinson=`0.7997929607/0.8225457855/0.8111693731`; Mean=`0.7602203701`.
+- Final-minus-base Score deltas: depression=`-0.0386470223`; Parkinson=`-0.0165659904`; Mean=`-0.0276065064`.
+- Residuals mean/std/mean_abs/min/max: depression=`-2.1220548153/6.0816330910/5.7748389244/-11.4396095276/8.9823598862`; Parkinson=`-3.8788068295/5.5069360733/5.9877977374/-14.8146009445/8.4554843905`.
+- Error audit: depression observed=621, base correct=465, final correct=441, corrected=52, introduced=76, balance=-24, sign flips=128 (20.6119%); Parkinson observed=312, base correct=268, final correct=267, corrected=12, introduced=13, balance=-1, sign flips=25 (8.0128%).
+- Base reproduction was within reference tolerance. Versus pooled baselines, final Scores: depression +0.019563 vs pooled F1 and +0.012236 vs pooled F2; Parkinson -0.046804 vs pooled F1 and -0.040935 vs pooled F2; final Mean -0.013621 vs pooled F1 and -0.014349 vs pooled F2.
+
+Verification/firewall:
+
+- Pre-run gates passed: CUDA RTX 4080; frozen audio=105 objects/3,031,880 scalars; trainable=22 objects/286,530 scalars; optimizer IDs exactly matched trainable IDs and were disjoint from frozen audio; audio stayed eval-only; counts train=6325, dev=933, test_none=1364, test_soft=1208, test_hard=1014; DEV base reproduction passed.
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config --config-path configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml` — passed before training.
+- `git diff --check` — passed; final `git diff -- src/audio src/video` — empty. Historical frozen checkpoint SHA remained `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`.
+- No source/config changes; `src/audio` and `src/video` unchanged. No Test metrics used for selection, checkpointing, early stopping, thresholding, or tuning. F2-temporal, RAMPS, text, and description remained deferred. Main/master was not modified.
+
+Plan status: Stage 4 strong-temporal-audio ablation run is complete. The result is negative against frozen audio on the selected DEV row; no promotion is implied.
+
+Blockers and risks: selected DEV Mean_Score decreased by `0.0276065064` versus frozen audio and depression introduced errors exceeded corrected errors. Test outputs remain monitoring-only; existing firewall and frozen-audio invariants held.
+
+Recommended next atomic task: manager review of TASK-004I3 and its negative result; do not start F2-temporal/RAMPS/text/description work in this task.
