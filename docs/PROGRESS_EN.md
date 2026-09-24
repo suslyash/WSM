@@ -1529,3 +1529,50 @@ Status: accepted.
 - The existing wsm_masked_sparse_loss remains the only supervision for the model-contract smoke.
 
 Recommended next atomic task: TASK-004B — implement/register the F0 availability-aware gated late-fusion model and verify forward/loss/backward on the accepted A+V DataModule. Do not create a training config or run training yet.
+
+
+### TASK-004B — Implement and register the F0 availability-aware gated A+V late-fusion model
+
+Status: complete; F0 model contract implemented and verified on synthetic and real TASK-004A batches. No training config, real training experiment, or Test metric computation was performed. Text/description remains deferred.
+
+Branch: codex/task-004b.
+
+Changed files:
+
+- src/fusion/models/av_f0_gated_late.py
+- src/fusion/models/__init__.py
+- src/chimera_plugin.py
+- docs/PROGRESS_EN.md
+
+F0 contract:
+
+- Registry key: wsm_av_f0_gated_late_model.
+- Fixed defaults: audio_feature_dim=768, video_feature_dim=512, hidden_dim=192, gate_hidden_dim=64, dropout=0.2, num_tasks=2.
+- Audio uses audio_cls through LayerNorm/Linear/GELU/Dropout projection. Video uses masked mean over video/video_mask followed by the matching projection. There is no temporal encoder.
+- Each task has independent audio and video scalar heads. Each task gate consumes only concatenated projected audio/video representations and outputs raw_audio_gates in [0,1].
+- Availability-aware fusion weights have last dimension [audio, video]: both available=[g,1-g], audio-only=[1,0], video-only=[0,1], and neither available raises ValueError.
+- Final output is exactly two independent logits [depression, parkinson], with no sigmoid on preds. No task_id/task_ids, task embeddings, corpus/split/Test IDs, shared fusion trunk, temporal fusion, TACME/relation bank, pseudo-labeling, prototype logic, contrastive loss, text, or description is present.
+
+ModelOutput evidence:
+
+- preds: [B,2].
+- features_audio/features_video: [B,H].
+- audio_logits/video_logits/raw_audio_gates: [B,2].
+- fusion_weights: [B,2,2], modality order [audio,video].
+- task_logits exposes depression=preds[:,0] and parkinson=preds[:,1].
+
+Exact verification commands/results:
+
+- python3 -m py_compile src/fusion/models/av_f0_gated_late.py src/fusion/models/__init__.py src/chimera_plugin.py — passed.
+- Required registry smoke with PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python — passed: wsm_av_f0_gated_late_model present and no project import warning.
+- Synthetic F0 forward/loss/backward smoke — passed with finite loss=0.7178359628. Verified output/aux shapes, normalized weights, exact convex blend, both/audio-only/video-only gate semantics, neither-modality rejection, masked-video invariance, unavailable-audio/video invariance, masked NaN sparse targets, finite modality-head/projection gradients, and finite gate gradients.
+- Real TASK-004A DataModule smoke — passed with finite loss=0.5963413119, preds [4,2], audio_cls [4,768], video [4,60,512], finite gradients, and no task_id/task_ids input.
+- git diff --check — passed.
+- git diff -- src/audio — empty; frozen src/audio unchanged.
+- git diff -- src/video — empty; video source unchanged.
+- git diff -- src/fusion/data/wsm_av_fusion_datamodule.py — empty; accepted DataModule unchanged.
+- No training config, real training run, Test metric computation, dependency installation, or text/description work was performed.
+
+Deviations/blockers: none.
+
+Recommended next atomic task: create the fixed F0 training config and run the authorized DEV-selected F0 baseline without changing the accepted DataModule/model contracts or using Test metrics for selection.
