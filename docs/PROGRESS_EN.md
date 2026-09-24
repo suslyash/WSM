@@ -1440,3 +1440,18 @@ Final verification:
 - git diff --check passed; git diff -- src/audio was empty.
 
 Recommended next atomic task: manager review of the DEV-selected V1/V2 family decision and authorization of the next PLAN stage; preserve the Test firewall and do not start multi-seed confirmation in this task.
+
+
+### MANAGER-DECISION-016 — Accept TASK-002O, close Stage 2, and defer Text/Description
+
+Status: accepted.
+
+- TASK-002O is integrated through PR #22 as ff0787ab5edd47cf84b57d20911bbe9684b780b8.
+- Stage 2 video comparison is complete for the fixed seed-42 family comparison.
+- V2 leads V1 on DEV Mean_Score by +0.003298 (0.706572 vs 0.703274). This DEV-only result is the current video-family ordering; Test metrics did not determine it.
+- The owner explicitly defers Stage 3 Text/Description until after the fusion/RAMPS/core-ablation research cycle.
+- Active execution order is now Stage 4 Fusion -> Stage 5 RAMPS -> Stage 6 core ablations/research -> return to deferred Stage 3 Text/Description before final paper-ready freeze.
+- Stage numbering remains unchanged for traceability.
+- Fusion must start with audio+video only, using the frozen audio representation contract and the accepted full-coverage video cache. Existing legacy fusion code that selects a task via task_id is not acceptable as the new final sparse two-head formulation.
+
+Recommended next atomic task: TASK-004A — implement/register the canonical sparse two-head audio+video fusion DataModule, joining frozen WavLM layer9/pool4 audio features and the full-coverage video cache by canonical segment identity, with four epoch-level evaluation streams. Do not implement or train a fusion model yet.
