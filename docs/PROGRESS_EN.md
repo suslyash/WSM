@@ -2731,3 +2731,15 @@ Status: TASK-005A3 accepted as blocked evidence; semantic/VLM acceptance audit a
 - No Test inference or metrics are authorized.
 
 Recommended next atomic task: TASK-005A4 — run the fixed CLIP semantic acceptance audit for depression, preserving the frozen Parkinson R2 rules, and publish a two-head offline cache only if depression passes the unchanged OOF/full-DEV 0.90 precision gate.
+
+
+### MANAGER-CORRECTION-033A — R2 OOD candidate feature leakage does not alter the accepted Family-A blocker, but must not propagate
+
+- Source review after TASK-005A3 acceptance found that the exploratory Family-C OOD feature computed a held-out row's class-centroid distance using the held-out true class label.
+- That is not a valid deployable OOD feature for a missing label, because the true missing class is unavailable.
+- The accepted TASK-005A3 blocker remains valid because every selected rule that determined deployability was Family A:
+  - depression selected OOF rule: negative Family A;
+  - Parkinson selected rules: positive Family A and negative Family A.
+  No accepted/deployability decision used the Family-C OOD feature.
+- Therefore TASK-005A3 remains integrated as valid evidence for the audio+video agreement failure, while Family-C OOD candidate-table values must not be used as evidence.
+- All future OOD acceptance logic must be side-conditional without target leakage: when evaluating candidate side c, compute distance to centroid c and compare against the fit/reference distance distribution for class c. Never use a held-out or missing row's ground-truth class to choose its centroid.
