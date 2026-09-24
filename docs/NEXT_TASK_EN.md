@@ -1,4 +1,4 @@
-# TASK-004G: Run the Fixed F2 Task-Aware Directed A+V Relation-Bank Baseline
+# TASK-005A: Calibrate the Frozen F2 Disease Teachers and Build the Audited RAMPS-R1 TRAIN Missing-Head Target Cache
 
 ## Role
 
@@ -6,461 +6,605 @@ You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.
 
 Required branch:
 
-    codex/task-004g
+    codex/task-005a
 
-This task explicitly authorizes the real F2 Stage 4 training run.
-
-Do not modify source code, the accepted A+V DataModule, F0/F1/F2 model code, frozen audio/video caches, loss, callbacks, metric definitions, or Test protocol definitions.
-Do not add pseudo-labeling, flow matching, PAGB, auxiliary losses, or text/description.
-Do not start Stage 5 RAMPS.
-
-## Critical Evaluation Rule
-
-Training loss is an optimization diagnostic only.
-
-The experiment is evaluated by metrics:
-
-- DEV depression UAR/MF1/Score
-- DEV Parkinson UAR/MF1/Score
-- DEV Mean_Score
-- TEST_NONE depression/Parkinson UAR/MF1/Score and Mean_Score
-- TEST_SOFT depression/Parkinson UAR/MF1/Score and Mean_Score
-- TEST_HARD depression/Parkinson UAR/MF1/Score and Mean_Score
-
-These four metric streams MUST be produced on every completed epoch.
-
-Checkpoint selection and early stopping MUST use ONLY:
-
-    dev/mean_score
-
-No loss value and no Test metric may select the model.
+Do not train a student.
+Do not modify F0/F1/F2 models.
+Do not modify the A+V DataModule.
+Do not modify src/audio or src/video.
+Do not evaluate or iterate any Test protocol.
+Do not start RAMPS R2/R3/R4.
+Do not add text/description work.
 
 ## Goal
 
-Create the fixed F2 production config and run the real seed-42 task-aware directed relation-bank A+V baseline.
+Start Stage 5 RAMPS R1 with an auditable frozen-teacher target artifact.
 
-Use:
+Use the DEV-selected F2 checkpoint as the frozen teacher, calibrate each disease head independently using ONLY DEV rows where that disease label is observed, fit separate positive/negative acceptance thresholds from that same observed-task DEV data, and then produce soft calibrated pseudo-targets for ONLY the missing task entries of canonical TRAIN rows.
 
-    data: wsm_av_fusion_datamodule
-    model: wsm_av_f2_task_aware_directed_model
-    loss: wsm_masked_sparse_loss
+This task produces teacher/calibration/target artifacts only.
 
-The primary Stage 4 question is whether F2 task-aware directed relations improve over the measured F1 shared-representation baseline on DEV.
+It MUST NOT apply pseudo-supervision to a trainable student yet.
+
+## Why This Task Exists
+
+The Stage 5 gate requires a direct gradient to the missing head, but the teacher signal must be frozen, calibrated, auditable, and separated from observed truth before the pseudo-loss is wired.
+
+TASK-005A therefore establishes:
+
+1. frozen stop-gradient teacher evidence;
+2. disease-specific temperature calibration;
+3. separate positive/negative acceptance thresholds;
+4. soft cross-corpus TRAIN pseudo-targets for missing entries only;
+5. base confidence reliability weights;
+6. coverage/class-balance audit.
+
+TASK-005B will consume this artifact and prove the direct missing-head gradient.
 
 ## Required Reading
 
 1. AGENTS.md
-2. docs/PROJECT_REQUIREMENTS.md Sections 5, 8, 9, 10, 13, 14
-3. docs/PLAN.md Stage 4
-4. docs/PROGRESS_EN.md through MANAGER-DECISION-022
+2. docs/PROJECT_REQUIREMENTS.md Sections 2, 5, 8, 9, 10, 11, 12, 13, 14
+3. docs/PLAN.md Stage 5
+4. docs/PROGRESS_EN.md through MANAGER-DECISION-023
 5. docs/NEXT_TASK_EN.md
-6. src/fusion/data/wsm_av_fusion_datamodule.py
-7. src/fusion/models/av_f2_task_aware_directed.py
-8. configs/wsm_mm_pd_dep_v1/fusion/01_f1_shared_mtl.yaml
-9. configs/wsm_mm_pd_dep_v1/fusion/00_f0_gated_late.yaml
+6. docs/SOTA_REVIEW_EN.md Sections 2, 3, 5, 7, 8, 9, 11
+7. src/fusion/data/wsm_av_fusion_datamodule.py
+8. src/fusion/models/av_f2_task_aware_directed.py
+9. configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml
+10. src/common/loss/wsm_masked_sparse_loss.py
 
 ## Allowed Tracked Files
 
-- configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml
+- src/fusion/loss/ramps_r1_teacher.py
+- src/fusion/loss/__init__.py
+- scripts/common/prepare_ramps_r1_teacher_targets.py
 - docs/PROGRESS_EN.md
 
 No other tracked file may be modified.
 
-Generated runtime artifacts under logs/ must remain untracked unless repository policy already tracks them.
+No Chimera registry entry is required in this task because this is an offline teacher-calibration/target-preparation utility, not yet a training-selectable loss.
 
-## 1. Create the Fixed F2 Config
+## Fixed Teacher
 
-Create:
+Teacher architecture/config:
 
     configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml
 
-It must mirror the accepted F1 production config for all non-model training/data/instrumentation semantics.
+Frozen DEV-selected checkpoint:
 
-Use exactly:
+    logs/wsm_mm_pd_dep_v1/av_f2_task_aware_directed_2026-09-24_18-18_wsm_av_f2_task_aware_directed_model_f1b9902d/checkpoints/epoch=5_dev_mean_score=0.7746.pt
 
-    seed: 42
+Teacher selected DEV evidence:
 
-Experiment:
+    dev/mean_score = 0.774569
 
-    experiment_name: wsm_mm_pd_dep_v1
-    run_name: av_f2_task_aware_directed
+Task order:
 
-Data:
+    0 = depression
+    1 = parkinson
 
-    name: wsm_av_fusion_datamodule
+The teacher MUST be:
 
-Data params exactly:
+- loaded from the exact selected checkpoint;
+- set to eval mode;
+- have requires_grad=false for every parameter;
+- run under torch.inference_mode() or equivalent;
+- never updated;
+- never placed in an optimizer.
 
-    data_root: /media/maxim/Databases/WSM_NEW
-    audio_feature_cache_root: /media/maxim/Databases/WSM_NEW/features
-    video_cache_root: /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache
-    batch_size: 32
-    num_workers: 4
-    pin_memory: true
-    persistent_workers: true
-    shuffle_train: true
-    drop_last_train: false
+Cached teacher outputs are therefore detached/offline stop-gradient targets by construction.
 
-Model:
+## Fixed Data Inputs
 
-    name: wsm_av_f2_task_aware_directed_model
+Data root:
 
-Model params exactly:
+    /media/maxim/Databases/WSM_NEW
 
-    audio_feature_dim: 768
-    video_feature_dim: 512
-    hidden_dim: 192
-    fusion_hidden_dim: 192
-    relation_hidden_dim: 192
-    dropout: 0.2
-    num_tasks: 2
+Audio feature cache:
 
-Loss:
+    /media/maxim/Databases/WSM_NEW/features
 
-    name: wsm_masked_sparse_loss
+Video feature cache:
 
-Optimizer exactly as F1:
+    /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache
 
-    name: adamw_optimizer
-    lr: 0.0001
-    weight_decay: 0.01
+Use the accepted:
 
-Training exactly as F1:
+    wsm_av_fusion_datamodule
 
-    epochs: 30
-    device: cuda
-    mixed_precision: true
-    grad_clip_norm: 0.5
-    log_every_steps: 25
-    collect_cache: true
+Expected counts:
 
-Metrics:
+    train = 6325
+    dev = 933
+    joined_total = 8622
+    missing_audio = 0
+    missing_video = 0
 
-    []
+You MAY instantiate the DataModule even though it defines Test datasets, but this task MUST NOT iterate, infer, evaluate, calibrate, threshold-fit, or compute metrics on:
 
-Do not add scheduler, auxiliary loss, pseudo-labeling, task weights, flow matching, PAGB, or tuning parameters.
+    test_none
+    test_soft
+    test_hard
 
-## 2. Required Instrumentation
+Only TRAIN and DEV may be consumed.
 
-Use the same instrumentation and durable paths as F1:
+## Fixed Output Root
 
-- wsm_segment_metrics_callback with splits=[auto]
-- checkpoint_callback
-- snapshot_callback
-- early_stopping_callback
-- wsm_summary_callback
-- console_file_logger
-- mlflow_logger
+Write generated runtime artifacts outside Git tracking to:
 
-Checkpoint:
+    /media/maxim/Programs/Features/WSM/ramps_r1_f2_teacher_v1
 
-    log_path: logs
-    monitor: dev/mean_score
-    mode: max
-    save_top_k: 2
-    save_last: true
+Required artifacts:
 
-Use the same filename_template as F1.
+    teacher_calibration.json
+    train_missing_targets.pt
+    audit.json
 
-Early stopping:
+Do not add these artifacts to git.
 
-    monitor: dev/mean_score
-    mode: max
-    patience: 6
-    min_delta: 0.0005
+The preparation script must refuse to overwrite an existing non-empty output root unless an explicit --overwrite flag is supplied.
 
-Snapshot:
+Do not use --overwrite in the production TASK-005A run unless the existing artifact is first verified to be an incomplete artifact produced by this same task.
 
-    log_path: logs
-    include:
-      - src
-      - configs
-    save_code_zip: true
-    save_config: true
+## 1. Reusable Calibration/Acceptance Utilities
 
-Console:
+Implement in:
 
-    log_path: logs
-    log_file: train.log
-    console_level: INFO
-    file_level: INFO
+    src/fusion/loss/ramps_r1_teacher.py
 
-MLflow:
+The module must be deterministic and independent of Test data.
 
-    tracking_uri: sqlite:///logs/mlflow.db
+### Binary temperature scaling
 
-No Test metric, train loss, or other quantity may appear in any selector/monitor field.
+Implement a binary temperature scaler operating on logits.
 
-## 3. F1/F2 Config Equivalence Audit
+For one task:
 
-Before training, parse:
+    calibrated_logit = raw_logit / T
+    calibrated_prob = sigmoid(calibrated_logit)
 
-    configs/wsm_mm_pd_dep_v1/fusion/01_f1_shared_mtl.yaml
-    configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml
+with:
 
-Assert all non-model training/data/instrumentation semantics are identical.
+    T > 0
 
-Intentional semantic differences only:
+Fit one scalar temperature independently for each disease using ONLY observed DEV labels for that disease.
 
-- experiment_info.params.run_name;
-- model.name;
-- F2 adds relation_hidden_dim=192;
-- all common model params stay identical.
+Use a stable positive parameterization, e.g.:
 
-No difference is allowed in:
+    T = exp(log_temperature)
 
-- seed;
-- data;
-- loss;
-- optimizer;
-- training;
-- metrics;
-- callbacks;
-- loggers;
-- selector/early stopping.
+Use torch optimization only; do not install a dependency.
 
-## 4. Pre-Run Validation
+The fit objective is binary NLL/BCE-with-logits on the corresponding observed DEV task rows.
 
-Run:
+Use a deterministic optimizer setup.
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config \
-      --config-path configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml
+After fitting, require:
 
-Build through actual Chimera registries and verify:
+    finite(T)
+    0.05 <= T <= 20.0
 
-- DataModule builds;
-- F2 model builds;
-- masked sparse loss builds;
-- optimizer builds;
-- callbacks/loggers build;
-- no project-module warnings;
-- CUDA is available;
-- dataset counts:
-  - train=6325
-  - dev=933
-  - test_none=1364
-  - test_soft=1208
-  - test_hard=1014
-- joined_total=8622;
-- missing audio/video=0/0;
-- val_dataloader keys exactly:
-  - dev
-  - test_none
-  - test_soft
-  - test_hard
-- checkpoint and early stopping monitor exactly dev/mean_score, mode=max.
+If unconstrained optimization exits outside the allowed range, clamp only the final deployed temperature to the allowed range and recompute/report calibration metrics with the deployed value.
 
-Run one real production-size batch forward/loss/backward smoke before the full run. The smoke loss is only a structural check; do not interpret it as model quality.
+### Calibration metrics
 
-If CUDA or config/build/smoke fails, stop as blocked. Do not alter source/config to work around a failure.
+Implement reusable functions for:
 
-## 5. Real F2 Training
+- binary NLL/BCE;
+- Brier score;
+- ECE with 15 equal-width probability bins.
+
+Report these before and after temperature scaling for each disease.
+
+Also record:
+
+- number of observed DEV examples;
+- positive count;
+- negative count.
+
+Do not require ECE to monotonically improve; report the actual result.
+
+Temperature fitting is judged primarily by the fitted NLL objective and artifact validity, not by fabricating an ECE improvement.
+
+## 2. Manager-Fixed Class-Specific Threshold Policy
+
+Fit separate acceptance thresholds for positive and negative pseudo-labels for each disease using ONLY that disease's observed DEV labels after temperature calibration.
+
+Fixed parameters:
+
+    precision_target = 0.90
+    min_support = 10
+    threshold_step = 0.01
+
+Positive acceptance:
+
+    accept positive if p >= tau_pos
+
+Candidate positive thresholds:
+
+    0.50, 0.51, ..., 0.99
+
+For each candidate, compute precision among accepted positive predictions.
+
+Choose the LOWEST candidate threshold satisfying:
+
+    accepted support >= 10
+    precision >= 0.90
+
+This maximizes accepted coverage subject to the fixed reliability target.
+
+Negative acceptance:
+
+    accept negative if p <= tau_neg
+
+Candidate negative thresholds:
+
+    0.01, 0.02, ..., 0.50
+
+For each candidate, define negative precision as:
+
+    fraction of accepted rows whose observed label is 0
+
+Choose the HIGHEST candidate threshold satisfying:
+
+    accepted support >= 10
+    negative precision >= 0.90
+
+This maximizes accepted negative coverage subject to the fixed reliability target.
+
+If no candidate satisfies a class side:
+
+- mark that side disabled;
+- store threshold=null;
+- do NOT invent or relax a threshold;
+- continue the audit.
+
+Record for each disease/class side:
+
+- selected threshold or null;
+- enabled flag;
+- accepted DEV support;
+- accepted DEV precision;
+- accepted DEV recall/coverage;
+- precision_target;
+- min_support.
+
+Do not use Test to choose thresholds.
+
+## 3. TRAIN Missing-Head Soft Targets
+
+Run the frozen calibrated teacher over all canonical TRAIN rows.
+
+For each row and task:
+
+Observed entry:
+
+    observed_mask=true
+
+Then:
+
+- observed target remains authoritative;
+- pseudo_accept_mask=false;
+- pseudo_target=NaN;
+- pseudo_reliability=0;
+- never overwrite or duplicate observed supervision.
+
+Missing entry:
+
+    observed_mask=false
+
+Compute calibrated teacher probability p.
+
+Acceptance:
+
+- positive accepted if positive side enabled and p >= tau_pos;
+- negative accepted if negative side enabled and p <= tau_neg;
+- otherwise rejected.
+
+For an accepted missing entry:
+
+    pseudo_target = p
+
+The target remains SOFT. Do NOT hard-replace it with 0 or 1.
+
+Base R1 reliability:
+
+    pseudo_reliability = 2 * abs(p - 0.5)
+
+For rejected missing entries:
+
+    pseudo_target = NaN
+    pseudo_reliability = 0
+
+All pseudo targets/reliabilities must be detached CPU tensors in the saved artifact.
+
+R2 will later add uncertainty, independent modality agreement, and OOD evidence. Do not add those now.
+
+## 4. train_missing_targets.pt Contract
+
+Save a torch artifact containing at least:
+
+    version = "ramps-r1-f2-teacher-v1"
+
+    task_names = ["depression", "parkinson"]
+
+    segment_ids               # length 6325, canonical order
+    observed_mask             # bool [6325,2]
+    observed_targets          # float [6325,2], NaN for unknown
+    raw_teacher_logits        # float [6325,2]
+    calibrated_probs          # float [6325,2]
+    pseudo_accept_mask        # bool [6325,2]
+    pseudo_targets            # float [6325,2], NaN unless accepted missing
+    pseudo_reliability        # float [6325,2], zero unless accepted missing
+    pseudo_class              # int8 [6325,2], -1 rejected/not eligible, 0 accepted-negative, 1 accepted-positive
+
+    temperatures
+    thresholds
+    teacher_checkpoint_path
+    teacher_checkpoint_sha256
+    teacher_config_path
+    teacher_config_sha256
+
+Requirements:
+
+- exactly 6325 rows;
+- exactly one canonical TRAIN segment_id per row;
+- no duplicate segment_id;
+- observed_mask matches the DataModule targets;
+- observed target values are unchanged;
+- pseudo_accept_mask & observed_mask is always false;
+- pseudo_targets are NaN for every observed entry;
+- pseudo_targets are NaN for every rejected missing entry;
+- accepted pseudo targets are finite and strictly within [0,1];
+- accepted pseudo reliability is finite and within [0,1];
+- rejected/observed pseudo reliability is exactly zero.
+
+## 5. teacher_calibration.json Contract
+
+Record at least:
+
+- artifact version;
+- UTC generation timestamp;
+- teacher config path + SHA256;
+- teacher checkpoint path + SHA256;
+- teacher selected DEV Mean_Score as provenance only;
+- task order;
+- DataModule/cache roots;
+- canonical/join counts;
+- exact calibration procedure;
+- exact threshold-selection procedure;
+- per-task temperature;
+- raw/calibrated DEV NLL;
+- raw/calibrated DEV Brier;
+- raw/calibrated DEV ECE-15;
+- DEV observed support/positive/negative counts;
+- positive threshold audit;
+- negative threshold audit;
+- explicit statement:
+  "No Test rows or Test metrics were used."
+
+Do not include Test metric values in this artifact.
+
+## 6. audit.json Contract
+
+Audit the generated TRAIN pseudo-target cache.
+
+For each missing head separately:
+
+Depression pseudo-targets on rows where depression is missing.
+
+Parkinson pseudo-targets on rows where Parkinson is missing.
+
+Record:
+
+- missing-entry count;
+- accepted total;
+- rejected total;
+- coverage = accepted/missing;
+- accepted positive count;
+- accepted negative count;
+- accepted positive fraction;
+- mean/std/min/max calibrated probability among accepted;
+- mean/std/min/max pseudo reliability among accepted.
+
+Also record overall:
+
+- train_rows=6325;
+- train_missing_entries;
+- accepted_missing_entries;
+- accepted overall coverage;
+- observed overwrite violations=0;
+- duplicate segment ids=0;
+- nonfinite accepted targets=0;
+- pseudo values on observed entries=0;
+- pseudo acceptance on observed entries=0.
+
+IMPORTANT:
+
+The missing cross-corpus labels are unknown.
+
+Therefore DO NOT report or claim pseudo-label accuracy/precision on the missing TRAIN entries.
+
+The only precision numbers are the threshold-fitting precision measured on the corresponding observed-task DEV labels.
+
+## 7. Production Script
+
+Implement:
+
+    scripts/common/prepare_ramps_r1_teacher_targets.py
+
+Required CLI arguments/defaults must support the exact production command below.
+
+The script must:
+
+1. set deterministic seeds;
+2. build the accepted A+V DataModule;
+3. verify canonical counts;
+4. build/load the exact F2 model/checkpoint;
+5. freeze teacher;
+6. infer DEV only for calibration/threshold fitting;
+7. fit the two independent temperatures;
+8. fit class-specific thresholds on observed DEV only;
+9. infer TRAIN;
+10. build missing-only pseudo targets;
+11. validate all invariants;
+12. write the three artifacts atomically where practical;
+13. print a concise calibration + coverage summary.
+
+Do not import or iterate Test loaders.
+
+## Exact Production Command
 
 Run from repository root:
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
+      scripts/common/prepare_ramps_r1_teacher_targets.py \
+      --data-root /media/maxim/Databases/WSM_NEW \
+      --audio-feature-cache-root /media/maxim/Databases/WSM_NEW/features \
+      --video-cache-root /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache \
+      --teacher-config configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml \
+      --teacher-checkpoint logs/wsm_mm_pd_dep_v1/av_f2_task_aware_directed_2026-09-24_18-18_wsm_av_f2_task_aware_directed_model_f1b9902d/checkpoints/epoch=5_dev_mean_score=0.7746.pt \
+      --output-root /media/maxim/Programs/Features/WSM/ramps_r1_f2_teacher_v1 \
+      --precision-target 0.90 \
+      --min-support 10 \
+      --threshold-step 0.01 \
+      --ece-bins 15 \
+      --batch-size 64 \
+      --num-workers 4 \
+      --device cuda
 
-Do not interrupt a healthy run.
+If CUDA is unavailable, stop as blocked. Do not silently switch the production teacher inference to CPU.
 
-If it fails:
+## Required Verification
 
-- preserve traceback/logs/artifacts;
-- do not modify source or fixed config;
-- record the exact blocker;
-- update PROGRESS_EN.md;
-- commit/push evidence;
-- stop as blocked.
+Compile:
 
-## 6. Mandatory Metrics Every Epoch
+    python3 -m py_compile \
+      src/fusion/loss/ramps_r1_teacher.py \
+      src/fusion/loss/__init__.py \
+      scripts/common/prepare_ramps_r1_teacher_targets.py
 
-For EVERY completed epoch record:
+Run focused synthetic checks for:
 
-- train loss;
-- DEV depression UAR;
-- DEV depression MF1;
-- DEV depression Score;
-- DEV Parkinson UAR;
-- DEV Parkinson MF1;
-- DEV Parkinson Score;
-- DEV Mean_Score;
-- TEST_NONE depression UAR/MF1/Score;
-- TEST_NONE Parkinson UAR/MF1/Score;
-- TEST_NONE Mean_Score;
-- TEST_SOFT depression UAR/MF1/Score;
-- TEST_SOFT Parkinson UAR/MF1/Score;
-- TEST_SOFT Mean_Score;
-- TEST_HARD depression UAR/MF1/Score;
-- TEST_HARD Parkinson UAR/MF1/Score;
-- TEST_HARD Mean_Score.
+- temperature scaling with finite T;
+- ECE/Brier/NLL finite;
+- positive threshold selection;
+- negative threshold selection;
+- threshold-disabled behavior when precision/support cannot be met;
+- observed entries can never become pseudo entries;
+- soft pseudo targets remain probabilities;
+- reliability in [0,1].
 
-All required metrics must be finite.
+Then run the exact production command.
 
-All four streams must be present on every completed epoch.
+After production, load all three artifacts and assert the full contracts above.
 
-Important:
+Additionally verify teacher stop-gradient:
 
-- training loss is logged but is NOT a model-quality metric;
-- best epoch is NOT minimum loss;
-- best epoch is maximum dev/mean_score only.
+- all teacher parameters requires_grad=false;
+- no teacher parameter has a gradient;
+- no optimizer is instantiated for the teacher.
 
-Test metrics are monitoring-only.
+Verify no Test use by code inspection and runtime evidence:
 
-Do NOT:
+- script does not call val_dataloader() because that includes Test streams;
+- script accesses dm.val_dataset directly for DEV;
+- script accesses dm.train_dataset/train loader for TRAIN;
+- no test_none/test_soft/test_hard dataset is iterated;
+- no Test metric value is produced.
 
-- select by Test;
-- select by train loss;
-- tune relation_hidden_dim/gates using Test;
-- change thresholds using Test;
-- manually stop based on Test;
-- change hyperparameters after looking at Test.
+Then:
 
-## 7. Best Checkpoint Selection
+    git diff --check
+    git diff -- src/audio
+    git diff -- src/video
+    git diff -- src/fusion/models
+    git diff -- src/fusion/data
+    git status --short
 
-After completion/early stopping:
+Before commit inspect only:
 
-1. identify best epoch ONLY by maximum dev/mean_score;
-2. record exact checkpoint path;
-3. record DEV task UAR/MF1/Score and DEV Mean_Score;
-4. record TEST_NONE/SOFT/HARD task metrics from the SAME DEV-selected epoch;
-5. record top-2 checkpoints and last.pt;
-6. record train.log, summary.txt, code.zip;
-7. record exact MLflow experiment name, run ID, final status.
+    git diff -- \
+      src/fusion/loss/ramps_r1_teacher.py \
+      src/fusion/loss/__init__.py \
+      scripts/common/prepare_ramps_r1_teacher_targets.py \
+      docs/PROGRESS_EN.md
 
-## 8. DEV Expert-Gate Diagnostic
+After commit/push:
 
-Using the DEV-selected checkpoint, run one post-hoc evaluation over all 933 DEV samples with no parameter updates.
-
-For each task:
-
-    depression
-    parkinson
-
-and each expert:
-
-    audio_to_video
-    video_to_audio
-
-record task_expert_weights:
-
-- mean;
-- std;
-- min;
-- max.
-
-Also verify:
-
-- finite values;
-- each task's expert weights sum to 1 on all DEV rows;
-- no Test rows used;
-- diagnostic does not affect checkpoint selection.
-
-Optionally report mean task_relation_features L2 norm per task if it is directly available without source changes. Do not add new code solely for that optional statistic.
-
-## 9. DEV Comparison
-
-Compare the DEV-selected F2 result against:
-
-F1:
-- DEV Mean_Score=0.773841
-- depression Score=0.689708
-- Parkinson Score=0.857973
-
-F0:
-- DEV Mean_Score=0.744211
-- depression Score=0.642220
-- Parkinson Score=0.846201
-
-Frozen historical audio:
-- DEV Mean_Score=0.787827
-- depression Score=0.747918
-- Parkinson Score=0.827735
-
-Selected video V2:
-- DEV Mean_Score=0.706572
-- depression Score=0.620101
-- Parkinson Score=0.793043
-
-Report:
-
-    F2 - F1 DEV Mean_Score delta
-    F2 - F0 DEV Mean_Score delta
-    F2 - audio DEV Mean_Score delta
-    F2 - video V2 DEV Mean_Score delta
-
-Also report per-task DEV Score deltas.
-
-The primary Stage 4 result is F2 versus F1 on DEV.
-
-Test comparisons may be reported descriptively but MUST NOT determine the conclusion.
+    git status --short
+    git rev-parse --abbrev-ref HEAD
+    git rev-parse HEAD
+    git diff --stat origin/main...HEAD
+    git diff --name-only origin/main...HEAD
 
 ## Acceptance Criteria
 
-Pass if:
+The task passes if:
 
-- F2 YAML is self-contained and valid;
-- F1/F2 config equivalence audit passes;
-- CUDA gate passes;
-- real production-size forward/loss/backward smoke passes;
-- real training completes or configured early stopping ends it;
-- DEV + three Test streams report full task metrics every epoch;
-- all required metrics finite;
-- best checkpoint selected strictly by dev/mean_score;
-- train loss is never used for model selection;
-- Test metrics never influence selection/tuning;
-- exact MLflow run ID/status recorded;
-- all-DEV task/expert gate diagnostics recorded;
-- F2 vs F1 DEV deltas recorded;
-- no source changes;
-- no dependency installation;
-- no pseudo-labeling/flow matching/PAGB;
-- no Stage 5 work;
+- frozen selected F2 teacher loads successfully;
+- teacher is fully stop-gradient;
+- only DEV observed labels are used for calibration and threshold fitting;
+- no Test row/metric is consumed;
+- separate temperature exists for depression and Parkinson;
+- separate positive/negative threshold policy is executed for each disease;
+- class side is disabled rather than relaxed if the fixed precision/support target cannot be met;
+- full TRAIN inference covers exactly 6325 unique rows;
+- pseudo targets exist only on missing entries;
+- observed truth is never overwritten;
+- pseudo targets remain soft calibrated probabilities;
+- confidence reliability is detached and in [0,1];
+- required calibration metrics are recorded;
+- coverage/class balance is recorded separately per missing head;
+- cross-corpus missing-target correctness is NOT claimed;
+- at least one accepted missing pseudo-target exists for each disease head; otherwise report Stage 5 R1 blocked rather than fabricating acceptance;
+- no student training;
+- no training config;
+- no Test metrics;
+- no R2/R3/R4;
 - text/description remains deferred;
 - src/audio unchanged;
 - src/video unchanged;
-- accepted A+V DataModule unchanged;
 - F0/F1/F2 source unchanged;
+- A+V DataModule unchanged;
 - git diff --check passes;
-- tracked diff contains only:
-  - configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml
-  - docs/PROGRESS_EN.md
-- branch codex/task-004g committed and pushed;
+- tracked diff contains only the four allowed paths;
+- branch codex/task-005a committed and pushed;
 - main/master untouched.
 
 ## Required PROGRESS_EN Update
 
-Append TASK-004G evidence without erasing prior records.
+Append TASK-005A evidence without erasing prior records.
 
 Record:
 
 - branch;
-- evidence commit SHA;
+- implementation commit SHA;
 - push result;
-- config path;
-- config equivalence result;
-- exact training command;
-- GPU/device;
-- dataset/join counts;
-- production smoke loss, explicitly labeled structural only;
-- epochs completed;
-- early-stopping status;
-- FULL epoch table with train loss plus all DEV/TEST task UAR/MF1/Score and Mean_Score;
-- best epoch selected by dev/mean_score;
-- best DEV metrics;
-- same-epoch Test metrics;
-- top-2/last checkpoint paths;
-- run directory, train.log, summary.txt, code.zip;
-- MLflow experiment/run ID/status;
-- DEV gate statistics per task/expert;
-- F2 versus F1/F0/audio/video-V2 DEV deltas;
-- explicit statement that loss was not used for selection;
-- explicit Test-selector firewall confirmation;
-- confirmation no source changes;
-- confirmation RAMPS not started;
+- exact teacher config/checkpoint paths;
+- checkpoint/config SHA256;
+- output artifact root and filenames;
+- CUDA/device;
+- train/dev counts and join audit;
+- per-task observed DEV support and class counts;
+- per-task fitted temperature;
+- raw/calibrated NLL, Brier, ECE-15;
+- selected positive/negative thresholds or disabled state;
+- threshold DEV support/precision/coverage;
+- per-missing-head TRAIN accepted/rejected counts;
+- accepted positive/negative counts and coverage;
+- reliability statistics;
+- proof observed truth was not overwritten;
+- proof teacher stop-gradient;
+- explicit no-Test statement;
+- explicit statement that no pseudo-target correctness claim is possible for the genuinely missing TRAIN labels;
+- confirmation no student training;
+- confirmation R2/R3/R4 not started;
 - confirmation text/description deferred;
 - src/audio unchanged;
 - src/video unchanged;
-- Stage 4 status;
+- Stage 5 R1 status;
 - recommended next atomic step only.
 
 ## Required Handoff
@@ -476,23 +620,20 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch codex/task-004g;
-- evidence commit SHA;
+- branch codex/task-005a;
+- implementation commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
-- config path;
-- epochs completed;
-- best epoch;
-- best dev/mean_score;
-- DEV depression/Parkinson UAR/MF1/Score;
-- same-epoch TEST_NONE/SOFT/HARD task metrics and Mean_Scores;
-- F2-F1 DEV delta;
-- DEV expert-gate statistics;
-- exact MLflow run ID/status;
-- explicit statement that train loss was NOT used for selection;
-- selector firewall confirmation;
-- no source changes;
-- RAMPS not started;
+- teacher checkpoint;
+- fitted temperatures;
+- positive/negative thresholds or disabled sides;
+- calibration metrics;
+- TRAIN pseudo-target coverage/class counts for both missing heads;
+- output artifact paths;
+- stop-gradient confirmation;
+- no-Test confirmation;
+- no student training;
+- no cross-corpus pseudo-label accuracy claim;
 - text/description deferred;
 - src/audio unchanged;
 - src/video unchanged.
