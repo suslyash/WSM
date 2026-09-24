@@ -1,4 +1,4 @@
-# TASK-002M: Run the First Real V1 Video Training Experiment
+# TASK-002N: Implement and Register the Prototype-Aware V2 Video Model Contract
 
 ## Role
 
@@ -6,350 +6,463 @@ You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.
 
 Required branch:
 
-    codex/task-002m
+    codex/task-002n
 
-This task explicitly authorizes the first real/full V1 video training experiment.
-
-Do not change model architecture, preprocessing, DataModule semantics, loss, optimizer, batch size, epoch count, seed, selector, callbacks, or Test protocol definitions in this task.
+Do not create a V2 training config, do not run training, do not change preprocessing/cache/DataModule semantics, and do not modify src/audio.
 
 ## Goal
 
-Run the accepted production V1 video training config exactly as frozen after TASK-002L2:
+Implement the second and final Stage 2 video family:
 
-    configs/wsm_mm_pd_dep_v1/video/00_depart_v1.yaml
+    V2 = accepted V1 temporal video encoder
+         + task-specific class prototypes
+         + classwise prototype/MLP gating
 
-Use the accepted full-coverage DEPART-compatible cache:
+The model must preserve the exact project output contract:
 
-    /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache
+    logits [B,2] ordered [depression, parkinson]
 
-Train the real V1 video model on the full TRAIN dataset and evaluate all four named streams every epoch:
+Unknown labels remain handled only by the existing masked sparse loss.
 
-    dev
-    test_none
-    test_soft
-    test_hard
+This task is model-contract implementation and synthetic verification only.
 
-The sole model-selection criterion is:
+## Manager-Fixed Minimal V2 Contract
 
-    dev/mean_score
+For each task t in {depression, parkinson}:
 
-Test metrics are mandatory epoch-level monitoring outputs only.
+1. reuse the V1 video encoder through pooled representation h in R^H;
+2. maintain two learned class prototypes:
+   - p_t,0 for negative class;
+   - p_t,1 for positive class;
+3. L2-normalize h and both prototypes;
+4. compute cosine similarities:
+   - s_t,0 = cos(h, p_t,0)
+   - s_t,1 = cos(h, p_t,1)
+5. define the prototype logit:
+   - proto_logit_t = prototype_scale * (s_t,1 - s_t,0)
+6. compute a V1-style task MLP logit:
+   - mlp_logit_t
+7. compute a learned scalar gate:
+   - gate_t = sigmoid(gate_mlp_t(h))
+8. final task logit:
+   - logit_t = (1 - gate_t) * mlp_logit_t + gate_t * proto_logit_t
 
-## Fixed Experiment Contract
+Stack task logits into [B,2].
 
-Config:
-
-    configs/wsm_mm_pd_dep_v1/video/00_depart_v1.yaml
-
-Seed:
-
-    42
-
-Experiment name:
-
-    wsm_mm_pd_dep_v1
-
-Run name:
-
-    depart_v1_clip_yolo_transformer
-
-Data:
-
-- train = 6325
-- dev = 933
-- test_none = 1364
-- test_soft = 1208
-- test_hard = 1014
-- unavailable counts = 0 for every stream
-
-Model:
-
-- video_feature_dim=512
-- hidden_dim=192
-- num_layers=2
-- num_heads=4
-- ff_mult=4
-- dropout=0.2
-- sequence_steps=60
-- num_tasks=2
-- outputs [B,2] independent logits ordered [depression, parkinson]
-
-Loss:
-
-    wsm_masked_sparse_loss
-
-Optimizer:
-
-    AdamW
-    lr=1e-4
-    weight_decay=0.01
-
-Training:
-
-- epochs=30
-- device=cuda
-- mixed_precision=true
-- grad_clip_norm=0.5
-- log_every_steps=25
-- collect_cache=true
-
-Automatic selector:
-
-    dev/mean_score
-    mode=max
-
-Early stopping:
-
-- monitor=dev/mean_score
-- mode=max
-- patience=6
-- min_delta=0.0005
-
-Checkpoint:
-
-- monitor=dev/mean_score
-- mode=max
-- save_top_k=2
-- save_last=true
-
-Do not change any of the above.
+This is the fixed initial V2 design. Do not add attention over prototypes, extra task tokens, cross-task fusion, pseudo-labeling, or a contrastive loss in this task.
 
 ## Required Reading
 
 1. AGENTS.md
-2. docs/PROJECT_REQUIREMENTS.md Sections 5, 8, 9, 10, 13, 14
-3. docs/PLAN.md Stage 2
-4. docs/PROGRESS_EN.md through MANAGER-DECISION-013
+2. docs/PROJECT_REQUIREMENTS.md Sections 2, 3, 7, 8, 11, 13, 14
+3. Stage 2 in docs/PLAN.md
+4. docs/PROGRESS_EN.md through MANAGER-DECISION-014
 5. docs/NEXT_TASK_EN.md
-6. configs/wsm_mm_pd_dep_v1/video/00_depart_v1.yaml
+6. src/video/models/depart_v1.py
+7. src/common/loss/wsm_masked_sparse_loss.py
+8. src/chimera_plugin.py
 
 ## Allowed Tracked Files
 
+- src/video/models/depart_v2.py
+- src/video/models/__init__.py
+- src/chimera_plugin.py
 - docs/PROGRESS_EN.md
 
-No tracked source or config file may be modified in this task.
+No other tracked file may be modified.
 
-Generated runtime artifacts under logs/ are expected and must remain untracked unless the repository already tracks a specific runtime artifact type.
+## Registry Key
 
-Do not modify src/audio.
+Register:
 
-## Pre-Run Gate
+    wsm_video_depart_v2_model
 
-Before launching the real run, verify:
+Do not alter the V1 registry key or implementation.
 
-    git status --short
+## Fixed Constructor Defaults
 
-The task branch must have no unexpected user changes.
+Use:
 
-Run:
+    video_feature_dim=512
+    hidden_dim=192
+    num_layers=2
+    num_heads=4
+    ff_mult=4
+    dropout=0.2
+    sequence_steps=60
+    num_tasks=2
+    prototype_scale=10.0
+    gate_hidden_dim=64
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config \
-      --config-path configs/wsm_mm_pd_dep_v1/video/00_depart_v1.yaml
+num_tasks must remain exactly 2.
 
-Confirm:
+## Encoder Contract
 
-- config valid;
-- CUDA available;
-- full DataModule counts are exactly accepted;
-- val_dataloader() keys exactly:
-  dev, test_none, test_soft, test_hard;
-- checkpoint and early stopping monitor only dev/mean_score;
-- no Test selector reference;
-- durable logs/ paths exist or can be created.
+The temporal encoder path must remain architecturally equivalent to V1:
 
-If CUDA is unavailable, TASK-002M is blocked. Do not silently switch this full experiment to CPU.
+- input LayerNorm;
+- Linear to hidden_dim;
+- GELU;
+- Dropout;
+- learned positional embeddings;
+- TransformerEncoder;
+- output LayerNorm;
+- masked mean pooling.
 
-## Real Training Command
+You MAY factor/reuse code only if it does not modify depart_v1.py in this task.
 
-Run from repository root:
+Simplest acceptable implementation: duplicate the small V1 encoder structure into depart_v2.py.
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/video/00_depart_v1.yaml
+Do not refactor V1.
 
-Do not interrupt a healthy run.
+## Prototype Parameters
 
-If the run fails:
+Store learned prototypes as a parameter with shape:
 
-- preserve logs and traceback;
-- do not change code/config in this task;
-- classify the exact runtime blocker;
-- update PROGRESS_EN.md;
-- commit/push the evidence;
-- stop as blocked.
+    [2,2,H]
 
-## Epoch-Level Monitoring Requirements
+ordered:
 
-For EVERY completed epoch, collect/report at least:
+    task 0 = depression
+    task 1 = parkinson
+    class 0 = negative
+    class 1 = positive
 
-DEV:
+Initialize prototypes with a small normal distribution, e.g. std=0.02.
 
-- dev/depression/uar
-- dev/depression/mf1
-- dev/depression/score
-- dev/parkinson/uar
-- dev/parkinson/mf1
-- dev/parkinson/score
-- dev/mean_score
+During forward:
 
-TEST_NONE:
+- normalize prototypes along H;
+- normalize pooled features along H;
+- cosine similarities shape must be [B,2,2].
 
-- test_none/depression/uar
-- test_none/depression/mf1
-- test_none/depression/score
-- test_none/parkinson/uar
-- test_none/parkinson/mf1
-- test_none/parkinson/score
-- test_none/mean_score
+Prototype parameters must receive gradients through the existing masked sparse BCE because final logits depend on prototype evidence.
 
-TEST_SOFT:
+## MLP Branch
 
-- test_soft/depression/uar
-- test_soft/depression/mf1
-- test_soft/depression/score
-- test_soft/parkinson/uar
-- test_soft/parkinson/mf1
-- test_soft/parkinson/score
-- test_soft/mean_score
+For each task use an independent scalar MLP head equivalent in capacity to V1:
 
-TEST_HARD:
+    LayerNorm(H)
+    Dropout
+    Linear(H,H)
+    GELU
+    Dropout
+    Linear(H,1)
 
-- test_hard/depression/uar
-- test_hard/depression/mf1
-- test_hard/depression/score
-- test_hard/parkinson/uar
-- test_hard/parkinson/mf1
-- test_hard/parkinson/score
-- test_hard/mean_score
+Return stacked MLP logits [B,2].
 
-Also record:
+## Gate Branch
 
-- train loss;
-- validation/evaluation loss if emitted;
-- learning rate if emitted;
-- epoch duration if available.
+For each task use an independent scalar gate MLP:
 
-Test metrics are monitoring only.
+    LayerNorm(H)
+    Linear(H, gate_hidden_dim)
+    GELU
+    Dropout
+    Linear(gate_hidden_dim,1)
+    Sigmoid
 
-Do NOT:
+Gate output shape:
 
-- pick an epoch because of Test;
-- change threshold based on Test;
-- stop manually because Test worsens;
-- alter any hyperparameter based on Test.
+    [B,2]
 
-## Best Checkpoint Selection
+Every gate value must lie strictly within [0,1].
 
-After training/early stopping completes:
+Do not condition gate inputs on:
 
-1. determine the best epoch ONLY by maximum dev/mean_score;
-2. record the exact best checkpoint path;
-3. record the best epoch number;
-4. record the best dev task metrics and dev/mean_score;
-5. record the test_none/test_soft/test_hard metrics from THAT SAME DEV-selected epoch for comparative monitoring only;
-6. do not compare Test epochs to choose a different checkpoint.
+- task_id metadata;
+- corpus;
+- labels;
+- observed_mask;
+- split;
+- Test protocol identity.
 
-Also record:
+Gate may use only the pooled video representation.
 
-- final/last epoch;
-- whether early stopping triggered;
-- total epochs completed;
-- top-2 checkpoint paths;
-- last checkpoint path;
-- snapshot location;
-- console log path;
-- MLflow experiment/run identifier if available.
+## Final Output Contract
 
-## Historical Comparison
+Return ModelOutput with:
 
-For context only, compare the DEV-selected V1 checkpoint to the frozen historical audio reference already recorded in PROGRESS_EN.md:
+    preds: final logits [B,2]
 
-Audio historical:
+and aux containing at least:
 
-- DEV Mean_Score = 0.787827
-- depression Score = 0.747918
-- Parkinson Score = 0.827735
-- TEST_NONE Mean_Score = 0.809486
-- TEST_SOFT Mean_Score = 0.815156
-- TEST_HARD Mean_Score = 0.828135
+    features                 -> pooled [B,H]
+    task_logits              -> depression/parkinson final logits
+    mlp_logits               -> [B,2]
+    prototype_logits         -> [B,2]
+    prototype_similarities   -> [B,2,2]
+    prototype_gates          -> [B,2]
+    normalized_prototypes    -> [2,2,H]
 
-This comparison is descriptive only.
+Do not apply sigmoid to final logits.
 
-Do not select or modify the V1 model based on those Test numbers.
+## Contrastive-Ablation Preparation
 
-## Required Run Audit
+Do NOT add contrastive loss now.
 
-After the run, verify:
+The aux contract above must be sufficient for a later controlled prototype contrastive loss/ablation to access:
 
-- all four evaluation prefixes were present on every completed epoch;
-- selector callback used only dev/mean_score;
-- checkpoint filenames/metadata correspond to DEV selection;
-- no NaN/Inf loss;
-- no NaN/Inf required metric;
-- no missing task metric;
-- Test dataset counts stayed 1364/1208/1014;
-- full cache root remained the accepted fullframe-fallback cache;
-- no source/config file changed during the run;
-- src/audio unchanged.
+- normalized pooled representation;
+- normalized task/class prototypes;
+- classwise similarities.
 
-If any required metric stream disappears on any completed epoch, treat the run as invalid/blocked and report it.
+If needed, also expose:
+
+    normalized_features -> [B,H]
+
+Do not use labels inside forward.
+
+## Mask/Shape Semantics
+
+Preserve V1 validation semantics:
+
+- video [B,T,512];
+- video_mask [B,T];
+- 1 <= T <= 60;
+- every sample must have at least one valid frame;
+- masked temporal positions excluded from attention/pooling;
+- changing masked temporal feature values must not change logits in eval mode.
+
+## Chimera Factory
+
+Context-aware factory must:
+
+- read data.video_feature_dim if available;
+- enforce data.num_tasks == 2 if present;
+- default video_feature_dim=512;
+- default num_tasks=2.
+
+Update src/chimera_plugin.py with explicit import:
+
+    video.models.depart_v2
+
+Required project import failures must not be hidden as optional warnings.
 
 ## Acceptance Criteria
 
-The task passes if:
-
-- production config validates;
-- CUDA full training launches successfully;
-- real training completes or ends via configured early stopping;
-- no runtime exception;
-- all four streams are evaluated every completed epoch;
-- all required metrics are finite;
-- best checkpoint is selected strictly by dev/mean_score;
-- top-2 + last checkpoints are preserved;
-- durable logs/snapshot/MLflow artifacts are preserved;
-- Test metrics are reported but never used as selector inputs;
-- no architecture/config/hyperparameter change occurred;
-- no dependency install;
+- MODELS contains wsm_video_depart_v2_model;
+- V1 registry remains intact;
+- plugin imports V2 with no project warning;
+- input [B,60,512] + bool mask works;
+- output.preds [B,2];
+- no task_id selection;
+- no 3-class softmax;
+- prototype tensor [2,2,H];
+- prototype similarities [B,2,2];
+- MLP logits [B,2];
+- prototype logits [B,2];
+- gates [B,2] in [0,1];
+- final logits exactly equal the documented convex gate blend;
+- mask invariance passes;
+- all-invalid sample raises ValueError;
+- wsm_masked_sparse_loss accepts output;
+- forward/loss/backward produces finite scalar loss;
+- trainable prototype parameters receive finite nonzero gradients on a synthetic batch with observed labels for both tasks;
+- at least one gate parameter receives finite gradient;
+- masked NaN labels remain unsupervised;
+- no training config;
+- no training run;
+- no Test metric computation;
 - src/audio unchanged;
-- tracked diff contains only docs/PROGRESS_EN.md;
-- branch codex/task-002m committed and pushed;
-- main/master untouched.
+- python compilation passes;
+- registry smoke passes;
+- git diff --check passes;
+- branch codex/task-002n committed and pushed;
+- main/master untouched;
+- tracked diff contains only the four allowed paths.
+
+## Exact Verification Commands
+
+Compile:
+
+    python3 -m py_compile \
+      src/video/models/depart_v2.py \
+      src/video/models/__init__.py \
+      src/chimera_plugin.py
+
+Registry smoke:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import warnings
+    from chimera_ml.core.registry import MODELS
+    import chimera_plugin
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        chimera_plugin.register()
+
+    warnings_v2 = [
+        str(x.message)
+        for x in caught
+        if "Failed to import" in str(x.message)
+        and "video.models.depart_v2" in str(x.message)
+    ]
+    assert not warnings_v2, warnings_v2
+    assert "wsm_video_depart_v1_model" in MODELS.keys()
+    assert "wsm_video_depart_v2_model" in MODELS.keys()
+    print("V2 registry smoke passed")
+    PY
+
+Synthetic V2 smoke:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import math
+    import torch
+
+    from common.loss.wsm_masked_sparse_loss import WSMMaskedSparseLoss
+    from video.models.depart_v2 import WSMVideoDepartV2Model
+
+    class FakeBatch:
+        def __init__(self, video, video_mask, targets=None, observed=None):
+            self.inputs = {"video": video}
+            self._video_mask = video_mask
+            self.targets = targets
+            self._observed = observed
+
+        def get_masks(self, name):
+            if name == "video_mask":
+                return self._video_mask
+            if name == "observed_mask":
+                return self._observed
+            raise KeyError(name)
+
+    torch.manual_seed(11)
+
+    model = WSMVideoDepartV2Model(
+        video_feature_dim=512,
+        hidden_dim=64,
+        num_layers=1,
+        num_heads=4,
+        ff_mult=2,
+        dropout=0.0,
+        sequence_steps=60,
+        prototype_scale=10.0,
+        gate_hidden_dim=16,
+    )
+
+    video = torch.randn(4, 60, 512)
+    mask = torch.ones(4, 60, dtype=torch.bool)
+    mask[0, 49:] = False
+    mask[1, 37:] = False
+
+    model.eval()
+    batch = FakeBatch(video, mask)
+    out = model(batch)
+
+    assert tuple(out.preds.shape) == (4,2)
+    assert tuple(out.aux["features"].shape) == (4,64)
+    assert tuple(out.aux["mlp_logits"].shape) == (4,2)
+    assert tuple(out.aux["prototype_logits"].shape) == (4,2)
+    assert tuple(out.aux["prototype_similarities"].shape) == (4,2,2)
+    assert tuple(out.aux["prototype_gates"].shape) == (4,2)
+    assert tuple(out.aux["normalized_prototypes"].shape) == (2,2,64)
+
+    gates = out.aux["prototype_gates"]
+    assert torch.all(gates >= 0) and torch.all(gates <= 1)
+
+    expected = (
+        (1.0 - gates) * out.aux["mlp_logits"]
+        + gates * out.aux["prototype_logits"]
+    )
+    assert torch.allclose(out.preds, expected, atol=1e-6, rtol=1e-6)
+
+    changed = video.clone()
+    changed[~mask] = 1e6
+    changed_out = model(FakeBatch(changed, mask))
+    assert torch.allclose(out.preds, changed_out.preds, atol=1e-5, rtol=1e-5)
+
+    bad = mask.clone()
+    bad[0] = False
+    try:
+        model(FakeBatch(video, bad))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("all-invalid sample must fail")
+
+    targets = torch.tensor([
+        [1.0, float("nan")],
+        [0.0, float("nan")],
+        [float("nan"), 1.0],
+        [float("nan"), 0.0],
+    ])
+    observed = torch.tensor([
+        [True, False],
+        [True, False],
+        [False, True],
+        [False, True],
+    ])
+
+    model.train()
+    train_batch = FakeBatch(video, mask, targets, observed)
+    train_out = model(train_batch)
+    loss = WSMMaskedSparseLoss()(train_out, train_batch)
+
+    assert loss.ndim == 0
+    assert math.isfinite(float(loss.detach()))
+    loss.backward()
+
+    assert model.class_prototypes.grad is not None
+    assert torch.isfinite(model.class_prototypes.grad).all()
+    assert float(model.class_prototypes.grad.abs().sum()) > 0
+
+    gate_grads = [
+        p.grad
+        for name, p in model.named_parameters()
+        if "gate" in name and p.grad is not None
+    ]
+    assert gate_grads
+    assert all(torch.isfinite(g).all() for g in gate_grads)
+
+    print("V2 prototype/gate forward-loss-backward smoke passed", float(loss.detach()))
+    PY
+
+Then:
+
+    git diff --check
+    git diff -- src/audio
+    git status --short
+
+Before commit inspect only:
+
+    git diff -- \
+      src/video/models/depart_v2.py \
+      src/video/models/__init__.py \
+      src/chimera_plugin.py \
+      docs/PROGRESS_EN.md
+
+After commit/push:
+
+    git status --short
+    git rev-parse --abbrev-ref HEAD
+    git rev-parse HEAD
+    git diff --stat origin/main...HEAD
+    git diff --name-only origin/main...HEAD
 
 ## Required PROGRESS_EN Update
-
-Append TASK-002M evidence without erasing prior records.
 
 Record:
 
 - branch;
-- implementation/evidence commit SHA;
+- implementation commit SHA;
 - push result;
-- exact training command;
-- config path and git starting SHA;
-- GPU/device details if available;
-- epochs completed;
-- whether early stopping triggered;
-- best epoch selected by dev/mean_score;
-- best checkpoint path;
-- top-2 and last checkpoint paths;
-- snapshot/log/MLflow locations;
-- full epoch-by-epoch table containing at minimum:
-  - epoch;
-  - dev depression UAR/MF1/Score;
-  - dev Parkinson UAR/MF1/Score;
-  - dev Mean_Score;
-  - test_none Mean_Score;
-  - test_soft Mean_Score;
-  - test_hard Mean_Score;
-  - train loss;
-- exact Test task metrics at the DEV-selected best epoch;
-- historical audio comparison;
-- confirmation every completed epoch contained all four metric streams;
-- confirmation Test never drove selection;
-- confirmation no source/config changes;
+- registry key;
+- exact prototype tensor/order;
+- prototype logit equation;
+- gate equation;
+- final blend equation;
+- fixed defaults;
+- aux contract;
+- mask-invariance result;
+- forward/loss/backward result;
+- prototype-gradient result;
+- gate-gradient result;
+- confirmation no contrastive loss yet;
+- confirmation no config/training/Test metrics;
 - src/audio unchanged;
-- Stage 2 status and recommended next atomic step.
-
-Do not call smoke metrics research results.
+- Stage 2 remains in V2 implementation;
+- recommended next atomic step only.
 
 ## Required Handoff
 
@@ -364,19 +477,16 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch codex/task-002m;
-- evidence commit SHA;
+- branch codex/task-002n;
+- implementation commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
-- epochs completed;
-- best epoch;
-- best dev/mean_score;
-- best DEV depression/Parkinson Scores;
-- same-epoch test_none/test_soft/test_hard Mean_Scores;
-- checkpoint/log/MLflow paths;
-- early-stopping status;
-- comparison with frozen historical audio reference;
-- Test selector firewall confirmation;
+- registry key;
+- output/aux shapes;
+- prototype gradient result;
+- gate gradient result;
+- no contrastive loss;
+- no training/Test metrics;
 - src/audio unchanged.
 
 Stop after this task.
