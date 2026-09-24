@@ -2183,3 +2183,36 @@ Exact verification:
 Blocker: reconcile the mandated residual/trainable parameter counts with the accepted F1-temporal model in a separately authorized narrow task. Do not train until the exact count gate and subsequent optimizer-ID gate pass.
 
 Recommended next atomic task: manager-authorized investigation/correction of the residual-head parameter-count contract only; no training or Test evaluation.
+
+
+### MANAGER-DECISION-027 — Accept TASK-004I2 optimizer repair and correct the manager-side parameter-count gate
+
+Status: optimizer repair accepted; pre-training evidence rerun required.
+
+- TASK-004I2 optimizer repair is integrated through PR #32 as `bc99c19305872afd9f77c189594f4d782814ed08`.
+- The new `wsm_trainable_adamw_optimizer` is accepted. It filters generically by `parameter.requires_grad`, preserves AdamW kwargs, rejects an empty trainable set, and does not special-case the audio model.
+- The strong-audio config now correctly uses `wsm_trainable_adamw_optimizer`; lr=1e-4 and weight_decay=0.01 are unchanged.
+- The TASK-004I2 stop was caused by an incorrect manager-side scalar-count expectation, not by an implementation/model defect.
+- The accepted TASK-004H residual head is:
+  `LayerNorm(192) -> Linear(192,192) -> GELU -> Dropout -> Linear(192,1)`.
+- Exact residual-head parameter arithmetic:
+  - LayerNorm(192): 192 weights + 192 biases = 384;
+  - Linear(192,192): 192*192 + 192 = 37,056;
+  - Linear(192,1): 192 + 1 = 193;
+  - one residual head total = 37,633;
+  - two residual heads total = 75,266.
+- Therefore the correct trainable scalar counts are:
+  - video_projection = 99,520;
+  - shared_fusion = 111,744;
+  - residual_heads = 75,266;
+  - total trainable = 286,530.
+- The correct trainable parameter-object count remains 22. Frozen audio remains 105 parameter objects / 3,031,880 scalar parameters.
+- The prior manager requirements `residual_heads=74,178` and `trainable total=285,442` are revoked as arithmetic errors. Do NOT change the accepted F1-temporal model to match those incorrect values.
+- Before any real training, one evidence-only rerun must prove:
+  - optimizer object IDs equal the exact requires_grad=true object IDs;
+  - optimizer has zero intersection with frozen parameter IDs;
+  - canonical DEV frozen-base reproduction still passes;
+  - one real TRAIN batch forward/loss/backward passes with frozen audio gradients absent and trainable branch gradients finite/nonzero.
+- No model/config/source change is authorized in this rerun except appending PROGRESS evidence.
+
+Recommended next atomic task: TASK-004I2B — rerun the complete strong-audio pre-training firewall with corrected parameter-count expectations and no code/config changes. If all gates pass, then authorize TASK-004I3 training.
