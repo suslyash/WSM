@@ -1,4 +1,4 @@
-# TASK-005A: Calibrate the Frozen F2 Disease Teachers and Build the Audited RAMPS-R1 TRAIN Missing-Head Target Cache
+# TASK-004H: Implement the Frozen Strong-Temporal-Audio F1 Residual A+V Contract and Reproduce the Historical Audio DEV Reference
 
 ## Role
 
@@ -6,529 +6,667 @@ You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.
 
 Required branch:
 
-    codex/task-005a
+    codex/task-004h
 
-Do not train a student.
-Do not modify F0/F1/F2 models.
-Do not modify the A+V DataModule.
-Do not modify src/audio or src/video.
-Do not evaluate or iterate any Test protocol.
-Do not start RAMPS R2/R3/R4.
-Do not add text/description work.
+This task supersedes the previously assigned TASK-005A before execution.
+
+Do not start RAMPS.
+Do not create a training config.
+Do not run a new fusion training experiment.
+Do not retrain or modify the audio baseline.
+Do not modify src/audio.
+Do not modify the accepted A+V DataModule.
+Do not modify existing F0/F1/F2 models.
+Do not start text/description work.
 
 ## Goal
 
-Start Stage 5 RAMPS R1 with an auditable frozen-teacher target artifact.
+Remove the main confound in the current fusion ladder.
 
-Use the DEV-selected F2 checkpoint as the frozen teacher, calibrate each disease head independently using ONLY DEV rows where that disease label is observed, fit separate positive/negative acceptance thresholds from that same observed-task DEV data, and then produce soft calibrated pseudo-targets for ONLY the missing task entries of canonical TRAIN rows.
+The historical audio reference uses the full frozen temporal audio model:
 
-This task produces teacher/calibration/target artifacts only.
+    WavLM-base-plus layer 9 / pool 4
+    temporal Transformer
+    hidden=192
+    layers=3
+    heads=4
+    sequence_steps=128
 
-It MUST NOT apply pseudo-supervision to a trainable student yet.
+whereas F0/F1/F2 used only pooled:
 
-## Why This Task Exists
+    audio_cls [768]
 
-The Stage 5 gate requires a direct gradient to the missing head, but the teacher signal must be frozen, calibrated, auditable, and separated from observed truth before the pseudo-loss is wired.
+TASK-004H must:
 
-TASK-005A therefore establishes:
+1. uniquely locate and strictly verify the exact historical DEV-selected audio checkpoint;
+2. wrap that frozen checkpoint in a fusion-side temporal-audio adapter without editing src/audio;
+3. reproduce the historical audio DEV result on the canonical A+V DEV rows;
+4. implement/register the first strong-audio fusion contract:
+       frozen strong audio base logits
+       + shared video-conditioned residual fusion;
+5. pass synthetic and real forward/loss/backward smoke;
+6. perform NO fusion training yet.
 
-1. frozen stop-gradient teacher evidence;
-2. disease-specific temperature calibration;
-3. separate positive/negative acceptance thresholds;
-4. soft cross-corpus TRAIN pseudo-targets for missing entries only;
-5. base confidence reliability weights;
-6. coverage/class-balance audit.
+The resulting model is the F1-style strong-audio ablation.
 
-TASK-005B will consume this artifact and prove the direct missing-head gradient.
+## Research Question
+
+This task prepares the controlled comparison:
+
+    strong temporal audio
+        vs
+    the same frozen strong temporal audio + video residual fusion
+
+The later fixed training run will test whether video adds value without discarding the strong temporal audio representation.
 
 ## Required Reading
 
 1. AGENTS.md
-2. docs/PROJECT_REQUIREMENTS.md Sections 2, 5, 8, 9, 10, 11, 12, 13, 14
-3. docs/PLAN.md Stage 5
-4. docs/PROGRESS_EN.md through MANAGER-DECISION-023
+2. docs/PROJECT_REQUIREMENTS.md Sections 2, 5, 6, 7, 8, 9, 10, 13, 14
+3. docs/PLAN.md Stage 4
+4. docs/PROGRESS_EN.md through MANAGER-DECISION-024
 5. docs/NEXT_TASK_EN.md
-6. docs/SOTA_REVIEW_EN.md Sections 2, 3, 5, 7, 8, 9, 11
-7. src/fusion/data/wsm_av_fusion_datamodule.py
-8. src/fusion/models/av_f2_task_aware_directed.py
-9. configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml
-10. src/common/loss/wsm_masked_sparse_loss.py
+6. configs/wsm_mm_pd_dep_v1/audio/00_frozen_baseline.yaml
+7. src/audio/models/audio_mamba_segment.py — READ ONLY
+8. src/fusion/models/av_sync_mamba_segment.py — for the frozen audio model's public temporal blocks only
+9. src/fusion/data/wsm_av_fusion_datamodule.py
+10. src/fusion/models/av_f1_shared_mtl.py
+11. src/common/callbacks/wsm_segment_callback.py
+12. src/common/loss/wsm_masked_sparse_loss.py
+13. src/chimera_plugin.py
 
 ## Allowed Tracked Files
 
-- src/fusion/loss/ramps_r1_teacher.py
-- src/fusion/loss/__init__.py
-- scripts/common/prepare_ramps_r1_teacher_targets.py
+- src/fusion/models/frozen_audio_temporal_adapter.py
+- src/fusion/models/av_f1_temporal_audio_residual.py
+- src/fusion/models/__init__.py
+- src/chimera_plugin.py
 - docs/PROGRESS_EN.md
 
 No other tracked file may be modified.
 
-No Chimera registry entry is required in this task because this is an offline teacher-calibration/target-preparation utility, not yet a training-selectable loss.
+## Registry Key
 
-## Fixed Teacher
+Register exactly:
 
-Teacher architecture/config:
+    wsm_av_f1_temporal_audio_residual_model
 
-    configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml
+The adapter itself does not need a registry key.
 
-Frozen DEV-selected checkpoint:
+Do not alter existing model registry keys.
 
-    logs/wsm_mm_pd_dep_v1/av_f2_task_aware_directed_2026-09-24_18-18_wsm_av_f2_task_aware_directed_model_f1b9902d/checkpoints/epoch=5_dev_mean_score=0.7746.pt
+## 1. Locate the Exact Historical Audio Checkpoint
 
-Teacher selected DEV evidence:
+Historical accepted reference:
 
-    dev/mean_score = 0.774569
+    run = wsm_audio_models-e0ce-006
+    selected epoch = 4
+    DEV Mean_Score = 0.787827
+    DEV depression Score = 0.747918
+    DEV Parkinson Score = 0.827735
 
-Task order:
+The exact checkpoint path is not currently recorded in active project docs.
 
-    0 = depression
-    1 = parkinson
+Before implementing the adapter:
 
-The teacher MUST be:
-
-- loaded from the exact selected checkpoint;
-- set to eval mode;
-- have requires_grad=false for every parameter;
-- run under torch.inference_mode() or equivalent;
-- never updated;
-- never placed in an optimizer.
-
-Cached teacher outputs are therefore detached/offline stop-gradient targets by construction.
-
-## Fixed Data Inputs
-
-Data root:
-
-    /media/maxim/Databases/WSM_NEW
-
-Audio feature cache:
-
-    /media/maxim/Databases/WSM_NEW/features
-
-Video feature cache:
-
-    /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache
-
-Use the accepted:
-
-    wsm_av_fusion_datamodule
-
-Expected counts:
-
-    train = 6325
-    dev = 933
-    joined_total = 8622
-    missing_audio = 0
-    missing_video = 0
-
-You MAY instantiate the DataModule even though it defines Test datasets, but this task MUST NOT iterate, infer, evaluate, calibrate, threshold-fit, or compute metrics on:
-
-    test_none
-    test_soft
-    test_hard
-
-Only TRAIN and DEV may be consumed.
-
-## Fixed Output Root
-
-Write generated runtime artifacts outside Git tracking to:
-
-    /media/maxim/Programs/Features/WSM/ramps_r1_f2_teacher_v1
-
-Required artifacts:
-
-    teacher_calibration.json
-    train_missing_targets.pt
-    audit.json
-
-Do not add these artifacts to git.
-
-The preparation script must refuse to overwrite an existing non-empty output root unless an explicit --overwrite flag is supplied.
-
-Do not use --overwrite in the production TASK-005A run unless the existing artifact is first verified to be an incomplete artifact produced by this same task.
-
-## 1. Reusable Calibration/Acceptance Utilities
-
-Implement in:
-
-    src/fusion/loss/ramps_r1_teacher.py
-
-The module must be deterministic and independent of Test data.
-
-### Binary temperature scaling
-
-Implement a binary temperature scaler operating on logits.
-
-For one task:
-
-    calibrated_logit = raw_logit / T
-    calibrated_prob = sigmoid(calibrated_logit)
-
-with:
-
-    T > 0
-
-Fit one scalar temperature independently for each disease using ONLY observed DEV labels for that disease.
-
-Use a stable positive parameterization, e.g.:
-
-    T = exp(log_temperature)
-
-Use torch optimization only; do not install a dependency.
-
-The fit objective is binary NLL/BCE-with-logits on the corresponding observed DEV task rows.
-
-Use a deterministic optimizer setup.
-
-After fitting, require:
-
-    finite(T)
-    0.05 <= T <= 20.0
-
-If unconstrained optimization exits outside the allowed range, clamp only the final deployed temperature to the allowed range and recompute/report calibration metrics with the deployed value.
-
-### Calibration metrics
-
-Implement reusable functions for:
-
-- binary NLL/BCE;
-- Brier score;
-- ECE with 15 equal-width probability bins.
-
-Report these before and after temperature scaling for each disease.
-
-Also record:
-
-- number of observed DEV examples;
-- positive count;
-- negative count.
-
-Do not require ECE to monotonically improve; report the actual result.
-
-Temperature fitting is judged primarily by the fitted NLL objective and artifact validity, not by fabricating an ECE improvement.
-
-## 2. Manager-Fixed Class-Specific Threshold Policy
-
-Fit separate acceptance thresholds for positive and negative pseudo-labels for each disease using ONLY that disease's observed DEV labels after temperature calibration.
-
-Fixed parameters:
-
-    precision_target = 0.90
-    min_support = 10
-    threshold_step = 0.01
-
-Positive acceptance:
-
-    accept positive if p >= tau_pos
-
-Candidate positive thresholds:
-
-    0.50, 0.51, ..., 0.99
-
-For each candidate, compute precision among accepted positive predictions.
-
-Choose the LOWEST candidate threshold satisfying:
-
-    accepted support >= 10
-    precision >= 0.90
-
-This maximizes accepted coverage subject to the fixed reliability target.
-
-Negative acceptance:
-
-    accept negative if p <= tau_neg
-
-Candidate negative thresholds:
-
-    0.01, 0.02, ..., 0.50
-
-For each candidate, define negative precision as:
-
-    fraction of accepted rows whose observed label is 0
-
-Choose the HIGHEST candidate threshold satisfying:
-
-    accepted support >= 10
-    negative precision >= 0.90
-
-This maximizes accepted negative coverage subject to the fixed reliability target.
-
-If no candidate satisfies a class side:
-
-- mark that side disabled;
-- store threshold=null;
-- do NOT invent or relax a threshold;
-- continue the audit.
-
-Record for each disease/class side:
-
-- selected threshold or null;
-- enabled flag;
-- accepted DEV support;
-- accepted DEV precision;
-- accepted DEV recall/coverage;
-- precision_target;
-- min_support.
-
-Do not use Test to choose thresholds.
-
-## 3. TRAIN Missing-Head Soft Targets
-
-Run the frozen calibrated teacher over all canonical TRAIN rows.
-
-For each row and task:
-
-Observed entry:
-
-    observed_mask=true
-
-Then:
-
-- observed target remains authoritative;
-- pseudo_accept_mask=false;
-- pseudo_target=NaN;
-- pseudo_reliability=0;
-- never overwrite or duplicate observed supervision.
-
-Missing entry:
-
-    observed_mask=false
-
-Compute calibrated teacher probability p.
-
-Acceptance:
-
-- positive accepted if positive side enabled and p >= tau_pos;
-- negative accepted if negative side enabled and p <= tau_neg;
-- otherwise rejected.
-
-For an accepted missing entry:
-
-    pseudo_target = p
-
-The target remains SOFT. Do NOT hard-replace it with 0 or 1.
-
-Base R1 reliability:
-
-    pseudo_reliability = 2 * abs(p - 0.5)
-
-For rejected missing entries:
-
-    pseudo_target = NaN
-    pseudo_reliability = 0
-
-All pseudo targets/reliabilities must be detached CPU tensors in the saved artifact.
-
-R2 will later add uncertainty, independent modality agreement, and OOD evidence. Do not add those now.
-
-## 4. train_missing_targets.pt Contract
-
-Save a torch artifact containing at least:
-
-    version = "ramps-r1-f2-teacher-v1"
-
-    task_names = ["depression", "parkinson"]
-
-    segment_ids               # length 6325, canonical order
-    observed_mask             # bool [6325,2]
-    observed_targets          # float [6325,2], NaN for unknown
-    raw_teacher_logits        # float [6325,2]
-    calibrated_probs          # float [6325,2]
-    pseudo_accept_mask        # bool [6325,2]
-    pseudo_targets            # float [6325,2], NaN unless accepted missing
-    pseudo_reliability        # float [6325,2], zero unless accepted missing
-    pseudo_class              # int8 [6325,2], -1 rejected/not eligible, 0 accepted-negative, 1 accepted-positive
-
-    temperatures
-    thresholds
-    teacher_checkpoint_path
-    teacher_checkpoint_sha256
-    teacher_config_path
-    teacher_config_sha256
+1. search local durable run artifacts under the repository/log roots;
+2. locate the historical run using the run identifier and/or its recorded selected DEV evidence;
+3. identify the epoch-4 selected checkpoint;
+4. inspect its checkpoint payload/state-dict structure;
+5. compute SHA256 of the checkpoint;
+6. verify the checkpoint can be strictly loaded into the exact historical AudioMambaSegmentModel architecture.
 
 Requirements:
 
-- exactly 6325 rows;
-- exactly one canonical TRAIN segment_id per row;
-- no duplicate segment_id;
-- observed_mask matches the DataModule targets;
-- observed target values are unchanged;
-- pseudo_accept_mask & observed_mask is always false;
-- pseudo_targets are NaN for every observed entry;
-- pseudo_targets are NaN for every rejected missing entry;
-- accepted pseudo targets are finite and strictly within [0,1];
-- accepted pseudo reliability is finite and within [0,1];
-- rejected/observed pseudo reliability is exactly zero.
+- exactly one authoritative checkpoint must be selected;
+- do not guess a path from naming alone;
+- do not choose another epoch;
+- do not retrain audio;
+- do not substitute the canonical config's random initialization;
+- do not download an unrelated checkpoint;
+- do not use Test metrics to choose among candidates.
 
-## 5. teacher_calibration.json Contract
+If the exact selected historical checkpoint cannot be uniquely located:
 
-Record at least:
+    STOP BLOCKED.
 
-- artifact version;
-- UTC generation timestamp;
-- teacher config path + SHA256;
-- teacher checkpoint path + SHA256;
-- teacher selected DEV Mean_Score as provenance only;
-- task order;
-- DataModule/cache roots;
-- canonical/join counts;
-- exact calibration procedure;
-- exact threshold-selection procedure;
-- per-task temperature;
-- raw/calibrated DEV NLL;
-- raw/calibrated DEV Brier;
-- raw/calibrated DEV ECE-15;
-- DEV observed support/positive/negative counts;
-- positive threshold audit;
-- negative threshold audit;
-- explicit statement:
-  "No Test rows or Test metrics were used."
+Update PROGRESS_EN.md with all candidate evidence and do not fabricate the adapter reproduction result.
 
-Do not include Test metric values in this artifact.
+## 2. Exact Frozen Audio Architecture
 
-## 6. audit.json Contract
+Instantiate the historical audio model exactly as:
 
-Audit the generated TRAIN pseudo-target cache.
+    AudioMambaSegmentModel(
+        audio_feature_dim=768,
+        num_tasks=2,
+        num_classes=2,
+        hidden_dim=192,
+        num_layers=3,
+        num_heads=4,
+        ff_mult=4,
+        dropout=0.25,
+        encoder_type="transformer",
+        sequence_steps=128,
+        mamba_d_state=16,
+        mamba_d_conv=4,
+        mamba_expand=2,
+        mamba_required=True,
+    )
 
-For each missing head separately:
+This lives in src/audio and MUST remain unmodified.
 
-Depression pseudo-targets on rows where depression is missing.
+Checkpoint loading:
 
-Parkinson pseudo-targets on rows where Parkinson is missing.
+- inspect the actual payload structure first;
+- use strict state loading after only the minimal verified extraction/prefix normalization required by that exact checkpoint format;
+- missing keys must be empty;
+- unexpected keys must be empty;
+- record the exact state key/prefix handling used;
+- never silently partial-load.
 
-Record:
-
-- missing-entry count;
-- accepted total;
-- rejected total;
-- coverage = accepted/missing;
-- accepted positive count;
-- accepted negative count;
-- accepted positive fraction;
-- mean/std/min/max calibrated probability among accepted;
-- mean/std/min/max pseudo reliability among accepted.
-
-Also record overall:
-
-- train_rows=6325;
-- train_missing_entries;
-- accepted_missing_entries;
-- accepted overall coverage;
-- observed overwrite violations=0;
-- duplicate segment ids=0;
-- nonfinite accepted targets=0;
-- pseudo values on observed entries=0;
-- pseudo acceptance on observed entries=0.
-
-IMPORTANT:
-
-The missing cross-corpus labels are unknown.
-
-Therefore DO NOT report or claim pseudo-label accuracy/precision on the missing TRAIN entries.
-
-The only precision numbers are the threshold-fitting precision measured on the corresponding observed-task DEV labels.
-
-## 7. Production Script
+## 3. FrozenAudioTemporalAdapter
 
 Implement:
 
-    scripts/common/prepare_ramps_r1_teacher_targets.py
+    src/fusion/models/frozen_audio_temporal_adapter.py
 
-Required CLI arguments/defaults must support the exact production command below.
+Class:
 
-The script must:
+    FrozenAudioTemporalAdapter
 
-1. set deterministic seeds;
-2. build the accepted A+V DataModule;
-3. verify canonical counts;
-4. build/load the exact F2 model/checkpoint;
-5. freeze teacher;
-6. infer DEV only for calibration/threshold fitting;
-7. fit the two independent temperatures;
-8. fit class-specific thresholds on observed DEV only;
-9. infer TRAIN;
-10. build missing-only pseudo targets;
-11. validate all invariants;
-12. write the three artifacts atomically where practical;
-13. print a concise calibration + coverage summary.
+The adapter wraps the exact frozen AudioMambaSegmentModel.
 
-Do not import or iterate Test loaders.
+Constructor must require:
 
-## Exact Production Command
+    checkpoint_path
 
-Run from repository root:
+and may expose fixed architecture parameters only for validation/provenance.
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
-      scripts/common/prepare_ramps_r1_teacher_targets.py \
-      --data-root /media/maxim/Databases/WSM_NEW \
-      --audio-feature-cache-root /media/maxim/Databases/WSM_NEW/features \
-      --video-cache-root /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache \
-      --teacher-config configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml \
-      --teacher-checkpoint logs/wsm_mm_pd_dep_v1/av_f2_task_aware_directed_2026-09-24_18-18_wsm_av_f2_task_aware_directed_model_f1b9902d/checkpoints/epoch=5_dev_mean_score=0.7746.pt \
-      --output-root /media/maxim/Programs/Features/WSM/ramps_r1_f2_teacher_v1 \
-      --precision-target 0.90 \
-      --min-support 10 \
-      --threshold-step 0.01 \
-      --ece-bins 15 \
-      --batch-size 64 \
-      --num-workers 4 \
-      --device cuda
+### Frozen semantics
 
-If CUDA is unavailable, stop as blocked. Do not silently switch the production teacher inference to CPU.
+After checkpoint load:
 
-## Required Verification
+- all audio-model parameters:
+      requires_grad = false
+- audio model:
+      eval()
+- forward:
+      under torch.no_grad() or torch.inference_mode()
+- audio model is never placed in an optimizer.
+
+Override/guard train-mode propagation as needed so that calling parent fusion_model.train() NEVER turns the frozen audio submodel's dropout/Transformer into training behavior.
+
+After:
+
+    fusion_model.train()
+
+the frozen audio model must still report:
+
+    training == False
+
+### Input
+
+Consume from the accepted A+V Batch:
+
+    batch.inputs["audio"]  -> [B,Ta,768]
+    batch.get_masks("audio_mask") -> bool [B,Ta]
+
+Do NOT read task_id/task_ids from the incoming batch.
+
+### Internal task conditioning
+
+The historical model is task-conditioned.
+
+For each input batch, run the frozen audio model internally twice:
+
+    fixed task index 0 = depression
+    fixed task index 1 = parkinson
+
+Construct the fixed internal task IDs yourself.
+
+They are architecture-internal constants, not dataset/model inputs.
+
+For each task collect:
+
+    legacy class logits -> [B,2]
+    segment feature     -> [B,192]
+
+Stack:
+
+    legacy_class_logits -> [B,2,2]
+    task_features       -> [B,2,192]
+
+dimensions of legacy_class_logits:
+
+    batch, task, legacy binary class
+
+Convert the historical two-class disease output into one independent binary logit per task:
+
+    binary_logit_t =
+        legacy_class_logits[:,t,1]
+        - legacy_class_logits[:,t,0]
+
+Return:
+
+    base_logits   -> [B,2]
+    task_features -> [B,2,192]
+    legacy_class_logits -> [B,2,2]
+
+This is an equivalent binary decision representation of each historical disease-specific two-class head.
+
+Do not produce a healthy/depression/Parkinson 3-class softmax.
+
+## 4. Frozen Audio DEV Reproduction Gate
+
+Before the new fusion contract can be accepted, reproduce the historical audio result on the accepted canonical A+V DEV dataset.
+
+Use:
+
+    WSMAVFusionDataModule.val_dataset
+
+directly.
+
+Do NOT call val_dataloader() for this reproduction because it also exposes Test streams.
+
+Build a deterministic DEV DataLoader from val_dataset using the accepted fusion collate.
+
+Run ONLY the frozen adapter base_logits.
+
+Collect:
+
+    logits [933,2]
+    targets [933,2]
+    observed_mask [933,2]
+
+Compute metrics with:
+
+    common.callbacks.wsm_segment_callback.compute_sparse_two_task_metrics
+
+using:
+
+    prefix="dev"
+
+Required reproduction reference:
+
+    dev/depression/score = 0.747918
+    dev/parkinson/score  = 0.827735
+    dev/mean_score       = 0.787827
+
+Acceptance tolerance for each of these three rounded historical values:
+
+    absolute delta <= 0.0005
+
+Also record reproduced UAR/MF1 values.
+
+If any required Score/Mean_Score differs by more than 0.0005:
+
+    STOP BLOCKED.
+
+Do not compensate with threshold tuning.
+Do not inspect Test.
+Do not continue to a training run.
+
+A model-contract implementation may remain on the branch for audit, but the handoff must report the reproduction blocker and the next task must not be proposed as a training run.
+
+## 5. Strong-Audio F1 Residual Fusion Model
+
+Implement:
+
+    src/fusion/models/av_f1_temporal_audio_residual.py
+
+Class:
+
+    WSMAVF1TemporalAudioResidualModel
+
+Registry:
+
+    wsm_av_f1_temporal_audio_residual_model
+
+### Fixed constructor defaults
+
+Use:
+
+    audio_feature_dim=768
+    audio_hidden_dim=192
+    video_feature_dim=512
+    hidden_dim=192
+    fusion_hidden_dim=192
+    dropout=0.2
+    num_tasks=2
+
+Require:
+
+    num_tasks == 2
+    audio_hidden_dim == 192
+
+Also require:
+
+    audio_checkpoint_path
+
+No default guessed checkpoint path.
+
+### Audio branch
+
+Use FrozenAudioTemporalAdapter.
+
+Its outputs are frozen:
+
+    audio_base_logits   [B,2]
+    audio_task_features [B,2,192]
+
+No audio parameter is trainable.
+
+### Video branch
+
+Use the same pooled video input philosophy as F1:
+
+    video [B,Tv,512]
+    video_mask [B,Tv]
+
+Masked mean:
+
+    v_raw [B,512]
+
+Projection:
+
+    LayerNorm(512)
+    Linear(512,192)
+    GELU
+    Dropout(0.2)
+
+Output:
+
+    video_features [B,192]
+
+### Availability
+
+This controlled ablation REQUIRES audio to be available.
+
+For every row:
+
+    modality_available[:,0] must be true
+
+If any audio-unavailable row is passed:
+
+    raise ValueError
+
+Video may be unavailable.
+
+Available video requires at least one true video_mask position.
+
+Unavailable video may have all-false video_mask.
+
+For video-unavailable rows:
+
+    effective_video_features = exact zero
+    residual_logits = exact zero
+    final logits = exact frozen audio_base_logits
+
+Changing raw unavailable-video values must not change output.
+
+### Shared F1-style residual fusion
+
+The historical audio representation is task-conditioned, so preserve that information.
+
+For each task t:
+
+    joined_t =
+        concat(
+            audio_task_features[:,t],
+            effective_video_features
+        )                           # [B,384]
+
+Use ONE shared fusion trunk for both tasks:
+
+    LayerNorm(384)
+    Linear(384,192)
+    GELU
+    Dropout(0.2)
+    Linear(192,192)
+    GELU
+    Dropout(0.2)
+
+Apply the same shared_fusion module independently to joined_depression and joined_parkinson.
+
+Result:
+
+    task_fused_features [B,2,192]
+
+Use two independent residual heads:
+
+    LayerNorm(192)
+    Linear(192,192)
+    GELU
+    Dropout(0.2)
+    Linear(192,1)
+
+Stack:
+
+    residual_logits [B,2]
+
+Final:
+
+    preds =
+        audio_base_logits
+        + video_available * residual_logits
+
+where video_available is broadcast to both task logits.
+
+Thus:
+
+- video available:
+      trainable video-conditioned residual can modify the strong audio base;
+- video unavailable:
+      exact fallback to the historical frozen audio base logits.
+
+No sigmoid is applied in forward.
+
+## 6. Important Boundary
+
+TASK-004H MUST NOT add:
+
+- audio fine-tuning;
+- src/audio edits;
+- new WavLM extraction;
+- a new audio architecture;
+- external task_id/task_ids input;
+- pseudo-labeling;
+- RAMPS;
+- directed F2 relation experts;
+- flow matching;
+- PAGB;
+- contrastive loss;
+- text/description;
+- Test-based tuning.
+
+This is F1-temporal only.
+
+The analogous F2-temporal directed model comes later, after the fixed F1-temporal run.
+
+## 7. ModelOutput Contract
+
+Return:
+
+    preds -> [B,2]
+
+aux must contain at least:
+
+    audio_base_logits            -> [B,2]
+    legacy_audio_class_logits    -> [B,2,2]
+    audio_task_features          -> [B,2,192]
+    video_features               -> [B,192]
+    effective_video_features     -> [B,192]
+    task_fused_features          -> [B,2,192]
+    residual_logits              -> [B,2]
+    task_logits = {
+        "depression": preds[:,0],
+        "parkinson": preds[:,1],
+    }
+
+Do not expose task IDs as batch/model inputs.
+
+## 8. Context-Aware Factory
+
+Factory must:
+
+- read data.audio_feature_dim if available and require 768;
+- read data.video_feature_dim if available and require 512;
+- enforce data.num_tasks == 2 if present;
+- require explicit audio_checkpoint_path from config/caller;
+- default common hidden dimensions as above.
+
+Update src/chimera_plugin.py with explicit required import:
+
+    fusion.models.av_f1_temporal_audio_residual
+
+Do not hide a project import failure as an optional warning.
+
+## 9. Synthetic Contract Smoke
+
+Use the actual discovered frozen audio checkpoint.
+
+Construct a synthetic Batch with:
+
+    audio [4, >=8, 768]
+    audio_mask variable
+    video [4, <=7, 512]
+    video_mask variable
+    modality_available:
+      at least:
+        both available rows
+        one audio-only row
+
+No audio-unavailable row is valid in this ablation.
+
+Verify:
+
+- preds [4,2];
+- audio_base_logits [4,2];
+- legacy_audio_class_logits [4,2,2];
+- audio_task_features [4,2,192];
+- video_features [4,192];
+- task_fused_features [4,2,192];
+- residual_logits [4,2];
+- no task_id/task_ids in incoming batch;
+- final equation exactly matches:
+      base + video_available * residual;
+- audio-only row preds exactly equal audio_base_logits;
+- masked audio padding invariance;
+- masked video padding invariance;
+- unavailable video raw-value invariance;
+- audio-unavailable row raises ValueError.
+
+## 10. Sparse Loss / Gradient Smoke
+
+Use:
+
+    wsm_masked_sparse_loss
+
+with sparse NaN targets.
+
+Verify:
+
+- finite scalar loss;
+- backward succeeds;
+- every frozen audio parameter has:
+      requires_grad == false
+      grad is None
+- video projection receives finite nonzero gradient;
+- shared_fusion receives finite nonzero gradient;
+- both residual task heads receive finite nonzero gradient when both tasks have observed labels in the synthetic batch.
+
+Also assert after:
+
+    model.train()
+
+that:
+
+    model.audio_adapter.audio_model.training == False
+
+and the frozen audio parameters remain non-trainable.
+
+## 11. Real A+V Batch Smoke
+
+Build the accepted:
+
+    WSMAVFusionDataModule
+
+Use one real TRAIN batch.
+
+Verify:
+
+- inputs contain temporal audio and video;
+- incoming inputs do NOT contain task_id/task_ids;
+- model output [B,2];
+- finite sparse loss;
+- backward succeeds;
+- frozen audio still has no gradients;
+- trainable video/shared/residual branches get finite gradients.
+
+No full training.
+
+## 12. Required Verification Commands
 
 Compile:
 
     python3 -m py_compile \
-      src/fusion/loss/ramps_r1_teacher.py \
-      src/fusion/loss/__init__.py \
-      scripts/common/prepare_ramps_r1_teacher_targets.py
+      src/fusion/models/frozen_audio_temporal_adapter.py \
+      src/fusion/models/av_f1_temporal_audio_residual.py \
+      src/fusion/models/__init__.py \
+      src/chimera_plugin.py
 
-Run focused synthetic checks for:
+Registry smoke:
 
-- temperature scaling with finite T;
-- ECE/Brier/NLL finite;
-- positive threshold selection;
-- negative threshold selection;
-- threshold-disabled behavior when precision/support cannot be met;
-- observed entries can never become pseudo entries;
-- soft pseudo targets remain probabilities;
-- reliability in [0,1].
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import warnings
+    from chimera_ml.core.registry import MODELS
+    import chimera_plugin
 
-Then run the exact production command.
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        chimera_plugin.register()
 
-After production, load all three artifacts and assert the full contracts above.
+    failures = [
+        str(x.message)
+        for x in caught
+        if "Failed to import" in str(x.message)
+        and "fusion.models.av_f1_temporal_audio_residual" in str(x.message)
+    ]
 
-Additionally verify teacher stop-gradient:
+    assert not failures, failures
+    assert "audio_mamba_segment_model" in MODELS.keys()
+    assert "wsm_av_f1_shared_mtl_model" in MODELS.keys()
+    assert "wsm_av_f2_task_aware_directed_model" in MODELS.keys()
+    assert "wsm_av_f1_temporal_audio_residual_model" in MODELS.keys()
 
-- all teacher parameters requires_grad=false;
-- no teacher parameter has a gradient;
-- no optimizer is instantiated for the teacher.
+    print("strong temporal-audio F1 registry smoke passed")
+    PY
 
-Verify no Test use by code inspection and runtime evidence:
+Then run:
 
-- script does not call val_dataloader() because that includes Test streams;
-- script accesses dm.val_dataset directly for DEV;
-- script accesses dm.train_dataset/train loader for TRAIN;
-- no test_none/test_soft/test_hard dataset is iterated;
-- no Test metric value is produced.
+1. exact checkpoint discovery/strict-load audit;
+2. frozen audio DEV reproduction gate;
+3. synthetic contract/loss/backward smoke;
+4. real A+V DataModule loss/backward smoke.
 
-Then:
+Finally:
 
     git diff --check
     git diff -- src/audio
     git diff -- src/video
-    git diff -- src/fusion/models
     git diff -- src/fusion/data
+    git diff -- src/fusion/models/av_f0_gated_late.py
+    git diff -- src/fusion/models/av_f1_shared_mtl.py
+    git diff -- src/fusion/models/av_f2_task_aware_directed.py
     git status --short
 
 Before commit inspect only:
 
     git diff -- \
-      src/fusion/loss/ramps_r1_teacher.py \
-      src/fusion/loss/__init__.py \
-      scripts/common/prepare_ramps_r1_teacher_targets.py \
+      src/fusion/models/frozen_audio_temporal_adapter.py \
+      src/fusion/models/av_f1_temporal_audio_residual.py \
+      src/fusion/models/__init__.py \
+      src/chimera_plugin.py \
       docs/PROGRESS_EN.md
 
 After commit/push:
@@ -541,71 +679,83 @@ After commit/push:
 
 ## Acceptance Criteria
 
-The task passes if:
+The task passes only if:
 
-- frozen selected F2 teacher loads successfully;
-- teacher is fully stop-gradient;
-- only DEV observed labels are used for calibration and threshold fitting;
-- no Test row/metric is consumed;
-- separate temperature exists for depression and Parkinson;
-- separate positive/negative threshold policy is executed for each disease;
-- class side is disabled rather than relaxed if the fixed precision/support target cannot be met;
-- full TRAIN inference covers exactly 6325 unique rows;
-- pseudo targets exist only on missing entries;
-- observed truth is never overwritten;
-- pseudo targets remain soft calibrated probabilities;
-- confidence reliability is detached and in [0,1];
-- required calibration metrics are recorded;
-- coverage/class balance is recorded separately per missing head;
-- cross-corpus missing-target correctness is NOT claimed;
-- at least one accepted missing pseudo-target exists for each disease head; otherwise report Stage 5 R1 blocked rather than fabricating acceptance;
-- no student training;
-- no training config;
-- no Test metrics;
-- no R2/R3/R4;
+- exact historical run/checkpoint is uniquely located;
+- selected epoch is 4;
+- checkpoint SHA256 is recorded;
+- checkpoint state structure is documented;
+- strict audio state load has zero missing/unexpected keys;
+- src/audio remains byte-for-byte unmodified by git diff;
+- frozen audio adapter has no trainable parameters;
+- parent model train mode never enables audio dropout/training behavior;
+- adapter internally evaluates both fixed disease task indices;
+- no external task_id/task_ids are consumed;
+- base binary logits equal class1_logit-class0_logit;
+- canonical DEV reproduction is within 0.0005 of:
+  - depression Score 0.747918
+  - Parkinson Score 0.827735
+  - Mean_Score 0.787827
+- F1-temporal registry key exists;
+- final output is [B,2];
+- audio-only fallback equals frozen audio base logits exactly;
+- audio/video mask invariance checks pass;
+- sparse forward/loss/backward passes;
+- frozen audio receives no gradients;
+- video/shared/residual branches receive finite nonzero gradients;
+- real A+V batch smoke passes;
+- no config or training run is created;
+- no Test stream is iterated or metric computed in this task;
+- no RAMPS work is performed;
 - text/description remains deferred;
-- src/audio unchanged;
-- src/video unchanged;
-- F0/F1/F2 source unchanged;
-- A+V DataModule unchanged;
-- git diff --check passes;
-- tracked diff contains only the four allowed paths;
-- branch codex/task-005a committed and pushed;
+- tracked diff contains only the five allowed paths;
+- branch codex/task-004h committed and pushed;
 - main/master untouched.
 
 ## Required PROGRESS_EN Update
 
-Append TASK-005A evidence without erasing prior records.
+Append TASK-004H evidence without erasing prior records.
 
 Record:
 
 - branch;
 - implementation commit SHA;
 - push result;
-- exact teacher config/checkpoint paths;
-- checkpoint/config SHA256;
-- output artifact root and filenames;
-- CUDA/device;
-- train/dev counts and join audit;
-- per-task observed DEV support and class counts;
-- per-task fitted temperature;
-- raw/calibrated NLL, Brier, ECE-15;
-- selected positive/negative thresholds or disabled state;
-- threshold DEV support/precision/coverage;
-- per-missing-head TRAIN accepted/rejected counts;
-- accepted positive/negative counts and coverage;
-- reliability statistics;
-- proof observed truth was not overwritten;
-- proof teacher stop-gradient;
+- exact historical audio run identifier;
+- exact selected checkpoint path;
+- checkpoint SHA256;
+- checkpoint payload/state key/prefix structure;
+- strict-load result;
+- frozen audio architecture;
+- DEV reproduction UAR/MF1/Score per task and Mean_Score;
+- deltas to historical rounded reference;
+- adapter internal task-conditioning contract;
+- binary-logit conversion equation;
+- F1-temporal residual equation;
+- output/aux shapes;
+- synthetic invariance results;
+- synthetic loss/backward result;
+- frozen/no-gradient proof;
+- real DataModule smoke result;
+- no external task_id verification;
 - explicit no-Test statement;
-- explicit statement that no pseudo-target correctness claim is possible for the genuinely missing TRAIN labels;
-- confirmation no student training;
-- confirmation R2/R3/R4 not started;
+- explicit no-training statement;
+- confirmation TASK-005A/RAMPS remains deferred;
 - confirmation text/description deferred;
 - src/audio unchanged;
 - src/video unchanged;
-- Stage 5 R1 status;
+- Stage 4 reopened-ablation status;
 - recommended next atomic step only.
+
+If DEV reproduction passes:
+
+    recommended next = fixed seed-42 F1-temporal residual training run
+
+If DEV reproduction fails:
+
+    recommended next = narrow checkpoint/reproduction corrective task only
+
+Do not propose F2-temporal or RAMPS before a successful F1-temporal reproduction/run sequence.
 
 ## Required Handoff
 
@@ -620,20 +770,21 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch codex/task-005a;
+- branch codex/task-004h;
 - implementation commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
-- teacher checkpoint;
-- fitted temperatures;
-- positive/negative thresholds or disabled sides;
-- calibration metrics;
-- TRAIN pseudo-target coverage/class counts for both missing heads;
-- output artifact paths;
-- stop-gradient confirmation;
-- no-Test confirmation;
-- no student training;
-- no cross-corpus pseudo-label accuracy claim;
+- exact audio checkpoint path + SHA256;
+- strict-load result;
+- reproduced DEV depression/Parkinson Scores and Mean_Score;
+- reproduction deltas;
+- registry key;
+- output/aux shapes;
+- frozen-audio no-gradient result;
+- synthetic and real DataModule loss/backward result;
+- no external task_id;
+- no training/Test metrics beyond the authorized DEV reproduction;
+- RAMPS deferred;
 - text/description deferred;
 - src/audio unchanged;
 - src/video unchanged.
