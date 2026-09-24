@@ -72,8 +72,9 @@ def main():
     p.add_argument("--yolo-weights",type=Path,required=True); p.add_argument("--target-frames",type=int,required=True)
     args=p.parse_args()
     requested=[x.strip() for x in args.splits.split(",") if x.strip()]
-    if requested != ["train","dev"]: raise ValueError("TASK-002G audit requires --splits train,dev")
-    if args.target_frames != 60: raise ValueError("TASK-002G audit requires target_frames=60")
+    if not requested or len(set(requested)) != len(requested) or any(split not in {"train", "dev", "test"} for split in requested):
+        raise ValueError("--splits must be a non-empty unique subset of train,dev,test")
+    if args.target_frames != 60: raise ValueError("TASK-002K audit requires target_frames=60")
     if not args.yolo_weights.is_file(): raise FileNotFoundError(args.yolo_weights)
     args.yolo_sha=weights_sha256(args.yolo_weights)
     rows,audit=build_manifest(args.data_root)
@@ -81,10 +82,10 @@ def main():
     expected_by_split={split:sum(row["split"]==split for row in selected) for split in requested}
     expected_ids={row["segment_id"] for row in selected}
     records=_load_index(args.cache_root/"cache_index.jsonl")
-    ids=[record["segment_id"] for record in records]
-    duplicate_ids=len(ids)!=len(set(ids))
-    test_rows=[record for record in records if record.get("split")=="test"]
     selected_records=[record for record in records if record.get("segment_id") in expected_ids]
+    selected_ids=[record["segment_id"] for record in selected_records]
+    duplicate_ids=len(selected_ids)!=len(set(selected_ids))
+    test_rows=[record for record in records if record.get("split")=="test"]
     missing=expected_ids-{record.get("segment_id") for record in selected_records}
     fingerprints=[record.get("cache_fingerprint") for record in selected_records if record.get("status") in {"extracted","reused"}]
     artifact_errors=[]; valid_records=[]
@@ -109,7 +110,7 @@ def main():
             "manifest_fingerprint":audit["manifest_fingerprint"]["value"],"expected_by_split":expected_by_split,
             "expected_total":len(selected),"indexed_selected_count":len(selected_records),
             "missing_record_count":len(missing),"missing_segment_ids":sorted(missing),
-            "test_rows_indexed":len(test_rows),"test_rows_processed":False,
+            "test_rows_indexed":len(test_rows),"test_rows_processed":"test" in requested,
             "duplicate_segment_id":duplicate_ids,"cache_fingerprints_unique":len(fingerprints)==len(set(fingerprints)),
             "successful_artifacts_valid":not artifact_errors,"artifact_errors":artifact_errors,
             "success_by_split":{split:sum(r.get("status") in {"extracted","reused"} and r.get("split")==split for r in selected_records) for split in requested},
@@ -123,7 +124,7 @@ def main():
             "target_frames":args.target_frames,"git":_git_state(),
             "package_versions":{name:_version(name) for name in ("torch","transformers","ultralytics")},
             "test_usage":{"model_predictions_inspected":False,"performance_metrics_inspected":False,"selection_or_tuning_performed":False},
-            "complete_for_requested_splits":not missing and not duplicate_ids and not test_rows and not artifact_errors and
+            "complete_for_requested_splits":not missing and not duplicate_ids and not artifact_errors and
                 all(record.get("status") in {"extracted","reused","failed"} for record in selected_records) and len(selected_records)==len(expected_ids)}
     args.report_output.parent.mkdir(parents=True,exist_ok=True)
     args.report_output.write_text(json.dumps(report,indent=2,sort_keys=True)+"\n",encoding="utf-8")

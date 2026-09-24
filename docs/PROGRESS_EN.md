@@ -1006,3 +1006,40 @@ Status: accepted.
 - The canonical manifest schema must not be changed merely to carry soft/hard membership, because changing the canonical serialization/fingerprint would invalidate the already accepted cache contract. Test protocol membership should be joined from the existing raw test metadata/segment index by canonical segment identity.
 
 Recommended next atomic task: build and independently audit the full canonical Test video cache, correct Test extraction/audit telemetry, and extend the video DataModule with separate test_none/test_soft/test_hard datasets using the established raw soft_filter/hard_filter semantics. Do not train yet.
+
+
+### TASK-002K - Build the full V1 Test video cache and expose separate Test protocols
+
+Status: complete; Stage 2 remains partial pending epoch-level training/evaluation integration.
+
+Branch: codex/task-002k.
+
+Changed files:
+
+- scripts/video/extract_clip_video_features.py;
+- scripts/video/audit_video_cache.py;
+- src/video/data/wsm_video_cache_datamodule.py;
+- docs/PROGRESS_EN.md.
+
+Implementation facts:
+
+- Corrected extraction telemetry for requested Test processing: requested/selected/processed/indexed Test rows are all 1364; labels_passed_to_encoder=false and test_metrics_inspected=false.
+- The independent audit now accepts any unique non-empty subset/order of train, dev, and test, ignores non-requested shared-index rows, and reports complete Test coverage.
+- The full pinned Test extraction completed with 1294 extracted successes and 70 explicit no_body_detected failures; no other failures occurred.
+- Raw protocol membership was joined from build_wsm_multitask_segment_index without changing the canonical manifest or fingerprint: test_none=1364, test_soft=1208, test_hard=1014.
+- The DataModule preserves train=6255 and dev=907 and exposes separate test_none/test_soft/test_hard datasets. Valid rows are 1294/1150/1013 with unavailable counts 70/58/1; every Test sample carries split=test and its evaluation_protocol.
+- Context exposes the three Test protocol counts, unavailable counts, indexed Test rows=1364, and data.video_epoch_test_monitoring_required=true without Test metric values.
+
+Exact verification commands/results:
+
+- python3 -m py_compile scripts/video/extract_clip_video_features.py scripts/video/audit_video_cache.py src/video/data/wsm_video_cache_datamodule.py - passed.
+- Full authorized Test extraction with --splits test --resume --overwrite and the pinned YOLO/CLIP identities - passed: selected=1364, success=1294, failures=70, all failures no_body_detected. Report: /media/maxim/Programs/Features/WSM/video_depart_v1/extraction_report_test_task002k.json.
+- Independent Test audit with --splits test - passed: expected=1364, indexed=1364, missing=0, complete=true, artifacts valid, fingerprints unique. Report: /media/maxim/Programs/Features/WSM/video_depart_v1/cache_audit_test_task002k.json.
+- DataModule protocol, variable-length collate, raw-membership, and context smoke - passed: train/dev=6255/907; valid Test=1294/1150/1013; unavailable=70/58/1.
+- .venv/bin/chimera-ml plugins list - passed: one wsm plugin, no project-module warning. Plugin import and DATAMODULES.get("wsm_video_depart_v1_datamodule") - passed.
+- git diff --check - passed; git diff -- src/audio - empty; src/audio remained unchanged.
+- No training, Test metrics, Test predictions, or selection/tuning ran.
+
+Deviation/blocker: 70 Test rows remain explicitly unavailable because no body ROI was detected; they are excluded from valid protocol datasets and counted per protocol. Test metrics remain monitoring-only and were not inspected in this task.
+
+Recommended next atomic task: manager review, then wire dev, test_none, test_soft, and test_hard into the epoch-level evaluation/metric callback path while keeping dev/mean_score as the sole selector and leaving Test outputs non-selective.

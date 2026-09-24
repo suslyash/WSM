@@ -241,9 +241,13 @@ def main() -> int:
             return {"count": len(values), "mean": sum(values)/len(values) if values else None,
                     "min": min(values) if values else None, "max": max(values) if values else None}
         all_records = [index[row["segment_id"]] for row in candidates if row["segment_id"] in index]
+        test_rows_selected = sum(row["split"] == "test" for row in candidates)
+        test_rows_indexed = sum(record.get("split") == "test" for record in index.values())
         report = {"schema_version": "wsm-depart-video-cache-report-v2", "manifest_path": str(manifest_path),
                   "manifest_fingerprint": manifest_fingerprint, "requested_splits": requested_splits,
-                  "candidate_counts_by_split": candidate_counts, "cache_root": str(args.cache_root),
+                  "candidate_counts_by_split": candidate_counts, "test_rows_selected": test_rows_selected,
+                  "test_rows_processed": test_rows_selected > 0, "test_rows_indexed": test_rows_indexed,
+                  "cache_root": str(args.cache_root),
                   "cache_index": str(index_path), "cache_fingerprints": [x["cache_fingerprint"] for x in all_records],
                   "model_name": args.model_name, "model_revision": args.model_revision,
                   "detector_identity": None if detector is None else detector.identity, "detector_weights_sha256": local_sha,
@@ -255,7 +259,6 @@ def main() -> int:
                   "failure_count": len(failures), "no_body_detected_count": sum(x.get("failure_category") == "no_body_detected" for x in failures),
                   "other_failure_count": sum(x.get("failure_category") != "no_body_detected" for x in failures),
                   "coverage_overall": cover(all_records), "records": all_records,
-                  "test_rows_processed": False, "test_rows_indexed": sum(x["split"] == "test" for x in index.values()),
                   "test_metrics_inspected": False, "labels_passed_to_encoder": False}
         args.report_output.parent.mkdir(parents=True, exist_ok=True)
         args.report_output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
