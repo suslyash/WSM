@@ -1297,3 +1297,18 @@ Verification:
 Deviation/blocker: no runtime blocker. No interruption snapshot is expected from clean completion; checkpoint, last-state, console, summary, code archive, and MLflow artifacts were retained.
 
 Recommended next atomic task: manager review of the fixed V1 baseline and selection of the next PLAN-authorized experiment; do not use Test metrics to alter the selected epoch or tune the baseline.
+
+
+### MANAGER-DECISION-014 — Accept TASK-002M V1 baseline and proceed to prototype-aware V2
+
+Status: accepted.
+
+- TASK-002M is integrated through PR #20 as 01a4321421f8b75999a9e7812214a90161ec6625.
+- The fixed seed-42 V1 video baseline completed 14 epochs with DEV-only early stopping; best epoch=8 by dev/mean_score=0.703274.
+- Best DEV task Scores: depression=0.661923, Parkinson=0.744626.
+- Same DEV-selected epoch monitoring values: test_none=0.732454, test_soft=0.742796, test_hard=0.751864.
+- Frozen historical audio remains stronger on DEV (0.787827 vs 0.703274). This comparison is descriptive and does not alter the accepted V1 selection.
+- Stage 2 now proceeds to the only remaining planned video family, V2: V1 plus task-specific class prototypes and classwise prototype/MLP gating.
+- The repository does not currently specify a more detailed V2 formula. The manager therefore fixes the minimal reproducible V2 contract: two learned class prototypes per task, cosine prototype evidence, a V1-style task MLP logit, and a learned scalar gate blending prototype and MLP logits. Contrastive supervision is NOT added yet; V2 must expose prototype geometry in ModelOutput.aux so a later controlled contrastive ablation can be added without changing the forward contract.
+
+Recommended next atomic task: TASK-002N — implement/register the prototype-aware V2 video model contract only, with synthetic forward/loss/backward and gating/prototype invariance checks. Do not create a V2 training config or run training yet.
