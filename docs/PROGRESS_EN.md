@@ -2128,3 +2128,22 @@ Verification and scope:
 - Evidence commit SHA: `f9b8fa9` (final documentation commit will follow); push result: pending.
 
 Recommended next atomic task: manager-authorized repair of the optimizer construction path so frozen audio parameters are excluded from optimizer groups, followed by rerunning TASK-004I’s pre-run gates. Do not train until that firewall passes.
+
+
+### MANAGER-DECISION-026 — Accept blocked TASK-004I evidence and authorize a narrow trainable-parameter optimizer repair
+
+Status: corrective action required before training.
+
+- Blocked TASK-004I evidence is integrated through PR #31 as `853b309f1f6a5ccd53853121c88c208ec8b2dc17`.
+- The fixed strong-temporal-audio config itself validated, the historical checkpoint SHA matched, CUDA/registry/DataModule/count gates passed, and no training/Test evaluation occurred.
+- The blocker is confirmed against Chimera ML v0.2.4 source: built-in `adamw_optimizer` constructs `torch.optim.AdamW(model.parameters(), ...)` and therefore includes frozen parameters even when `requires_grad=false`.
+- This violates the strong-audio ablation firewall, which requires the 105 frozen audio parameter objects to be absent from optimizer groups, not merely gradient-disabled.
+- Do NOT modify Chimera ML, `src/audio`, the frozen adapter, or the F1-temporal model to work around this.
+- The project-side repair is fixed as a new Chimera optimizer registry component:
+  `wsm_trainable_adamw_optimizer`.
+- That optimizer must build AdamW from exactly the model parameters with `requires_grad=true`, reject an empty trainable set, and preserve the same configurable AdamW hyperparameters.
+- The strong-audio config must switch only its optimizer name from `adamw_optimizer` to `wsm_trainable_adamw_optimizer`; lr=1e-4 and weight_decay=0.01 remain unchanged.
+- TASK-004I2 is a corrective pre-run gate only: after the repair, rerun config/registry/data/checkpoint-SHA/frozen-audio/optimizer/base-DEV-reproduction/real-batch-smoke gates and stop. Do not start the 30-epoch experiment in the corrective task.
+- If TASK-004I2 passes, the next task is the real fixed TASK-004I training run using the repaired optimizer component, with no other experiment changes.
+
+Recommended next atomic task: TASK-004I2 — register the trainable-only AdamW optimizer, switch the fixed strong-audio config to it, and rerun all pre-training gates without starting training.
