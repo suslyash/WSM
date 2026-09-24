@@ -2067,7 +2067,7 @@ Verification:
 - Real A+V DataModule smoke passed with finite sparse loss=`0.0378004387`, output `[1,2]`, finite trainable gradients, frozen audio without gradients, temporal audio/video inputs, and no `task_id`/`task_ids` input.
 - `git diff --check`, `git diff -- src/audio`, `git diff -- src/video`, `git diff -- src/fusion/data`, and existing F0/F1/F2 source checks passed.
 
-Evidence commit SHA: pending commit. Push result: pending.
+Evidence commit SHA: fe41bdc6d7e3b32b48e492d4f1cda0f358127880. Push result: successful after final branch push.
 
 Stage status: Stage 4 is reopened for the strong temporal-audio controlled ablation before RAMPS. TASK-005A/RAMPS remains deferred; text/description remains deferred.
 
