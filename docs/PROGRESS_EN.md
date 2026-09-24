@@ -2583,3 +2583,41 @@ Status: TASK-004K accepted; Stage 4 complete; Stage 5 R1 active.
 - The first R1 task does not claim correctness of genuinely missing cross-corpus labels because no dual-annotated ground truth is available.
 
 Recommended next atomic task: TASK-005A2 — calibrate the exact frozen strong temporal-audio disease heads and build an audited TRAIN missing-head soft-target cache. No student training and no Test evaluation.
+
+
+### TASK-005A2 — Calibrate the frozen strong-audio teachers and build the audited RAMPS-R1 TRAIN target cache
+
+Outcome: blocked at the required two-head acceptance gate. The implementation and calibration audit are complete, but the fixed precision-target policy accepts zero depression missing-head targets, so no valid two-disease TRAIN pseudo-target cache is publishable.
+
+Changed files:
+
+- `src/fusion/loss/ramps_r1_teacher.py` — binary NLL/Brier/ECE-15, scalar temperature fitting with deployed interval `[0.05, 20.0]`, and fixed positive/negative threshold selection.
+- `src/fusion/loss/__init__.py` — exports the RAMPS-R1 utilities.
+- `scripts/common/prepare_ramps_r1_strong_audio_targets.py` — CUDA-only frozen-teacher calibration, canonical TRAIN/DEV audit, missing-only target construction, invariant checks, atomic artifact writing, and corrected per-disease acceptance gate.
+- `docs/PROGRESS_EN.md` — this evidence record.
+
+Exact production command:
+
+```text
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python scripts/common/prepare_ramps_r1_strong_audio_targets.py --data-root /media/maxim/Databases/WSM_NEW --audio-feature-cache-root /media/maxim/Databases/WSM_NEW/features --video-cache-root /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache --teacher-checkpoint logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt --output-root /media/maxim/Programs/Features/WSM/ramps_r1_strong_audio_teacher_v1 --precision-target 0.90 --min-support 10 --threshold-step 0.01 --ece-bins 15 --batch-size 64 --num-workers 4 --device cuda --overwrite
+```
+
+Verification and results:
+
+- The exact checkpoint SHA256 passed: `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`. CUDA was available; CPU fallback was not used.
+- Canonical counts passed: TRAIN=6325, DEV=933, TEST_NONE=1364, TEST_SOFT=1208, TEST_HARD=1014; missing audio/video=0. TRAIN inference produced 6325 unique rows in canonical order.
+- Teacher adapter was `FrozenAudioTemporalAdapter`, in eval mode, with all parameters frozen and no optimizer/gradient path. A synthetic forward/loss/backward and utility checks passed before production.
+- Calibration used observed DEV labels only. Depression temperature=`2.3877333828`; raw NLL/Brier/ECE-15=`0.7111505632/0.2117764799/0.1664045220`; calibrated=`0.5573472041/0.1857162727/0.0527928157`. Parkinson temperature=`1.7874480292`; raw=`0.4666269309/0.1240986552/0.1066728653`; calibrated=`0.3876341398/0.1159000397/0.0471492548`.
+- Fixed threshold policy was precision target=0.90, minimum support=10, grid step=0.01. Depression positive and negative thresholds were both disabled: no DEV candidate reached the target. Parkinson positive threshold=0.90 (support=45, precision=0.9111111111, coverage=0.3904761905); negative threshold=0.17 (support=191, precision=0.9005235602, coverage=0.8309178744).
+- TRAIN missing-head result: depression missing=2665, accepted=0, rejected=2665, coverage=0.0, accepted positive/negative=0/0; Parkinson missing=3660, accepted=1889, rejected=1771, coverage=0.5161201954, accepted positive/negative=370/1519. Overall accepted missing entries=1889. This fails the explicit requirement that both disease heads have at least one accepted target.
+- The corrected rerun exited with `RuntimeError: R1 blocked: at least one missing disease head has no accepted pseudo-target`. The prior artifact-write failure was also corrected narrowly by giving the PyTorch temporary file a `.pt` suffix.
+- Audit invariants observed before the corrected gate: duplicate segment IDs=0, observed overwrite violations=0, pseudo-acceptance on observed entries=0, pseudo-values on observed entries=0, accepted targets finite and in `[0,1]`, reliability=`2*abs(p-0.5)` and bounded. No missing-label correctness claim is made.
+- Runtime evidence is under `/media/maxim/Programs/Features/WSM/ramps_r1_strong_audio_teacher_v1`; the calibration/audit evidence is retained, but the target cache is not valid for downstream student training because the two-head gate failed.
+- No Test rows were iterated and no Test metrics were inspected. No student training ran. Candidate B was not used. R2/R3/R4, text, and description remain unstarted/deferred.
+- `src/audio` and `src/video` stayed unchanged.
+
+Deviations/blockers: the frozen strong-audio teacher cannot meet the predeclared 0.90 precision target for either depression class on observed DEV, yielding no depression pseudo-targets. Do not lower the threshold, fit on Test, use Candidate B, or start student training without a new manager-authorized atomic task.
+
+Plan status: Stage 5 R1 remains blocked; no later Stage 5 phase started.
+
+Recommended next atomic task: manager review of the R1 depression-head calibration/acceptance failure and explicit decision on whether to revise the frozen policy or stop R1.
