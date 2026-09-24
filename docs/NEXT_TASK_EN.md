@@ -1,185 +1,113 @@
-# TASK-004I4: Implement and Register the Zero-Initialized Strong-Audio F1 Residual Control
+# TASK-004K: Run a Bounded Three-Model Audio-First Temporal A+V Search
 
 ## Role
 
-You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.md, commit on the required task branch, push to origin, then stop. Follow AGENTS.md.
+You are the implementing Codex. Execute only this bounded research sprint, update docs/PROGRESS_EN.md, commit on the required task branch, push to origin, then stop. Follow AGENTS.md.
 
 Required branch:
 
-    codex/task-004i4
+    codex/task-004k
 
-Do not run a full training experiment.
-Do not create or edit a training config.
-Do not modify the accepted random-init F1-temporal model.
-Do not modify src/audio or src/video.
-Do not modify the A+V DataModule.
-Do not start F2-temporal, RAMPS, text, or description work.
+This task explicitly supersedes the unexecuted TASK-004I4.
+
+This is a manager-authorized exception to the previous one-model-at-a-time Stage 4 workflow: you may design, implement, and train exactly THREE bounded candidate fusion models in this one task.
+
+Do not add a fourth candidate.
+Do not unfreeze or modify src/audio.
+Do not modify src/video.
+Do not modify the accepted A+V DataModule.
+Do not modify the historical audio checkpoint.
+Do not start RAMPS, text, or description work.
+Do not use Test metrics to design, rank, revise, or select candidates.
 
 ## Goal
 
-Implement one controlled variant that differs from the accepted TASK-004H/TASK-004I3 strong-audio F1 residual model ONLY by its residual-output initialization.
+Find an audio-first temporal A+V fusion candidate that can beat the exact frozen temporal-audio DEV reference while preserving task balance.
 
-New registry key:
+Frozen strong-audio reference:
 
-    wsm_av_f1_temporal_audio_residual_zero_init_model
+    depression Score = 0.7479183895
+    Parkinson Score = 0.8277353635
+    Mean_Score = 0.7878268765
 
-At construction:
+The audio system is the dominant anchor.
 
-    residual_logits == 0 exactly
-    preds == audio_base_logits exactly
+Every candidate MUST:
 
-for every valid sample, including rows where video is available.
+    final_logits = frozen_audio_base_logits + learned_video_correction
 
-This isolates whether a video residual that starts from the exact frozen-audio baseline can learn useful corrections without the random-initialization confound observed in TASK-004I3.
+and MUST initialize with:
+
+    learned_video_correction == 0 exactly
+
+so that before training:
+
+    final_logits == frozen_audio_base_logits exactly
+
+for every valid row.
+
+The video path is allowed to correct the strong audio model, but it is not allowed to replace the frozen audio base.
+
+## Research Freedom Granted
+
+You have freedom to choose exact internal details within the three required candidate families below.
+
+You may choose:
+
+- exact hidden layout inside the stated parameter cap;
+- attention head count when valid;
+- whether candidate C uses temporal-video attention, directed relations, or both;
+- exact task-specific gate MLP structure;
+- exact residual hidden structure;
+- whether candidate B/C reuse small helper modules across tasks;
+- implementation organization across the three allowed model files.
+
+However:
+
+- the three candidate architectures MUST be fully specified in a fixed SEARCH MANIFEST before the first training run;
+- once the first metric-bearing training run starts, you MUST NOT redesign any candidate architecture based on DEV or Test results;
+- all three candidates use the same fixed training protocol except one documented batch-size OOM fallback described below.
 
 ## Required Reading
 
 1. AGENTS.md
-2. docs/PROJECT_REQUIREMENTS.md Sections 3, 5, 6, 8, 9, 13, 14
-3. docs/PLAN.md Stage 4
-4. docs/PROGRESS_EN.md through MANAGER-DECISION-029
+2. docs/PROJECT_REQUIREMENTS.md Sections 2-10, 13-14
+3. docs/PLAN.md Stage 4 and Promotion Rule
+4. docs/PROGRESS_EN.md through MANAGER-DECISION-030
 5. docs/NEXT_TASK_EN.md
-6. src/fusion/models/av_f1_temporal_audio_residual.py
+6. configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml
 7. src/fusion/models/frozen_audio_temporal_adapter.py
-8. src/common/optimizers.py
-9. src/fusion/data/wsm_av_fusion_datamodule.py
-10. src/common/loss/wsm_masked_sparse_loss.py
-11. src/chimera_plugin.py
+8. src/fusion/models/av_f1_temporal_audio_residual.py
+9. src/fusion/models/av_f2_task_aware_directed.py
+10. src/common/optimizers.py
+11. src/fusion/data/wsm_av_fusion_datamodule.py
+12. src/common/callbacks/wsm_segment_callback.py
+13. src/common/loss/wsm_masked_sparse_loss.py
+14. src/chimera_plugin.py
 
 ## Allowed Tracked Files
 
-- src/fusion/models/av_f1_temporal_audio_residual_zero_init.py
+- src/fusion/models/av_audio_first_zero_residual.py
+- src/fusion/models/av_audio_query_temporal_video.py
+- src/fusion/models/av_audio_confidence_gated.py
 - src/chimera_plugin.py
+- configs/wsm_mm_pd_dep_v1/fusion/04_audio_first_zero_residual.yaml
+- configs/wsm_mm_pd_dep_v1/fusion/05_audio_query_temporal_video.yaml
+- configs/wsm_mm_pd_dep_v1/fusion/06_audio_confidence_gated.yaml
 - docs/PROGRESS_EN.md
 
 No other tracked file may be modified.
 
-The accepted random-init file:
+Existing accepted models, especially:
 
     src/fusion/models/av_f1_temporal_audio_residual.py
+    src/fusion/models/av_f2_task_aware_directed.py
 
-MUST remain unchanged.
+must remain unchanged.
 
-## 1. Model Contract
+## Fixed Historical Audio Anchor
 
-Implement:
-
-    src/fusion/models/av_f1_temporal_audio_residual_zero_init.py
-
-Class:
-
-    WSMAVF1TemporalAudioResidualZeroInitModel
-
-The cleanest implementation is to subclass:
-
-    WSMAVF1TemporalAudioResidualModel
-
-Do not copy/rewrite the entire model unless inheritance cannot preserve the exact accepted contract.
-
-Constructor signature/defaults must match the accepted base model:
-
-    audio_checkpoint_path
-    audio_feature_dim=768
-    audio_hidden_dim=192
-    video_feature_dim=512
-    hidden_dim=192
-    fusion_hidden_dim=192
-    dropout=0.2
-    num_tasks=2
-
-After super().__init__(...), zero-initialize ONLY the final Linear layer of each residual head:
-
-    final_linear.weight = 0
-    final_linear.bias = 0
-
-Do not zero:
-
-- video_projection;
-- shared_fusion;
-- residual-head hidden Linear layers;
-- LayerNorm parameters;
-- any frozen audio parameter.
-
-No new trainable parameter is allowed.
-
-## 2. Exact Initialization Semantics
-
-Immediately after model construction, before any optimizer step:
-
-For every valid batch row:
-
-    residual_logits == 0 exactly
-
-and therefore:
-
-    preds == audio_base_logits exactly
-
-for both tasks.
-
-This must hold even when video is available.
-
-Required exact tensor test:
-
-    torch.equal(output.aux["residual_logits"], torch.zeros_like(...))
-
-and:
-
-    torch.equal(output.preds, output.aux["audio_base_logits"])
-
-Do not use an approximate tolerance for these two initialization invariants.
-
-## 3. Registry
-
-Register exactly:
-
-    wsm_av_f1_temporal_audio_residual_zero_init_model
-
-Update:
-
-    src/chimera_plugin.py
-
-with explicit required import:
-
-    fusion.models.av_f1_temporal_audio_residual_zero_init
-
-Preserve all existing registry keys.
-
-Do not replace or alter:
-
-    wsm_av_f1_temporal_audio_residual_model
-
-## 4. Factory Semantics
-
-The new factory must preserve the accepted context-aware checks:
-
-- audio_feature_dim == 768 if supplied by data context;
-- video_feature_dim == 512 if supplied;
-- num_tasks == 2 if supplied;
-- explicit audio_checkpoint_path required;
-- same fixed hidden dimensions/defaults.
-
-No guessed checkpoint path.
-
-## 5. Parameter-Count Identity Gate
-
-The zero-init control MUST have the same parameter topology/counts as the accepted random-init model.
-
-Require:
-
-    frozen audio = 105 objects / 3,031,880 scalars
-    trainable = 22 objects / 286,530 scalars
-
-Trainable scalar blocks:
-
-    video_projection = 99,520
-    shared_fusion = 111,744
-    residual_heads = 75,266
-
-No extra parameter object may be introduced.
-
-## 6. Historical Checkpoint Gate
-
-Use the accepted checkpoint:
+Exact checkpoint:
 
     logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt
 
@@ -187,258 +115,573 @@ Required SHA256:
 
     0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2
 
-Recompute and assert exact match.
+All three candidates MUST use:
 
-Frozen-audio semantics remain unchanged:
+    FrozenAudioTemporalAdapter
 
-- all audio parameters requires_grad=false;
-- parent model.train() leaves audio submodel in eval mode;
-- no external task_id/task_ids input.
+or a thin fusion-side wrapper around it.
 
-## 7. Exact DEV Initialization Reproduction
+The historical audio model must remain:
 
-Build the accepted A+V DataModule.
+- fully frozen;
+- eval-only even under parent model.train();
+- absent from optimizer groups;
+- internally task-conditioned only by its fixed disease indices;
+- unchanged on disk and in src/audio.
 
-Iterate ONLY:
+No candidate may use pooled audio_cls as its audio anchor.
 
-    dm.val_dataset
+## Mandatory Candidate Families
 
-Do not iterate any Test loader.
+You must implement and train exactly these THREE candidate families.
 
-With a freshly constructed zero-init model, collect final:
+### Candidate A — Zero-Initialized Audio-Anchored Residual
 
-    output.preds
+Registry key:
 
-not only aux base logits.
+    wsm_av_audio_first_zero_residual_model
 
-Compute canonical DEV metrics.
+File:
 
-Because residual is exactly zero, final initialized model MUST reproduce the frozen historical audio result within the existing metric tolerance:
+    src/fusion/models/av_audio_first_zero_residual.py
+
+This is the simplest no-harm control.
+
+Required idea:
+
+    audio_base_logits
+    +
+    zero-initialized task residual from
+        frozen audio task feature
+        + video representation
+
+You may improve the hidden MLP organization relative to TASK-004I3, but:
+
+- final correction layer for each task MUST be zero-initialized;
+- initial predictions MUST equal audio_base_logits exactly;
+- video may be masked-mean or learned pooled;
+- trainable parameter count excluding frozen audio MUST be <= 500,000.
+
+### Candidate B — Audio-Query Temporal-Video Attention Residual
+
+Registry key:
+
+    wsm_av_audio_query_temporal_video_model
+
+File:
+
+    src/fusion/models/av_audio_query_temporal_video.py
+
+This candidate MUST use the temporal video sequence, not only masked-mean video.
+
+Required idea:
+
+- frozen temporal-audio task feature is the query;
+- projected temporal video frames are key/value;
+- attention is task-specific by query even if projection/attention parameters are shared;
+- attended video context produces a task residual;
+- final task correction layer is zero-initialized;
+- initial predictions equal audio_base_logits exactly.
+
+Use the existing video mask.
+
+Do not add a new video encoder family or modify cached features.
+
+You may choose the exact attention block and head count, but:
+
+- hidden width must remain <= 256;
+- attention heads must divide the hidden width;
+- trainable parameter count excluding frozen audio MUST be <= 1,000,000.
+
+### Candidate C — Audio-Confidence-Gated Video Correction
+
+Registry key:
+
+    wsm_av_audio_confidence_gated_model
+
+File:
+
+    src/fusion/models/av_audio_confidence_gated.py
+
+This candidate explicitly gives more authority to the stronger audio model.
+
+Required idea:
+
+    final_logit_t =
+        audio_base_logit_t
+        + gate_t * residual_t
+
+where gate_t is learned per task and conditioned on the frozen audio evidence.
+
+The gate MUST use at least:
+
+- frozen audio task feature;
+- magnitude or equivalent confidence information derived from the frozen audio base logit.
+
+It MAY also use:
+
+- temporal-video attention context;
+- pooled video context;
+- one F2-like directed relation feature.
+
+The gate must remain bounded:
+
+    0 <= gate_t <= 1
+
+Use sigmoid or another explicit bounded construction.
+
+The residual output layer MUST be zero-initialized, so initial predictions still equal the frozen audio base exactly.
+
+The intended behavior is:
+
+- when audio is already confident, the model may learn to suppress video correction;
+- when audio is uncertain, it may allow stronger video correction.
+
+Do not hard-code a heuristic confidence threshold.
+
+Trainable parameter count excluding frozen audio MUST be <= 1,000,000.
+
+## Global Candidate Invariants
+
+All three candidates MUST:
+
+- output preds [B,2] ordered [depression, parkinson];
+- use independent binary logits, no sigmoid in forward;
+- consume no external task_id/task_ids;
+- use observed sparse labels only;
+- use wsm_masked_sparse_loss;
+- require audio availability;
+- support video availability masks;
+- fall back exactly to frozen audio base when video is unavailable;
+- initialize with residual correction exactly zero for video-available rows too;
+- keep frozen audio parameter grads None;
+- remain compatible with wsm_trainable_adamw_optimizer.
+
+At construction, exact tensor identity is required:
+
+    torch.equal(output.preds, output.aux["audio_base_logits"])
+
+for every candidate.
+
+## SEARCH MANIFEST — Freeze Designs Before Training
+
+Before the FIRST full training run:
+
+1. implement all three candidate models;
+2. compile/register/smoke all three;
+3. create all three fixed configs;
+4. append a SEARCH MANIFEST section to docs/PROGRESS_EN.md.
+
+The SEARCH MANIFEST must record, for A/B/C:
+
+- registry key;
+- exact forward equation;
+- exact video representation/attention path;
+- gate equation where applicable;
+- hidden dimensions;
+- attention heads if applicable;
+- trainable scalar parameter count;
+- confirmation residual output is zero-initialized;
+- exact config path;
+- run order.
+
+The manifest must explicitly state:
+
+    "Candidate architectures are frozen before the first metric-bearing training run."
+
+After the first full training run begins:
+
+- do NOT change any candidate model source;
+- do NOT change any candidate config;
+- do NOT add a fourth candidate;
+- do NOT use candidate A results to redesign B or C;
+- do NOT use Test results for any reason.
+
+If a source/config correctness bug prevents a candidate from running after the manifest is frozen, stop the task as partially blocked and report the exact candidate. Do not redesign around its metrics.
+
+## Fixed Config/Training Protocol
+
+Create:
+
+    configs/wsm_mm_pd_dep_v1/fusion/04_audio_first_zero_residual.yaml
+    configs/wsm_mm_pd_dep_v1/fusion/05_audio_query_temporal_video.yaml
+    configs/wsm_mm_pd_dep_v1/fusion/06_audio_confidence_gated.yaml
+
+All three configs use exactly:
+
+    seed: 42
+    experiment_name: wsm_mm_pd_dep_v1
+
+Data:
+
+    name: wsm_av_fusion_datamodule
+
+Data params:
+
+    data_root: /media/maxim/Databases/WSM_NEW
+    audio_feature_cache_root: /media/maxim/Databases/WSM_NEW/features
+    video_cache_root: /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache
+    batch_size: 8
+    num_workers: 4
+    pin_memory: true
+    persistent_workers: true
+    shuffle_train: true
+    drop_last_train: false
+
+Candidate-specific run names:
+
+    A: av_audio_first_zero_residual
+    B: av_audio_query_temporal_video
+    C: av_audio_confidence_gated
+
+Each model must receive the exact frozen audio checkpoint path.
+
+Loss:
+
+    name: wsm_masked_sparse_loss
+
+Optimizer:
+
+    name: wsm_trainable_adamw_optimizer
+    lr: 0.0001
+    weight_decay: 0.01
+
+Training:
+
+    epochs: 30
+    device: cuda
+    mixed_precision: true
+    grad_clip_norm: 0.5
+    log_every_steps: 25
+    collect_cache: true
+
+Metrics:
+
+    []
+
+Required instrumentation for every config:
+
+- wsm_segment_metrics_callback with splits=[auto]
+- checkpoint_callback
+- snapshot_callback
+- early_stopping_callback
+- wsm_summary_callback
+- console_file_logger
+- mlflow_logger
+
+Checkpoint:
+
+    monitor: dev/mean_score
+    mode: max
+    save_top_k: 2
+    save_last: true
+
+Early stopping:
+
+    monitor: dev/mean_score
+    mode: max
+    patience: 6
+    min_delta: 0.0005
+
+MLflow:
+
+    tracking_uri: sqlite:///logs/mlflow.db
+
+No scheduler.
+No pseudo-labeling.
+No task loss reweighting.
+No audio fine-tuning.
+No threshold tuning.
+
+### OOM exception
+
+Default batch size is 8 for all candidates.
+
+Only if Candidate B or C is CUDA-OOM specifically because of temporal attention:
+
+- you may retry that candidate once with batch_size=4;
+- record the full OOM traceback and the batch-size fallback;
+- do not alter any other hyperparameter;
+- do not reduce sequence content or architecture after seeing metrics.
+
+No other training hyperparameter tuning is allowed.
+
+## Pre-Run Gate for Every Candidate
+
+Before any full run, each candidate must pass:
+
+- registry construction;
+- exact checkpoint SHA;
+- frozen audio eval/no-grad;
+- optimizer_ids == trainable_ids;
+- optimizer/frozen intersection empty;
+- trainable parameter cap;
+- real production batch forward/loss/backward;
+- no external task IDs;
+- finite gradients after wake-up.
+
+Because every candidate starts with a zero final correction layer:
+
+1. fresh-model initial forward must have:
+       residual/correction == 0 exactly
+       preds == audio_base_logits exactly
+2. first backward may have zero upstream gradients;
+3. perform one bounded in-memory optimizer step for smoke only;
+4. on second backward require finite nonzero gradients through every intended trainable path;
+5. discard this smoke model and use a fresh model for the full run.
+
+Do not save smoke weights.
+
+## Exact Frozen-Audio DEV Initialization Gate
+
+Before each candidate training run, use a FRESH candidate model and canonical DEV only.
+
+Require final initialized predictions to reproduce:
 
     depression Score = 0.7479183895
     Parkinson Score = 0.8277353635
     Mean_Score = 0.7878268765
 
-Require:
+with absolute tolerance <= 0.0005.
 
-    abs(delta) <= 0.0005
+Additionally require:
 
-for the two task Scores and Mean_Score.
+    preds == audio_base_logits
 
-Also verify on every DEV batch:
+exactly on every DEV batch before training.
 
-    output.preds == output.aux["audio_base_logits"]
+No Test loader may be iterated for this gate.
 
-exactly.
+## Full Training Runs
 
-No Test iteration.
-No threshold tuning.
+After SEARCH MANIFEST is frozen and all three candidates pass pre-run gates, run exactly three metric-bearing experiments in the declared order.
 
-## 8. First-Backward Expected Gradient Gate
+For each candidate:
 
-Use one deterministic real TRAIN batch of size 8 containing observed supervision for both tasks.
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
+      --config-path <candidate-config>
 
-Use:
+Do not interrupt a healthy run.
 
-    wsm_trainable_adamw_optimizer
+Do not edit later candidates after seeing earlier candidate metrics.
 
-through actual Chimera build_optimizer.
+## Mandatory Metrics Every Epoch
 
-Before any optimizer step:
+For every completed epoch of every candidate record:
 
-    optimizer.zero_grad(set_to_none=True)
-    output = model(batch)
-    loss = wsm_masked_sparse_loss(output, batch)
-    loss.backward()
+- train loss;
 
-Require:
+DEV:
+- depression UAR/MF1/Score;
+- Parkinson UAR/MF1/Score;
+- Mean_Score;
 
-- finite loss;
-- frozen audio grads all None;
-- final Linear of depression residual head gets finite nonzero gradient;
-- final Linear of Parkinson residual head gets finite nonzero gradient;
-- all present gradients finite.
+TEST_NONE:
+- depression UAR/MF1/Score;
+- Parkinson UAR/MF1/Score;
+- Mean_Score;
 
-Important expected zero-init behavior:
+TEST_SOFT:
+- depression UAR/MF1/Score;
+- Parkinson UAR/MF1/Score;
+- Mean_Score;
 
-Because the final residual weights are exactly zero, upstream residual gradients on this FIRST backward may be zero.
+TEST_HARD:
+- depression UAR/MF1/Score;
+- Parkinson UAR/MF1/Score;
+- Mean_Score.
 
-Do NOT treat zero first-backward gradients in:
+All must be finite.
 
-    video_projection
-    shared_fusion
-    earlier residual-head layers
+Best epoch per candidate:
 
-as a failure.
+    argmax(dev/mean_score)
 
-Record them explicitly.
+Training loss and Test metrics are NOT selectors.
 
-## 9. Exactly-One-Step Wake-Up Gate
+## Candidate Ranking
 
-After the first backward, execute exactly ONE bounded optimizer step:
+After all three runs complete, rank candidates ONLY by each candidate's best:
 
-    optimizer.step()
+    DEV/Mean_Score
 
-This is a smoke-only in-memory step, not training.
+Do not rank by Test.
 
-Then:
+Frozen audio comparator:
 
-    optimizer.zero_grad(set_to_none=True)
+    Mean_Score = 0.7878268765
+    depression Score = 0.7479183895
+    Parkinson Score = 0.8277353635
 
-Run a second forward/loss/backward on a second deterministic real TRAIN batch that contains observed supervision for both tasks.
+For each candidate report:
 
-Require after this second backward:
+    candidate DEV Mean - frozen audio DEV Mean
+    candidate depression Score - frozen audio depression Score
+    candidate Parkinson Score - frozen audio Parkinson Score
 
-- finite scalar loss;
-- frozen audio grads all None;
-- video_projection finite nonzero gradient;
-- shared_fusion finite nonzero gradient;
-- depression residual branch finite nonzero gradient;
-- Parkinson residual branch finite nonzero gradient;
-- all present trainable gradients finite.
+Define a "safe single-seed screen winner" only if BOTH are true:
 
-Also verify:
+1. candidate DEV Mean_Score > 0.7878268765
+2. neither task Score is more than 0.010 below the frozen-audio task Score
 
-- residual_logits are no longer required to be zero after the one optimizer step;
-- frozen audio remains eval-only;
-- optimizer_ids still equal trainable_ids;
-- optimizer/frozen intersection remains empty.
+This is only a screening nomination, not final promotion.
 
-Do NOT execute a second optimizer step.
+If multiple candidates satisfy this, nominate exactly one with the highest DEV Mean_Score.
 
-## 10. Synthetic/Availability Invariants
+If no candidate satisfies it:
 
-Verify the inherited accepted semantics remain unchanged:
+- nominate none;
+- preserve all three negative results;
+- do NOT add a fourth candidate in this task.
 
-- output [B,2];
-- no external task_id/task_ids;
-- audio unavailable raises ValueError;
-- audio-only row falls back to exact frozen audio base because video residual is masked out;
-- masked audio padding invariance;
-- masked video padding invariance;
-- unavailable video raw-value invariance.
+## Selected-Checkpoint Same-Row Audits
 
-The only intended behavioral difference from the accepted random-init model is residual-output initialization at construction.
+For every candidate's DEV-selected checkpoint, run the same-row canonical DEV audit:
 
-## 11. No-Training Boundary
+Collect:
 
-TASK-004I4 MUST NOT run:
+    final_logits
+    audio_base_logits
+    candidate correction/residual
+    targets
+    observed_mask
 
-    chimera-ml train
+Report:
 
-It MUST NOT:
+- frozen-base task UAR/MF1/Score and Mean;
+- final task UAR/MF1/Score and Mean;
+- final-minus-base task Score deltas and Mean delta;
+- residual/correction mean/std/mean_abs/min/max per task;
+- corrected errors;
+- introduced errors;
+- sign flips.
 
-- create a new production training config;
-- create an MLflow training run;
-- run epoch loops;
-- iterate TEST_NONE/SOFT/HARD;
-- modify the old random-init model;
-- start F2-temporal;
-- start RAMPS/text/description.
+For Candidate C also report:
 
-The single in-memory optimizer.step() required by the wake-up smoke is explicitly allowed and must not save a checkpoint or training artifact.
+- gate mean/std/min/max per task;
+- gate mean on base-correct rows;
+- gate mean on base-wrong rows;
+- correlation between gate and absolute frozen audio base logit, if straightforward to compute without source changes.
 
-## Required Verification
+Diagnostics are descriptive only.
 
-Compile:
+## Run Provenance
 
-    python3 -m py_compile \
-      src/fusion/models/av_f1_temporal_audio_residual_zero_init.py \
-      src/chimera_plugin.py
+For every candidate record:
 
-Registry smoke must verify both keys exist:
+- config path;
+- registry key;
+- implementation SHA;
+- GPU;
+- trainable parameter count;
+- actual batch size;
+- epochs completed;
+- best epoch;
+- best DEV metrics;
+- same-epoch Test metrics;
+- top-2 checkpoints;
+- last.pt;
+- run directory;
+- train.log;
+- summary.txt;
+- code.zip;
+- resolved config;
+- MLflow experiment;
+- MLflow run ID;
+- MLflow final status;
+- artifact URI.
 
-    wsm_av_f1_temporal_audio_residual_model
-    wsm_av_f1_temporal_audio_residual_zero_init_model
+## Test Firewall
 
-Then run:
+TEST_NONE/SOFT/HARD must be computed every epoch as required by the project.
 
-1. checkpoint SHA gate;
-2. parameter-count identity gate;
-3. exact zero residual / preds==base initialization gate;
-4. canonical DEV initialized-final reproduction;
-5. first-backward gradient gate;
-6. exactly-one-step wake-up gate;
-7. inherited mask/availability checks.
+They MUST NOT influence:
 
-Finally:
+- candidate architecture;
+- candidate order;
+- whether a candidate is considered successful;
+- early stopping;
+- checkpoint selection;
+- candidate ranking;
+- nomination;
+- next-step recommendation.
 
-    git diff --check
-    git diff -- src/audio
-    git diff -- src/video
-    git diff -- src/fusion/models/av_f1_temporal_audio_residual.py
-    git diff -- src/fusion/data
-    git status --short
-
-Before commit inspect only:
-
-    git diff -- \
-      src/fusion/models/av_f1_temporal_audio_residual_zero_init.py \
-      src/chimera_plugin.py \
-      docs/PROGRESS_EN.md
+The candidate manifest must be frozen before any Test metric from this task exists.
 
 ## Acceptance Criteria
 
-Pass only if:
+Pass if:
 
-- old random-init model file is unchanged;
-- new zero-init registry key exists;
-- no extra trainable/frozen parameters introduced;
-- exact parameter counts match accepted model;
-- checkpoint SHA exact;
-- residual final Linear weights/biases are zero at construction;
-- residual_logits exactly zero before any step;
-- preds exactly equal audio_base_logits before any step;
-- canonical DEV initialized final output reproduces frozen audio;
-- first backward gives nonzero gradients to both residual output Linear layers;
-- exactly one optimizer step is performed;
-- second backward produces finite nonzero gradients in video_projection/shared_fusion/both residual branches;
-- frozen audio never receives gradients and remains eval-only;
-- optimizer contains only trainable parameters;
-- inherited mask/availability invariants pass;
-- no Test iteration;
-- no full training/MLflow training run;
+- exactly three candidate families are implemented;
+- no fourth candidate is added;
+- all use the exact frozen historical temporal audio checkpoint;
+- all start exactly at frozen audio predictions;
+- audio remains frozen/eval-only and absent from optimizers;
+- at least Candidate B uses temporal video frames;
+- Candidate C uses bounded audio-confidence gating;
+- all trainable parameter caps pass;
+- SEARCH MANIFEST is frozen before first training run;
+- no candidate source/config changes occur after first run begins;
+- all three runs complete or configured early stopping ends them, unless a genuine runtime blocker is preserved;
+- all four metric streams are recorded every epoch;
+- each candidate selects only by dev/mean_score;
+- ranking uses DEV only;
+- same-row audits are complete;
+- all run provenance is complete;
+- no Test-driven search occurs;
 - src/audio unchanged;
 - src/video unchanged;
-- tracked diff contains only the three allowed paths;
-- branch codex/task-004i4 committed and pushed;
+- accepted DataModule unchanged;
+- RAMPS/text/description not started;
+- tracked diff contains only the eight allowed paths;
+- branch codex/task-004k committed and pushed;
 - main/master untouched.
 
 ## Required PROGRESS_EN Update
 
-Record:
+Append a complete TASK-004K record.
 
-- branch;
-- implementation commit SHA;
-- push result;
-- registry key;
-- exact zero-init operation;
-- proof old random-init model unchanged;
-- checkpoint SHA;
-- parameter object/scalar counts;
-- zero residual / preds==base exact checks;
-- initialized-final canonical DEV metrics;
-- first-backward gradient results, including expected upstream zeros;
-- exactly-one-step optimizer smoke;
-- second-backward wake-up gradient results;
-- optimizer firewall result;
-- frozen-audio integrity;
-- availability/mask checks;
-- explicit no-Test statement;
-- explicit no-full-training statement;
-- confirmation F2-temporal/RAMPS/text remain deferred;
-- src/audio unchanged;
-- src/video unchanged;
-- Stage 4 status;
-- recommended next atomic task only.
+It must include:
 
-If all gates pass:
+1. SEARCH MANIFEST before metric-bearing runs:
+   - exact A/B/C architecture equations;
+   - hidden sizes/heads;
+   - parameter counts;
+   - config paths;
+   - run order;
+   - explicit frozen-before-training statement.
 
-    recommended next = TASK-004I5 run one fixed seed-42 zero-init strong-temporal-audio F1 residual experiment.
+2. Pre-run evidence per candidate:
+   - exact baseline-at-init equality;
+   - DEV frozen-audio reproduction;
+   - optimizer firewall;
+   - two-step gradient wake-up smoke;
+   - parameter cap.
 
-If blocked:
+3. FULL epoch tables for A, B, and C.
 
-    recommend only the narrow correction for the exact failed gate.
+4. Best selected DEV metrics and same-epoch Test metrics for A/B/C.
+
+5. Same-row frozen-base versus final DEV audits for A/B/C.
+
+6. Candidate C gate diagnostics.
+
+7. DEV-only candidate ranking.
+
+8. Safe-winner test against:
+       Mean > 0.7878268765
+       task drops <= 0.010
+
+9. Exact MLflow/checkpoint/artifact provenance for all three runs.
+
+10. Explicit statement that Test metrics did not influence search/ranking.
+
+11. Confirmation:
+    - no fourth candidate;
+    - audio stayed frozen;
+    - src/audio unchanged;
+    - src/video unchanged;
+    - RAMPS/text/description deferred.
 
 ## Required Handoff
 
@@ -453,22 +696,32 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch codex/task-004i4;
-- implementation commit SHA;
+- branch codex/task-004k;
+- final implementation/evidence commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
-- new registry key;
-- exact parameter counts;
-- zero residual / preds==base initialization result;
-- initialized-final DEV depression/Parkinson Scores and Mean_Score;
-- first-backward output-layer gradient result;
-- second-backward video/shared/both-head gradient result after exactly one optimizer step;
-- frozen-audio no-gradient result;
-- no Test iteration;
-- no full training;
-- old random-init model unchanged;
-- F2-temporal/RAMPS/text deferred;
+- the three chosen/frozen candidate architecture summaries;
+- trainable parameter counts;
+- epochs/best DEV Mean for all three;
+- frozen-audio DEV delta for all three;
+- task Score deltas for all three;
+- whether any candidate met the safe-winner rule;
+- nominated candidate if any;
+- same-epoch TEST_NONE/SOFT/HARD Mean_Scores for all three;
+- MLflow run IDs/status for all three;
+- explicit Test-firewall statement;
+- frozen-audio integrity;
+- no fourth candidate;
+- RAMPS/text/description deferred;
 - src/audio unchanged;
 - src/video unchanged.
+
+If one candidate meets the safe-winner rule:
+
+    recommended next = manager-assigned 3-seed confirmation of that single candidate only.
+
+If none meets the safe-winner rule:
+
+    recommended next = manager review of the negative bounded search; do not add another fusion candidate automatically.
 
 Stop after this task.
