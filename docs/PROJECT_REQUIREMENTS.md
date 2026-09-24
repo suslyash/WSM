@@ -87,6 +87,12 @@ Use run_name for specific variants. A fundamentally different programme MAY use 
 
 ## 7. Unimodal Experiment Budget
 
+Execution-order override accepted by the dataset owner/manager:
+
+- Text/description remains required for the final programme but is deferred until after the audio+video fusion, RAMPS, and core ablation research cycle.
+- After Stage 2 video is complete, work MUST proceed directly to audio+video fusion rather than starting text/description.
+- The deferred text/description stage MUST be completed before final paper-ready freeze and before claims that require all planned modalities.
+
 - Audio: one frozen baseline; no new architecture family.
 - Video: at most two families: DEPART-like CLIP+Transformer, then its prototype-aware variant.
 - Text: at most two families: a pretrained text encoder, then selected text plus observable description/semantic features.
