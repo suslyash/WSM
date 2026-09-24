@@ -18,7 +18,7 @@ Final Test authorized: **no**.
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | complete | Bounded strong-temporal-audio search complete; no safe A+V winner under the predeclared task-balance gate | TASK-004A through TASK-004K |
-| 5. RAMPS | active/blocked | R1 blocked for depression; R2 independent multimodal reliability gate also blocked for depression | TASK-005A2/TASK-005A3 |
+| 5. RAMPS | active/blocked | R1/R2 blocked for depression; fixed semantic bridge blocked because the mandated local CLIP model is unavailable | TASK-005A2/TASK-005A4 |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
 
@@ -2743,3 +2743,43 @@ Recommended next atomic task: TASK-005A4 — run the fixed CLIP semantic accepta
   No accepted/deployability decision used the Family-C OOD feature.
 - Therefore TASK-005A3 remains integrated as valid evidence for the audio+video agreement failure, while Family-C OOD candidate-table values must not be used as evidence.
 - All future OOD acceptance logic must be side-conditional without target leakage: when evaluating candidate side c, compute distance to centroid c and compare against the fit/reference distance distribution for class c. Never use a held-out or missing row's ground-truth class to choose its centroid.
+
+
+### TASK-005A4 — Add fixed CLIP semantic evidence for the blocked depression RAMPS gate
+
+Outcome: blocked before semantic inference because the mandated local-only `openai/clip-vit-base-patch32` processor/model is unavailable. The script did not download a model, did not substitute another model, and emitted the required blocked artifacts.
+
+Changed files:
+
+- `src/fusion/loss/ramps_r2_semantic.py`;
+- `src/fusion/loss/__init__.py`;
+- `scripts/common/prepare_ramps_r2_semantic_targets.py`;
+- `docs/PROGRESS_EN.md`.
+
+Branch/evidence:
+
+- Required branch: `codex/task-005a4`.
+- The exact audio checkpoint SHA verified as `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`.
+- The exact video checkpoint SHA verified as `3e39778126db401a2fe17bb472a172191616e8a7b5265e982233c53dcd4af2f6`; the payload identifies epoch 5.
+- The video/audio teachers were constructed before the CLIP availability stop; no optimizer was instantiated.
+
+Exact production command:
+
+```text
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python scripts/common/prepare_ramps_r2_semantic_targets.py --data-root /media/maxim/Databases/WSM_NEW --audio-feature-cache-root /media/maxim/Databases/WSM_NEW/features --video-cache-root /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache --audio-checkpoint logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt --video-checkpoint logs/wsm_mm_pd_dep_v1/depart_v2_prototype_gated_2026-09-24_14-39_wsm_video_depart_v2_model_0a7294f4/checkpoints/epoch=5_dev_mean_score=0.7066.pt --clip-model openai/clip-vit-base-patch32 --clip-revision main --output-root /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1 --precision-target 0.90 --min-support 10 --folds 5 --batch-size 32 --num-workers 4 --device cuda --overwrite
+```
+
+Verification/results:
+
+- CUDA was available. The exact production command verified both checkpoint hashes, strict epoch-5 video loading, and then stopped at local-only `CLIPProcessor.from_pretrained(..., local_files_only=True)` with `OSError: Can't load image processor for 'openai/clip-vit-base-patch32'`. No network download or alternate VLM was used.
+- The fixed prompt bank was recorded exactly as authorized, with canonical JSON SHA256 `19428db58f91f73ca26ce9c4354b5731431e14ec524fc1a47e7070e1b32f447e`. It contains no negative prompts or sample-specific information. Depression/neutral embedding hashes are null because the local CLIP model was unavailable.
+- Required artifacts exist at `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/semantic_prompt_bank.json`, `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/semantic_search.json`, and `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/audit.json`.
+- `audit.json` records blocked=true, train_inference_ran=false, train_missing_targets_published=false, and no missing-label correctness claim. `train_missing_targets.pt` does not exist.
+- `precision_target=0.90` and `min_support=10` were unchanged. No Test rows or metrics were used. No student training, Parkinson semantic reselection, Candidate B/fusion teacher, R3/R4, or general Text/Description Stage 3 work occurred.
+- `python3 -m py_compile` and deterministic semantic synthetic checks passed before production. `git diff --check` passed. `src/audio`, `src/video`, accepted models, caches, and the DataModule were unchanged.
+
+Blocker: the fixed local CLIP processor/model must be provisioned by the manager or environment owner before this exact semantic audit can proceed. Do not download it, substitute a model, change prompts, lower the reliability thresholds, or infer TRAIN in this task.
+
+Plan status: Stage 5 remains active/blocked; TASK-005A4 did not reach OOF semantic selection or full-DEV confirmation.
+
+Recommended next atomic task: provision/restore the exact local `openai/clip-vit-base-patch32` revision `main` model and processor, then rerun this unchanged semantic audit.
