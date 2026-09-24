@@ -4,7 +4,7 @@
 
 Plan initialized: 2026-09-23.
 
-Current stage: **Stage 4 in progress**.
+Current stage: **Stage 4 reopened — strong temporal-audio fusion ablation before RAMPS**.
 
 Final Test authorized: **no**.
 
@@ -17,8 +17,8 @@ Final Test authorized: **no**.
 | 1. Manifest/partial-label contract | complete | Canonical manifest, separate DEV/Test consumer, masked sparse loss, zero video leakage, and owner-accepted speaker-independent split contract | TASK-001A through TASK-001E plus manager decision below |
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
-| 4. Fusion baselines | complete | Canonical sparse A+V DataModule and fixed F0/F1/F2 baselines complete; F2 selected by DEV/Mean_Score | TASK-004A through TASK-004G |
-| 5. RAMPS | not started | Direct reliable missing-head gradient | None |
+| 4. Fusion baselines | reopened | F0/F1/F2 pooled-audio ladder complete; owner-authorized strong temporal-audio controlled ablation now active before RAMPS | TASK-004A through TASK-004G plus TASK-004H onward |
+| 5. RAMPS | deferred | TASK-005A was assigned but superseded before execution; start after the strong temporal-audio fusion ablation | None |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
 
@@ -2000,3 +2000,23 @@ Status: accepted.
 - Warm-up is not executed in TASK-005A; it will be enforced when the R1 pseudo-supervision loss/training contract is implemented.
 
 Recommended next atomic task: TASK-005A — implement the deterministic binary teacher calibration/threshold utilities and create an audited TRAIN missing-head soft-target cache from the frozen DEV-selected F2 teacher. No student training or Test evaluation.
+
+
+### MANAGER-DECISION-024 — Supersede TASK-005A before execution and reopen Stage 4 for strong temporal-audio fusion
+
+Status: active owner override.
+
+- The owner explicitly requested that the strong temporal-audio fusion comparison be executed now, before RAMPS.
+- TASK-005A had been assigned in NEXT_TASK_EN but no `codex/task-005a` branch exists and no TASK-005A handoff/evidence has been produced. The assignment is superseded before execution, not failed. RAMPS will be re-issued after this ablation.
+- TASK-004G/Stage 4 pooled-audio F0/F1/F2 evidence remains accepted and unchanged.
+- The reason for reopening Stage 4 is a concrete comparison confound: the historical audio reference uses the full WavLM layer-9/pool-4 temporal Transformer, while F0/F1/F2 used only cached `audio_cls`. Therefore the current A+V result does not yet isolate the effect of adding video to the strong historical audio system.
+- PROJECT_REQUIREMENTS already permits new fusion models to load the frozen audio checkpoint through an external adapter while keeping `src/audio` unchanged.
+- The strong-audio ablation must locate and strictly load the exact historical DEV-selected audio checkpoint for run `wsm_audio_models-e0ce-006`, selected epoch 4, DEV/Mean_Score=0.787827. If the exact checkpoint cannot be uniquely located locally, stop blocked; do not retrain audio and do not substitute another checkpoint.
+- Because the historical audio model is internally task-conditioned, a faithful adapter must run the frozen audio model internally for both fixed task indices and convert each two-class disease output to one binary logit using `class1_logit - class0_logit`. No external `task_id` is accepted from the fusion batch.
+- Before any new fusion training is trusted, the adapter must reproduce the historical DEV reference on the canonical A+V DEV set within a small numerical/rounding tolerance.
+- The first strong-audio fusion model is fixed as an F1-style shared residual fusion: frozen task-specific temporal audio features/base logits + pooled video feature -> shared fusion trunk -> independent task residual logits; final logits are frozen audio base logits plus video-conditioned residuals. If video is unavailable, the residual must be exactly zero and output must fall back exactly to the frozen audio base logits.
+- The frozen audio submodel remains eval-only, stop-gradient, absent from the optimizer, and `src/audio` remains untouched.
+- No training config/run is authorized in TASK-004H. TASK-004H is checkpoint discovery/reproduction plus model-contract implementation/smoke only.
+- After TASK-004H, run the fixed F1-temporal residual experiment before implementing the analogous F2-temporal directed relation variant.
+
+Recommended next atomic task: TASK-004H — locate/verify the exact historical audio checkpoint, implement a frozen temporal-audio adapter and the F1-style strong-audio+video residual model contract, reproduce the historical DEV audio score, and pass synthetic/real forward-loss-backward smoke without training.
