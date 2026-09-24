@@ -2689,3 +2689,45 @@ Integrity/deviations: the first production attempt exposed a batch device-transf
 Plan status: Stage 5 R2 remains blocked for depression; do not start TASK-005B or student training from this result.
 
 Recommended next atomic task: manager review for a semantic/VLM evidence step; do not lower the 0.90 precision target or min_support=10 automatically.
+
+
+### MANAGER-DECISION-033 — Accept blocked TASK-005A3 and authorize one fixed CLIP semantic-evidence audit for the blocked depression head
+
+Status: TASK-005A3 accepted as blocked evidence; semantic/VLM acceptance audit authorized; no student training authorized.
+
+- TASK-005A3 is integrated through PR #37 as `9ba814409fd3db1aad4b0c6dd8cab19dce2d84ba`.
+- R2 is accepted as a valid negative result for depression:
+  - depression positive side remained disabled;
+  - depression negative Family A at tau_conf=0.69 reached OOF precision/support=0.90/10 but collapsed to full-DEV support=0 and is disabled;
+  - depression deployable=false.
+- Parkinson R2 is stable and accepted for future cache construction:
+  - positive Family A tau_conf=0.77, OOF/full-DEV precision=1.0, support=21;
+  - negative Family A tau_conf=0.50, OOF/full-DEV precision=0.9585492, support=193.
+- Do NOT lower precision_target=0.90, lower min_support=10, use Test data, or redesign the Parkinson reliability rule.
+- The next task is a single semantic/VLM acceptance audit for the BLOCKED depression head only. Parkinson deployment rules are frozen from TASK-005A3 and may only be reproduced/verified, not reselected.
+- This task is an explicit semantic-label-embedding acceptance ablation allowed by PROJECT_REQUIREMENTS Section 11 and the Stage-5/SOTA semantic-bridge plan. It does NOT start the deferred general Text/Description Stage 3.
+- The existing video cache was extracted label-free with `openai/clip-vit-base-patch32`, revision `main`, through `transformers.CLIPModel.get_image_features`. The semantic audit must reuse those cached image embeddings; no raw frame re-extraction or diagnosis-conditioned image prompt is allowed.
+- The matching local CLIP text encoder `openai/clip-vit-base-patch32` is authorized only to encode one fixed, predeclared task-level prompt bank. No sample label, corpus identity, split, protocol, or ground truth may enter a prompt.
+- Fixed semantic prompt bank:
+  - depression disease prompts:
+    1. "a video of a person with depression"
+    2. "a person with depressive symptoms"
+    3. "a person showing signs of depression"
+  - neutral prompts:
+    1. "a video of a person"
+    2. "a person"
+    3. "a video showing a person"
+- Negative prompts such as "no depression" or "healthy instead of depression" are prohibited.
+- For each sample, semantic evidence is the cosine-similarity margin between the normalized pooled cached CLIP image embedding and the mean normalized depression-prompt embedding versus the neutral-prompt embedding.
+- Semantic score calibration must be monotonic: `p_semantic = sigmoid(exp(log_scale) * margin + bias)`. The positive scale prevents the calibration layer from turning a disease-label semantic score into an arbitrary sign-flipped classifier.
+- Reliability selection remains deterministic 5-fold OOF on observed depression DEV labels only, followed by frozen full-DEV confirmation.
+- Exactly three depression reliability families may be compared:
+  1. audio + semantic same-class agreement with joint confidence;
+  2. family 1 plus low uncertainty and class-conditional frozen-audio OOD filtering;
+  3. audio + video + semantic three-way agreement with joint confidence and low uncertainty.
+- Final eligibility remains unchanged: empirical precision >=0.90 and support>=10 on pooled OOF, then again on full DEV with the exact OOF-selected rule.
+- If at least one depression side survives full-DEV confirmation, combine it with the already frozen Parkinson R2 rules and only then infer TRAIN/build a two-head cache. Pseudo-target values remain calibrated STRONG-AUDIO probabilities; semantic/video evidence is acceptance-only.
+- If semantic evidence still cannot recover a deployable depression side, publish only the audit and remain blocked. Do not add a fourth reliability family, change prompts, lower reliability criteria, or start a student.
+- No Test inference or metrics are authorized.
+
+Recommended next atomic task: TASK-005A4 — run the fixed CLIP semantic acceptance audit for depression, preserving the frozen Parkinson R2 rules, and publish a two-head offline cache only if depression passes the unchanged OOF/full-DEV 0.90 precision gate.
