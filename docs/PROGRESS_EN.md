@@ -4,7 +4,7 @@
 
 Plan initialized: 2026-09-23.
 
-Current stage: **Stage 5 active — RAMPS R2 offline reliability audit is blocked for depression after full-DEV confirmation**.
+Current stage: **Stage 5 active — fixed CLIP semantic bridge accepted; subsequent RAMPS work remains manager-gated**.
 
 Final Test authorized: **no**.
 
@@ -18,7 +18,7 @@ Final Test authorized: **no**.
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | complete | Bounded strong-temporal-audio search complete; no safe A+V winner under the predeclared task-balance gate | TASK-004A through TASK-004K |
-| 5. RAMPS | active/blocked | R1 blocked for depression; R2 independent multimodal reliability gate also blocked for depression | TASK-005A2/TASK-005A3 |
+| 5. RAMPS | active | Fixed CLIP semantic bridge passed and published the audited two-head cache; further RAMPS work remains manager-gated | TASK-005A2/TASK-005A4-C2 |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
 
@@ -2743,3 +2743,218 @@ Recommended next atomic task: TASK-005A4 — run the fixed CLIP semantic accepta
   No accepted/deployability decision used the Family-C OOD feature.
 - Therefore TASK-005A3 remains integrated as valid evidence for the audio+video agreement failure, while Family-C OOD candidate-table values must not be used as evidence.
 - All future OOD acceptance logic must be side-conditional without target leakage: when evaluating candidate side c, compute distance to centroid c and compare against the fit/reference distance distribution for class c. Never use a held-out or missing row's ground-truth class to choose its centroid.
+
+
+### TASK-005A4 — Add fixed CLIP semantic evidence for the blocked depression RAMPS gate
+
+Outcome: blocked before semantic inference because the mandated local-only `openai/clip-vit-base-patch32` processor/model is unavailable. The script did not download a model, did not substitute another model, and emitted the required blocked artifacts.
+
+Changed files:
+
+- `src/fusion/loss/ramps_r2_semantic.py`;
+- `src/fusion/loss/__init__.py`;
+- `scripts/common/prepare_ramps_r2_semantic_targets.py`;
+- `docs/PROGRESS_EN.md`.
+
+Branch/evidence:
+
+- Required branch: `codex/task-005a4`.
+- The exact audio checkpoint SHA verified as `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`.
+- The exact video checkpoint SHA verified as `3e39778126db401a2fe17bb472a172191616e8a7b5265e982233c53dcd4af2f6`; the payload identifies epoch 5.
+- The video/audio teachers were constructed before the CLIP availability stop; no optimizer was instantiated.
+
+Exact production command:
+
+```text
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python scripts/common/prepare_ramps_r2_semantic_targets.py --data-root /media/maxim/Databases/WSM_NEW --audio-feature-cache-root /media/maxim/Databases/WSM_NEW/features --video-cache-root /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache --audio-checkpoint logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt --video-checkpoint logs/wsm_mm_pd_dep_v1/depart_v2_prototype_gated_2026-09-24_14-39_wsm_video_depart_v2_model_0a7294f4/checkpoints/epoch=5_dev_mean_score=0.7066.pt --clip-model openai/clip-vit-base-patch32 --clip-revision main --output-root /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1 --precision-target 0.90 --min-support 10 --folds 5 --batch-size 32 --num-workers 4 --device cuda --overwrite
+```
+
+Verification/results:
+
+- CUDA was available. The exact production command verified both checkpoint hashes, strict epoch-5 video loading, and then stopped at local-only `CLIPProcessor.from_pretrained(..., local_files_only=True)` with `OSError: Can't load image processor for 'openai/clip-vit-base-patch32'`. No network download or alternate VLM was used.
+- The fixed prompt bank was recorded exactly as authorized, with canonical JSON SHA256 `19428db58f91f73ca26ce9c4354b5731431e14ec524fc1a47e7070e1b32f447e`. It contains no negative prompts or sample-specific information. Depression/neutral embedding hashes are null because the local CLIP model was unavailable.
+- Required artifacts exist at `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/semantic_prompt_bank.json`, `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/semantic_search.json`, and `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/audit.json`.
+- `audit.json` records blocked=true, train_inference_ran=false, train_missing_targets_published=false, and no missing-label correctness claim. `train_missing_targets.pt` does not exist.
+- `precision_target=0.90` and `min_support=10` were unchanged. No Test rows or metrics were used. No student training, Parkinson semantic reselection, Candidate B/fusion teacher, R3/R4, or general Text/Description Stage 3 work occurred.
+- `python3 -m py_compile` and deterministic semantic synthetic checks passed before production. `git diff --check` passed. `src/audio`, `src/video`, accepted models, caches, and the DataModule were unchanged.
+
+Blocker: the fixed local CLIP processor/model must be provisioned by the manager or environment owner before this exact semantic audit can proceed. Do not download it, substitute a model, change prompts, lower the reliability thresholds, or infer TRAIN in this task.
+
+Plan status: Stage 5 remains active/blocked; TASK-005A4 did not reach OOF semantic selection or full-DEV confirmation.
+
+Recommended next atomic task: provision/restore the exact local `openai/clip-vit-base-patch32` revision `main` model and processor, then rerun this unchanged semantic audit.
+
+### MANAGER-REVIEW-034 — TASK-005A4 requires corrective implementation before acceptance
+
+Status: corrective task required; TASK-005A4 is not accepted for merge yet. Stage 5 remains active/blocked.
+
+Evidence reviewed:
+
+- Branch `codex/task-005a4`, implementation commit `30410c0debde864ca2280b7e90b9c3af7f64ec10`, exactly one implementation commit ahead of the then-current `main`.
+- Tracked implementation scope is limited to the four authorized paths: `src/fusion/loss/ramps_r2_semantic.py`, `src/fusion/loss/__init__.py`, `scripts/common/prepare_ramps_r2_semantic_targets.py`, and `docs/PROGRESS_EN.md`.
+- The reported environment blocker is credible: local-only `openai/clip-vit-base-patch32` / revision `main` failed at processor loading; no download or substitute model is evidenced; the blocked artifacts were written and no `train_missing_targets.pt` was published.
+- `src/audio` and `src/video` are absent from the branch diff.
+
+Corrective findings:
+
+1. The required success path is not implemented. If depression passes the OOF/full-DEV gate, the script infers TRAIN and then unconditionally raises `RuntimeError("semantic TRAIN writer not reached in this blocked audit")`. Therefore the required two-head cache can never be published even after the exact local CLIP dependency is restored.
+2. `semantic_reliability` is not deployable as written for Family S2: it reads `records["ood_percentile"]`, while the records contract provides side-specific `ood_percentile_positive` and `ood_percentile_negative`. Reliability must be computed for the selected candidate side without target leakage.
+3. The fixed task contract is not enforced exactly. The CLI currently permits `precision_target > 0.90`, `min_support > 10`, and alternate CLIP model/revision values, although TASK-005A4 freezes these to `0.90`, `10`, `openai/clip-vit-base-patch32`, revision `main`.
+4. The required deterministic-seed step is absent from the production script.
+5. The PROGRESS entry calls a command containing `--overwrite` the "Exact production command", while the task-file exact command did not include that flag. A corrective rerun may use `--overwrite` only because the fixed output root is now non-empty, and that manager-authorized rerun deviation must be stated explicitly.
+
+Decision:
+
+- Do not merge the current implementation yet.
+- Do not broaden the semantic method, change prompts, add reliability families, lower reliability criteria, use Test, start student training, or start R3/R4.
+- Execute exactly one corrective task, TASK-005A4-C1, on the existing branch only under explicit manager authorization to reuse it.
+- The external CLIP provisioning blocker remains separate. The corrective task must make the code structurally complete for both blocked and pass outcomes; it must not download or substitute the CLIP model.
+
+Recommended next atomic task: TASK-005A4-C1 — complete the already-authorized TASK-005A4 success path and fixed-contract enforcement without changing the research method.
+
+
+
+### TASK-005A4-C1 — Complete the fixed CLIP semantic audit success path without changing the method
+
+Outcome: corrective implementation complete; production remains environment-blocked because the mandated local-only CLIP processor/model is unavailable. The blocked path remains valid, and the previously unreachable success path is now structurally complete.
+
+Changed files:
+
+- `src/fusion/loss/ramps_r2_semantic.py`;
+- `src/fusion/loss/__init__.py`;
+- `scripts/common/prepare_ramps_r2_semantic_targets.py`;
+- `docs/PROGRESS_EN.md`.
+
+Branch/evidence:
+
+- Reused the manager-authorized existing branch `codex/task-005a4`; manager commits `9699b0f` and `e412542` were preserved.
+- Corrective implementation commit SHA is recorded in the final handoff after commit/push.
+- Main/master was not modified.
+
+Corrections implemented:
+
+- Removed the unconditional `semantic TRAIN writer not reached` sentinel. The success path now performs canonical TRAIN inference only after both-head DEV deployment, constructs the required two-head artifact, validates masks/targets/finite ranges/accepted audio-target equality/positive coverage, atomically writes `train_missing_targets.pt`, and writes pass audit statistics.
+- Fixed `semantic_reliability(records, rule, positive, mask)` to use explicit candidate-side confidence and `ood_percentile_positive` for side 1 or `ood_percentile_negative` for side 0; output is detached and clamped to `[0,1]`.
+- Enforced exact `openai/clip-vit-base-patch32`, revision `main`, precision_target `0.90`, min_support `10`, and folds `5`.
+- Added deterministic seed 42 for Python, Torch, and CUDA.
+- Preserved the exact prompts, S1/S2/S3 families, frozen Parkinson rules, side-conditional OOD logic, local-only CLIP loading, and no-Test firewall.
+
+Exact verification commands/results:
+
+- `python3 -m py_compile src/fusion/loss/ramps_r2_semantic.py src/fusion/loss/__init__.py scripts/common/prepare_ramps_r2_semantic_targets.py` — passed.
+- Required candidate-side S2 smoke — passed: finite bounded detached positive/negative reliability and side-specific ordering.
+- Sentinel absence check — passed. Fixed model/prompt string checks — passed.
+- Exact production rerun with `--overwrite` was attempted. Audio SHA=`0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`; video SHA=`3e39778126db401a2fe17bb472a172191616e8a7b5265e982233c53dcd4af2f6`; video epoch-5 strict construction passed.
+- Production stopped at `CLIPProcessor.from_pretrained(..., local_files_only=True)` with `OSError: Can't load image processor for 'openai/clip-vit-base-patch32'`. No download, network access, substitute model, raw-frame extraction, DEV semantic inference, TRAIN inference, or cache publication occurred.
+- Required blocked artifacts were rewritten: `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/semantic_prompt_bank.json`, `semantic_search.json`, and `audit.json`. `train_missing_targets.pt` is absent; blocked audit records `train_inference_ran=false` and `train_missing_targets_published=false`.
+- `precision_target=0.90`, `min_support=10`, and `folds=5` remained exact. No Test rows/metrics, Candidate B/fusion teacher, student training, TASK-005B, R3/R4, Stage 6/7, or general Text/Description work occurred.
+- `git diff --check` passed; `src/audio`, `src/video`, `src/fusion/models`, and `src/fusion/data` remained unchanged.
+
+Plan status: Stage 5 remains active/blocked on the external local CLIP dependency. This task did not start TASK-005B. No missing-label correctness or comorbidity claim is made.
+
+Recommended next atomic task: provision/restore the exact local `openai/clip-vit-base-patch32` revision `main` processor/model, then rerun the unchanged semantic audit.
+
+
+### TASK-005A4-C1 follow-up — Provision the exact local CLIP dependency and complete the semantic audit
+
+Outcome: complete. The exact `openai/clip-vit-base-patch32`, revision `main`, was provisioned into `/media/maxim/Programs/ml_cache/hf/hub`. The local-only processor/model load passed, the semantic audit passed the two-head DEV gate, and the audited TRAIN cache was published.
+
+Implementation corrections:
+
+- `normalize_prompt_bank` now unwraps the `text_embeds` field returned by the installed Transformers version.
+- TRAIN cache calibrated probabilities remain float64 so accepted pseudo-targets equal the stored calibrated audio probabilities exactly.
+- The overall deployability flag now requires both the depression semantic rule and frozen Parkinson rules.
+
+Exact commands/results:
+
+- CLIP provisioning used the exact repository/revision with `snapshot_download(repo_id='openai/clip-vit-base-patch32', revision='main', cache_dir='/media/maxim/Programs/ml_cache/hf/hub')`; download completed at approximately 1.82 GB.
+- Offline verification with `HF_HUB_OFFLINE=1` and `local_files_only=True` passed: `CLIPProcessor`, `CLIPModel`, projection dimension 512.
+- Exact semantic production command from TASK-005A4-C1 was rerun with `--overwrite`; result: `status=passed`, `accepted_missing=2177`.
+- DEV reproduction: audio depression/Parkinson/Mean=`0.7479183895/0.8277353635/0.7878268765`; video=`0.6201013364/0.7930427585/0.7065720475`.
+- Depression OOF selected S1 rules: positive tau_conf=`0.61`, precision/support=`0.9132653/196`; negative tau_conf=`0.77`, precision/support=`0.9259259/27`. Full-DEV confirmation retained positive precision/support=`0.9020619/194` and disabled negative precision/support=`0.8333333/30`.
+- Frozen Parkinson Family-A rules remained unchanged: positive tau_conf=`0.77`, precision/support=`1.0/21`; negative tau_conf=`0.50`, precision/support=`0.9585492/193`.
+- TRAIN accepted missing targets: depression `376/2665` (coverage `0.1410882`, positive/negative `376/0`); Parkinson `1801/3660` (coverage `0.4920765`, positive/negative `212/1589`).
+- Cache invariants passed: 6325 rows, 6325 unique IDs, observed overwrite `0`, observed pseudo-values `0`, rejected reliability nonzero count `0`, accepted targets finite/in `[0,1]`, exact accepted-target equality to calibrated audio probabilities, reliability bounded, valid pseudo classes.
+- Artifacts: `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/semantic_prompt_bank.json`, `semantic_search.json`, `audit.json`, and `train_missing_targets.pt`.
+- No Test rows/metrics, raw-frame extraction, Candidate B/fusion teacher, student training, TASK-005B, R3/R4, Stage 6/7, or general Text/Description work occurred. No missing-label correctness/comorbidity claim is made. `src/audio` and `src/video` remained unchanged.
+
+The exact fixed policy remained precision_target=`0.90`, min_support=`10`, folds=`5`; the fixed prompt bank and S1/S2/S3 method were unchanged.
+
+### MANAGER-REVIEW-035 — TASK-005A4-C1 runtime evidence accepted, one reproducibility correction required
+
+Status: corrective task required before PR #38 can merge. Stage 5 remains active.
+
+Owner clarification:
+
+- The owner explicitly authorized Codex to download/provision the exact `openai/clip-vit-base-patch32`, revision `main`. Therefore the CLIP download is NOT treated as an instruction violation or blocker.
+
+Evidence accepted:
+
+- Exact local CLIP dependency is now present and offline loading was reported successful.
+- Audio/video historical DEV reproduction matched the frozen references.
+- Depression OOF selected S1 positive/negative rules; full-DEV retained only the positive side at precision/support `0.9020619/194`.
+- Frozen Parkinson Family-A rules reproduced unchanged.
+- Published TRAIN cache reports accepted missing targets: depression `376/2665`, Parkinson `1801/3660`.
+- Reported cache invariants include 6325 unique rows, zero observed overwrite, exact accepted-target equality to calibrated audio probability, bounded reliability, and no Test use.
+- The semantic bridge is acceptance-only; general Text/Description Stage 3 remains deferred.
+
+Blocking reproducibility finding:
+
+- Current committed `normalize_prompt_bank()` uses:
+  `getattr(x, "text_embeds", None) or getattr(x, "pooler_output", None)`.
+- If `text_embeds` is a multi-element `torch.Tensor`, Python evaluates its truth value for the `or` expression and raises:
+  `RuntimeError: Boolean value of Tensor with more than one value is ambiguous`.
+- This directly affects the compatibility path added for the installed Transformers output object and contradicts the requirement that the committed code rerun reproducibly from the published branch.
+
+Decision:
+
+- Do not merge PR #38 yet.
+- Preserve all successful semantic/cache evidence; do not redesign or reselect anything.
+- Execute one narrow corrective task, TASK-005A4-C2, that fixes only safe CLIP text-output unwrapping, adds a regression smoke for an object carrying a multi-row `text_embeds` Tensor, and reruns the exact offline semantic audit.
+- The rerun must reproduce the frozen semantic selection/cache result without Test use. No TASK-005B implementation is authorized in this corrective cycle.
+
+Recommended next atomic task: TASK-005A4-C2 — make CLIP text-output unwrapping tensor-safe and reproduce the already accepted semantic audit/cache.
+
+
+
+### TASK-005A4-C2 — Make CLIP text-output unwrapping tensor-safe and reproduce the accepted semantic cache
+
+Outcome: complete. The committed `normalize_prompt_bank()` compatibility path no longer truth-tests a Tensor. It now accepts a direct Tensor, prefers a Tensor `text_embeds` field, falls back explicitly to a Tensor `pooler_output` field, and raises `TypeError` when neither field is usable. The exact fixed semantic audit reproduced the previously accepted OOF/full-DEV rules and TRAIN cache completely offline.
+
+Changed files:
+
+- `src/fusion/loss/ramps_r2_semantic.py`;
+- `docs/PROGRESS_EN.md`.
+
+Branch and history:
+
+- Required/reused branch: `codex/task-005a4`;
+- manager commits `aa47508` and `5983309` were preserved;
+- one corrective implementation commit was created after verification and pushed to `origin` (SHA recorded in the final handoff);
+- `main`/`master` was untouched by Codex.
+
+Exact verification commands/results:
+
+- `python3 -m py_compile src/fusion/loss/ramps_r2_semantic.py scripts/common/prepare_ramps_r2_semantic_targets.py` — passed.
+- The exact inline tensor-safe regression smoke passed for direct Tensor, multi-row `text_embeds`, and `pooler_output` fallback; outputs were identical, finite, and unit norm. Unsupported output raised the required clear `TypeError`.
+- `HF_HUB_OFFLINE=1` with `local_files_only=True` loaded `openai/clip-vit-base-patch32`, revision `main`, projection dimension 512 — passed. No download or model update occurred in this task.
+- Exact offline production rerun with the approved fixed command and `--overwrite` completed: `{"accepted_missing":2177,"status":"passed"}`. The production script was unchanged.
+- Historical DEV reproduction: audio depression/Parkinson/Mean=`0.7479183894738777/0.8277353634690592/0.7878268764714684`; video=`0.620101336372725/0.7930427585483398/0.7065720474605324`.
+- Depression OOF S1 rules reproduced: positive `tau_conf=0.61`, precision/support=`0.9132653061224489/196`; negative `tau_conf=0.77`, precision/support=`0.9259259259259259/27`.
+- Full-DEV confirmation reproduced: positive enabled, precision/support=`0.9020618556701031/194`; negative disabled, measured precision/support=`0.8333333333333334/30`.
+- Frozen Parkinson Family-A rules reproduced: positive `tau_conf=0.77`, precision/support=`1.0/21`; negative `tau_conf=0.50`, precision/support=`0.9585492014884949/193`.
+- TRAIN cache reproduced exactly: depression accepted `376/2665`, class counts `376/0`; Parkinson accepted `1801/3660`, class counts `212/1589`; total accepted missing `2177`.
+- Independent `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt` invariant check passed: 6325 rows and unique IDs, task dimension 2, no observed pseudo-acceptance/values, rejected reliability zero, rejected class `-1`, accepted targets finite and in `[0,1]`, exact equality to calibrated audio probabilities, bounded reliability, and pseudo classes limited to `-1/0/1`.
+- Fixed policy remained `precision_target=0.90`, `min_support=10`, `folds=5`; fixed prompt bank and semantic method were unchanged.
+- `git diff --check` passed. `git diff -- src/audio` and `git diff -- src/video` were empty. No Test rows or metrics were used; no raw-frame extraction, Candidate B/fusion teacher, student training, missing-label correctness/comorbidity claim, TASK-005B, R3/R4, Stage 6/7, or general Text/Description work occurred.
+
+Artifacts:
+
+- `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/semantic_prompt_bank.json`;
+- `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/semantic_search.json`;
+- `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/audit.json`;
+- `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt`.
+
+Plan status: Stage 5 remains active. TASK-005A4-C2 is complete; stop before TASK-005B. No missing-label correctness or comorbidity claim is made.
+
+Recommended next atomic task: manager review for TASK-005B.
