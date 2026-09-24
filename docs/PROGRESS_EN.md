@@ -4,7 +4,7 @@
 
 Plan initialized: 2026-09-23.
 
-Current stage: **Stage 4 reopened — strong temporal-audio fusion ablation before RAMPS**.
+Current stage: **Stage 5 active — RAMPS reliability recovery; R1 strong-audio-only acceptance is blocked and R2 offline reliability audit is next**.
 
 Final Test authorized: **no**.
 
@@ -17,8 +17,8 @@ Final Test authorized: **no**.
 | 1. Manifest/partial-label contract | complete | Canonical manifest, separate DEV/Test consumer, masked sparse loss, zero video leakage, and owner-accepted speaker-independent split contract | TASK-001A through TASK-001E plus manager decision below |
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
-| 4. Fusion baselines | reopened | F0/F1/F2 pooled-audio ladder complete; owner-authorized strong temporal-audio controlled ablation now active before RAMPS | TASK-004A through TASK-004G plus TASK-004H onward |
-| 5. RAMPS | deferred | TASK-005A was assigned but superseded before execution; start after the strong temporal-audio fusion ablation | None |
+| 4. Fusion baselines | complete | Bounded strong-temporal-audio search complete; no safe A+V winner under the predeclared task-balance gate | TASK-004A through TASK-004K |
+| 5. RAMPS | active | R1 strong-audio-only calibrated acceptance blocked for depression; R2 independent multimodal reliability recovery authorized | TASK-005A2 onward |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
 
@@ -2621,3 +2621,34 @@ Deviations/blockers: the frozen strong-audio teacher cannot meet the predeclared
 Plan status: Stage 5 R1 remains blocked; no later Stage 5 phase started.
 
 Recommended next atomic task: manager review of the R1 depression-head calibration/acceptance failure and explicit decision on whether to revise the frozen policy or stop R1.
+
+
+### MANAGER-DECISION-032 — Accept blocked TASK-005A2 and advance to an offline R2 reliability-recovery audit without lowering the precision standard
+
+Status: TASK-005A2 accepted as blocked evidence; R1 strong-audio-only acceptance is not sufficient for both disease heads; no student training authorized.
+
+- TASK-005A2 is integrated through PR #36 as `d3eaf35011db70dd4b9756d5aef018bed2dbfbdb`.
+- The implementation is accepted. Calibration, threshold selection, TRAIN inference, missing-only masking, stop-gradient teacher semantics, and the no-Test firewall were all correctly implemented.
+- Exact frozen temporal-audio teacher calibration on observed DEV:
+  - depression temperature=2.3877333828;
+  - Parkinson temperature=1.7874480292.
+- The fixed R1 acceptance rule remained exactly precision_target=0.90, min_support=10, threshold_step=0.01.
+- Depression: neither positive nor negative class side reaches the fixed acceptance criterion; both sides are disabled and TRAIN accepted count is 0/2665 missing depression entries.
+- Parkinson: positive threshold=0.90 with DEV precision=0.9111111111/support=45; negative threshold=0.17 with DEV precision=0.9005235602/support=191; TRAIN accepted=1889/3660 missing Parkinson entries.
+- Therefore no valid two-head R1 cache exists. This is a genuine method limitation, not a reason to lower the 0.90 target or use Test data.
+- Do NOT lower the reliability target, lower minimum support, fit thresholds on Test, cherry-pick Candidate B, or start a student from the one-head Parkinson cache.
+- PLAN R2 explicitly permits uncertainty, multimodal agreement, OOD distance, and coverage curves. The next task will test whether those independent reliability signals can recover a depression acceptance subset while preserving the SAME final empirical precision target.
+- The independent second modality must be the already Stage-2-selected video V2 checkpoint, not a Stage-4 fusion model and not a task-specific post-hoc teacher:
+  `logs/wsm_mm_pd_dep_v1/depart_v2_prototype_gated_2026-09-24_14-39_wsm_video_depart_v2_model_0a7294f4/checkpoints/epoch=5_dev_mean_score=0.7066.pt`.
+- Before it can participate in the R2 audit, that video checkpoint must strict-load into `wsm_video_depart_v2_model` and reproduce its historical DEV result within tolerance:
+  depression Score=0.620101, Parkinson Score=0.793043, Mean_Score=0.706572.
+- R2 remains an OFFLINE reliability/target-preparation step. No trainable student, no Test inference, and no R3/R4 is authorized.
+- To control DEV overfitting, reliability-family selection must use deterministic stratified 5-fold out-of-fold DEV evidence. A family/side is eligible only if its pooled out-of-fold precision remains >=0.90 with support>=10.
+- The bounded R2 search may compare exactly three predeclared reliability families:
+  1. calibrated audio+video same-class agreement with joint confidence;
+  2. the same agreement plus low predictive entropy;
+  3. the same agreement/entropy plus class-conditional frozen-audio feature-distance (OOD) filtering.
+- The search objective is coverage/support subject to the unchanged precision constraint, not higher DEV classification Score.
+- If no R2 rule yields at least one accepted TRAIN missing target for each disease while passing the OOF/full-DEV reliability gates, remain blocked and proceed later only by a new manager decision (e.g. semantic/VLM evidence). Do not relax the rule inside the task.
+
+Recommended next atomic task: TASK-005A3 — run the bounded R2 audio+independent-video reliability audit, and publish a two-head missing-target cache only if the unchanged 0.90 precision gate is recovered for both diseases.
