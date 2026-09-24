@@ -151,6 +151,9 @@ Segment-level metrics remain primary; video/person aggregation SHOULD be seconda
 - Feature-cache fingerprints MUST include model revision, layer, preprocessing, sampling, and manifest hash.
 - Labels/task identity MUST NOT enter prompts/extraction, except an explicitly studied trainable task token.
 - Extraction failure MUST produce an availability mask, not a fake feature.
+- For DEPART-comparable video preprocessing, a YOLO body-detection miss is NOT an extraction failure. Every readable sampled frame MUST use the detected body ROI when a valid box exists and MUST fall back to the full RGB frame when no valid body box exists. This fallback is part of the reproducible preprocessing contract, not a fabricated feature.
+- The DEPART-comparable video cache used for training/evaluation MUST cover all canonical readable rows in TRAIN, DEV, and TEST. Rows MUST NOT be excluded solely because YOLO failed to detect a body.
+- TEST_NONE/SOFT/HARD dataset membership counts are defined before video preprocessing availability filtering. For DEPART-comparable comparisons, the evaluation DataModule MUST preserve full protocol membership unless the underlying video itself is unreadable or another non-YOLO fatal extraction error is explicitly documented.
 - Distinguish modality dropout from real extraction failure.
 
 ## 11. Supervision
