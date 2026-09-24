@@ -4,7 +4,7 @@
 
 Plan initialized: 2026-09-23.
 
-Current stage: **Stage 5 active — RAMPS reliability recovery; R1 strong-audio-only acceptance is blocked and R2 offline reliability audit is next**.
+Current stage: **Stage 5 active — RAMPS R2 offline reliability audit is blocked for depression after full-DEV confirmation**.
 
 Final Test authorized: **no**.
 
@@ -18,7 +18,7 @@ Final Test authorized: **no**.
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | complete | Bounded strong-temporal-audio search complete; no safe A+V winner under the predeclared task-balance gate | TASK-004A through TASK-004K |
-| 5. RAMPS | active | R1 strong-audio-only calibrated acceptance blocked for depression; R2 independent multimodal reliability recovery authorized | TASK-005A2 onward |
+| 5. RAMPS | active/blocked | R1 blocked for depression; R2 independent multimodal reliability gate also blocked for depression | TASK-005A2/TASK-005A3 |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
 
@@ -2652,3 +2652,40 @@ Status: TASK-005A2 accepted as blocked evidence; R1 strong-audio-only acceptance
 - If no R2 rule yields at least one accepted TRAIN missing target for each disease while passing the OOF/full-DEV reliability gates, remain blocked and proceed later only by a new manager decision (e.g. semantic/VLM evidence). Do not relax the rule inside the task.
 
 Recommended next atomic task: TASK-005A3 — run the bounded R2 audio+independent-video reliability audit, and publish a two-head missing-target cache only if the unchanged 0.90 precision gate is recovered for both diseases.
+
+
+### TASK-005A3 — Recover two-head RAMPS reliability with independent video agreement, uncertainty, and OOD filtering
+
+Outcome: blocked evidence task. The exact Stage-2 V2 video teacher strict-loaded and reproduced its historical DEV scores, and the deterministic R2 audit completed. Parkinson remained deployable, but depression’s OOF-selected negative Family A rule collapsed on full-DEV confirmation; therefore the overall two-head gate failed. No TRAIN inference or target cache publication occurred.
+
+Branch/evidence:
+
+- Branch: `codex/task-005a3`.
+- The implementation is committed after verification and will be pushed for manager review.
+- Allowed tracked scope is limited to `src/fusion/loss/ramps_r2_reliability.py`, `src/fusion/loss/__init__.py`, `scripts/common/prepare_ramps_r2_av_targets.py`, and this progress entry.
+
+Exact production command:
+
+```text
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python scripts/common/prepare_ramps_r2_av_targets.py --data-root /media/maxim/Databases/WSM_NEW --audio-feature-cache-root /media/maxim/Databases/WSM_NEW/features --video-cache-root /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache --audio-checkpoint logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt --video-checkpoint logs/wsm_mm_pd_dep_v1/depart_v2_prototype_gated_2026-09-24_14-39_wsm_video_depart_v2_model_0a7294f4/checkpoints/epoch=5_dev_mean_score=0.7066.pt --output-root /media/maxim/Programs/Features/WSM/ramps_r2_av_reliability_v1 --precision-target 0.90 --min-support 10 --folds 5 --batch-size 32 --num-workers 4 --device cuda --overwrite
+```
+
+Verification/results:
+
+- Required audio checkpoint SHA passed: `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`. V2 video checkpoint payload identified epoch 5, strict-loaded as `WSMVideoDepartV2Model` with the fixed contract, and SHA256 was `3e39778126db401a2fe17bb472a172191616e8a7b5265e982233c53dcd4af2f`.
+- CUDA production ran on the requested device. Both teachers were eval-only, all parameters had `requires_grad=false`, inference used `torch.inference_mode()`, and no optimizer was instantiated.
+- Canonical counts passed: TRAIN=6325, DEV=933, TEST_NONE=1364, TEST_SOFT=1208, TEST_HARD=1014; DataModule audit reported missing audio/video=0. Only direct `val_dataset` and `train_dataset` paths are present; `val_dataloader()` was not called, no Test dataset was iterated, and no Test metric was inspected.
+- Historical DEV reproduction passed: audio depression/Parkinson/Mean=`0.7479183895/0.8277353635/0.7878268765`; video V2=`0.6201013364/0.7930427585/0.7065720475`, all within the required 0.0005 tolerance.
+- Deterministic stratified 5-fold OOF assignment passed separately per disease: class-sorted SHA256(`task_name:segment_id`) round-robin folds, every held-out row exactly once, and every fit partition retained both classes. Fold audit and all Families A/B/C candidate rows are stored in `reliability_search.json`.
+- The unchanged reliability standard remained precision_target=0.90 and min_support=10. No threshold relaxation or Test fitting occurred.
+- Full-DEV temperatures: depression audio/video=`2.3877333510/15.4549383663`; Parkinson audio/video=`1.7874480212/4.9769937391`.
+- Depression OOF selection: positive disabled; negative Family A, tau_conf=`0.69`, OOF precision/support/coverage=`0.900000/10/0.0294118`. Full-DEV confirmation became disabled: precision/support/coverage=`0.0/0/0.0`. Depression deployable=false.
+- Parkinson OOF selection: positive Family A, tau_conf=`0.77`, precision/support/coverage=`1.000000/21/0.200000`; negative Family A, tau_conf=`0.50`, precision/support/coverage=`0.9585492/193/0.8937198`. Full-DEV values remained positive=`1.000000/21`, negative=`0.9585492/193`. Parkinson deployable=true.
+- Required artifacts exist at `/media/maxim/Programs/Features/WSM/ramps_r2_av_reliability_v1/reliability_search.json` and `/media/maxim/Programs/Features/WSM/ramps_r2_av_reliability_v1/audit.json`. `train_missing_targets.pt` does not exist because the overall two-head gate failed; `audit.json` records `train_inference_ran=false`, TRAIN missing counts depression=2665 and Parkinson=3660, and all observed/pseudo overwrite invariants are zero.
+- Synthetic utility checks and `py_compile` passed. `git diff --check` passed. `src/audio`, `src/video`, `src/fusion/models`, and `src/fusion/data` remained unchanged.
+
+Integrity/deviations: the first production attempt exposed a batch device-transfer issue before inference; the scoped orchestrator fix was applied, then the exact CUDA command was rerun successfully through the intended blocked gate. No Candidate B or any Stage-4 fusion model was used as a teacher. No missing-label correctness or comorbidity recovery claim is made. No student training ran. R3/R4 were not started. Text/description remains deferred.
+
+Plan status: Stage 5 R2 remains blocked for depression; do not start TASK-005B or student training from this result.
+
+Recommended next atomic task: manager review for a semantic/VLM evidence step; do not lower the 0.90 precision target or min_support=10 automatically.
