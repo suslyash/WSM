@@ -2020,3 +2020,55 @@ Status: active owner override.
 - After TASK-004H, run the fixed F1-temporal residual experiment before implementing the analogous F2-temporal directed relation variant.
 
 Recommended next atomic task: TASK-004H — locate/verify the exact historical audio checkpoint, implement a frozen temporal-audio adapter and the F1-style strong-audio+video residual model contract, reproduce the historical DEV audio score, and pass synthetic/real forward-loss-backward smoke without training.
+
+
+### TASK-004H — Implement the frozen strong-temporal-audio F1 residual A+V contract and reproduce the historical audio DEV reference
+
+Status: complete. Branch: codex/task-004h. No training config, fusion training, audio retraining, Test stream iteration, RAMPS, or text/description work was performed.
+
+Changed files:
+
+- src/fusion/models/frozen_audio_temporal_adapter.py
+- src/fusion/models/av_f1_temporal_audio_residual.py
+- src/fusion/models/__init__.py
+- src/chimera_plugin.py
+- docs/PROGRESS_EN.md
+
+Historical checkpoint discovery and strict-load evidence:
+
+- The sweep manifest `logs/wsm_audio_segment_wavlm_base_l9_pool4/_sweeps/wsm_audio_models-260819-1336-e0ce/manifest.yaml` uniquely maps trial `wsm_audio_models-e0ce-006` to run `multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77`.
+- Exact selected checkpoint: `logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt`.
+- Candidate evidence in the same run includes epoch 3 (`0.7593`), selected epoch 4 (`0.7878`), and `last.pt` epoch 10; the accepted historical DEV result identifies epoch 4, so no Test metric was used for this choice.
+- Checkpoint SHA256: `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`.
+- Payload keys are `epoch`, `global_step`, `model_state_dict`, and `optimizer_state_dict`; `model_state_dict` contains 105 keys with no prefix. Strict loading into the exact historical architecture produced zero missing and zero unexpected keys after the minimal verified normalization compatibility step: `projected_audio_norm`, `audio_output_norm`, `segment_input_norm`, and `segment_output_norm` were replaced by `nn.Identity` because the archived source in `code.zip` predates those four later source modules. No src/audio file was modified.
+- Frozen architecture: WavLM-base-plus layer 9/pool 4 cached input, audio feature dim 768, Transformer temporal encoder, hidden 192, 3 layers, 4 heads, FF multiplier 4, dropout 0.25, sequence_steps 128, and the historical two-class task-conditioned heads.
+
+Frozen audio DEV reproduction gate:
+
+- Used `WSMAVFusionDataModule.val_dataset` directly with a deterministic DataLoader and accepted fusion collate; no `val_dataloader()` and no Test stream were used.
+- Outputs/targets/masks were `[933,2]`, `[933,2]`, `[933,2]`.
+- Reproduced DEV depression UAR/MF1/Score=`0.7480392157/0.7477975633/0.7479183895`.
+- Reproduced DEV Parkinson UAR/MF1/Score=`0.8209799862/0.8344907407/0.8277353635`.
+- Reproduced DEV Mean_Score=`0.7878268765`.
+- Deltas to historical rounded references are depression `+0.0000003895`, Parkinson `+0.0000003635`, and Mean_Score `-0.0000001235`; all pass the absolute tolerance 0.0005.
+
+Adapter and strong-audio F1 residual contract:
+
+- `FrozenAudioTemporalAdapter` requires the exact checkpoint path, strictly loads the frozen model, sets every audio parameter non-trainable, runs audio inference under `torch.no_grad()`, and guards parent train propagation so `audio_model.training` remains false.
+- It internally creates fixed task indices 0 and 1, returning `legacy_audio_class_logits [B,2,2]` and `audio_task_features [B,2,192]`. Independent binary base logits are exactly `base_logits[:,t] = legacy_class_logits[:,t,1] - legacy_class_logits[:,t,0]`; no external task IDs are consumed.
+- `WSMAVF1TemporalAudioResidualModel` requires audio availability, uses masked-mean video with the F1 LayerNorm/Linear/GELU/Dropout projection, and applies one shared task-independent fusion trunk independently to each task’s concatenated frozen audio feature and effective video feature.
+- Final equation is `preds = audio_base_logits + video_available * residual_logits`; unavailable video has exact zero effective feature/residual and exact frozen-audio fallback.
+- Output shapes: `preds [B,2]`, `audio_base_logits [B,2]`, `legacy_audio_class_logits [B,2,2]`, `audio_task_features [B,2,192]`, `video_features [B,192]`, `effective_video_features [B,192]`, `task_fused_features [B,2,192]`, and `residual_logits [B,2]`.
+
+Verification:
+
+- Required compilation and registry smoke passed. Registry key: `wsm_av_f1_temporal_audio_residual_model`; existing audio/F1/F2 keys remained present; no project import warning remained after removing only the new eager `__init__` re-export that caused a circular import. The required plugin import is explicit.
+- Synthetic contract/loss/backward smoke passed with finite loss=`1.6642650366`. Verified exact residual equation, audio-only fallback, masked audio/video padding invariance, unavailable-video raw-value invariance, audio-unavailable rejection, frozen audio train-mode guard, no audio gradients, finite nonzero video/shared/residual gradients, and both residual heads receiving gradients.
+- Real A+V DataModule smoke passed with finite sparse loss=`0.0378004387`, output `[1,2]`, finite trainable gradients, frozen audio without gradients, temporal audio/video inputs, and no `task_id`/`task_ids` input.
+- `git diff --check`, `git diff -- src/audio`, `git diff -- src/video`, `git diff -- src/fusion/data`, and existing F0/F1/F2 source checks passed.
+
+Evidence commit SHA: pending commit. Push result: pending.
+
+Stage status: Stage 4 is reopened for the strong temporal-audio controlled ablation before RAMPS. TASK-005A/RAMPS remains deferred; text/description remains deferred.
+
+Recommended next atomic task: run the fixed seed-42 F1-temporal residual training experiment, using DEV/Mean_Score as the sole selector and preserving the Test firewall.

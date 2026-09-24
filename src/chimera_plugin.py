@@ -15,6 +15,7 @@ _MODULES_TO_REGISTER: tuple[str, ...] = (
     "fusion.models.av_f0_gated_late",
     "fusion.models.av_f1_shared_mtl",
     "fusion.models.av_f2_task_aware_directed",
+    "fusion.models.av_f1_temporal_audio_residual",
     "fusion.data.wsm_manifest_datamodule",
     "fusion.data.wsm_av_fusion_datamodule",
     "video.models.depart_v1",
