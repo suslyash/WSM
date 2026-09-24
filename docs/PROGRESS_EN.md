@@ -2216,3 +2216,54 @@ Status: optimizer repair accepted; pre-training evidence rerun required.
 - No model/config/source change is authorized in this rerun except appending PROGRESS evidence.
 
 Recommended next atomic task: TASK-004I2B — rerun the complete strong-audio pre-training firewall with corrected parameter-count expectations and no code/config changes. If all gates pass, then authorize TASK-004I3 training.
+
+### TASK-004I2B — Re-run the strong-audio pre-training firewall with corrected parameter counts
+
+Status: complete. All no-training pre-training gates passed on the authorized branch. No full training, optimizer step, MLflow training run, or Test-loader iteration was performed.
+
+Branch: codex/task-004i2b.
+
+Changed files:
+
+- docs/PROGRESS_EN.md only.
+
+Repository/scope:
+
+- Started from clean `origin/main`; source/config files matched `origin/main` and remained unchanged. Only this progress entry became dirty.
+- `src/audio` and `src/video` remained unchanged. F2-temporal, RAMPS, text, and description work remained deferred.
+
+Corrected parameter-count evidence:
+
+- The accepted residual head is LayerNorm(192) + Linear(192,192) + GELU + Dropout + Linear(192,1): 384 + 37,056 + 193 = 37,633 scalars per head, 75,266 for two heads.
+- Production model counts passed: frozen audio=105 objects / 3,031,880 scalars; trainable=22 objects / 286,530 scalars; video_projection=99,520; shared_fusion=111,744; residual_heads=75,266.
+- `model.train()` preserved `model.audio_adapter.audio_model.training == false`; every audio parameter remained `requires_grad=false`.
+
+Registry/config/checkpoint gates:
+
+- Required registry smoke passed: built-in `adamw_optimizer`, `wsm_trainable_adamw_optimizer`, `wsm_av_f1_temporal_audio_residual_model`, `wsm_av_fusion_datamodule`, and `wsm_masked_sparse_loss` were present with no project-module import warning.
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config --config-path configs/wsm_mm_pd_dep_v1/fusion/03_f1_temporal_audio_residual.yaml` — passed: Config is valid. The config remained seed=42, batch_size=8, epochs=30, optimizer=`wsm_trainable_adamw_optimizer`, lr=0.0001, weight_decay=0.01, and checkpoint/early-stopping monitor `dev/mean_score` mode=max.
+- Historical checkpoint SHA256 — passed: `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`.
+
+Optimizer firewall:
+
+- Actual `chimera_ml.training.builders.build_optimizer` construction passed with `torch.optim.AdamW`, effective lr=0.0001 and weight_decay=0.01.
+- `len(trainable_ids)=22`, `len(frozen_ids)=105`, `len(optimizer_ids)=22`.
+- Exact result: `optimizer_ids == trainable_ids` passed; `optimizer_ids.isdisjoint(frozen_ids)` passed; no frozen audio parameter object entered the optimizer.
+
+Data/protocol and DEV reproduction gates:
+
+- Production DataModule counts passed: train=6325, dev=933, test_none=1364, test_soft=1208, test_hard=1014; joined_total=8622; missing audio/video=0/0.
+- Validation keys were exactly `dev`, `test_none`, `test_soft`, `test_hard`; only `dm.val_dataset` was iterated, and no Test loader was iterated.
+- DEV frozen-base reproduction passed using deterministic DEV loading and `compute_sparse_two_task_metrics`: depression UAR/MF1/Score=`0.7480392157/0.7477975633/0.7479183895`; Parkinson UAR/MF1/Score=`0.8209799862/0.8344907407/0.8277353635`; Mean_Score=`0.7878268765`. Score deltas from the required references were below `3.2e-11`.
+
+Bounded TRAIN smoke:
+
+- One production-shuffled TRAIN batch of size 8 passed forward/loss/backward with structural-only sparse loss=`0.0538242795`, predictions shape `[8,2]`, and observed counts `[6,2]` for depression/Parkinson.
+- Gradients were finite and nonzero: video_projection sum=`2.9405664913`, shared_fusion sum=`46.2325229570`, depression residual head sum=`16.0797466449`, Parkinson residual head sum=`7.9945105910`.
+- All frozen audio gradients were `None`; audio remained eval-only; optimizer IDs remained exact after backward. `optimizer.step()` was not called.
+
+Boundary and next step:
+
+- No `chimera-ml train`, epoch metrics, MLflow training run, Test iteration, source/config change, or optimizer step occurred.
+- Evidence commit SHA: `c982eb0` (final documentation reference commit follows); push result: pending.
+- Stage 4 strong-temporal-audio ablation is pre-training-ready. Recommended next atomic task: TASK-004I3 run the fixed seed-42 strong-temporal-audio F1 residual experiment using the accepted production config and repaired optimizer.
