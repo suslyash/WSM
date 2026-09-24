@@ -102,6 +102,13 @@ Checkpointing and early stopping use dev/mean_score in max mode.
 - New training datamodules must expose DEV, TEST_NONE, TEST_SOFT, and TEST_HARD as separate evaluation streams and report all four every epoch/validation cycle.
 - DEV/Mean_Score is the only automatic selector/checkpoint/early-stopping signal; Test protocol metrics are monitoring outputs and must not drive automatic selection.
 
+### DEPART-comparable video coverage
+
+- A YOLO body-detection miss is not a video extraction failure for the DEPART-comparable V1 path.
+- Use the detected body ROI when available; otherwise use the full RGB frame for that sampled frame.
+- Do not exclude TRAIN/DEV/TEST samples solely because YOLO found no body.
+- The training/evaluation cache must preserve full canonical protocol membership unless the source video is unreadable or another explicitly documented fatal extraction error occurs.
+
 ### Experiment limits
 
 - Do not tune the audio architecture.
