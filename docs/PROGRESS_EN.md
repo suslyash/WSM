@@ -1576,3 +1576,19 @@ Exact verification commands/results:
 Deviations/blockers: none.
 
 Recommended next atomic task: create the fixed F0 training config and run the authorized DEV-selected F0 baseline without changing the accepted DataModule/model contracts or using Test metrics for selection.
+
+
+### MANAGER-DECISION-018 — Accept TASK-004B and authorize the fixed F0 training run
+
+Status: accepted.
+
+- TASK-004B is integrated through PR #24 as a9b4ac919428a6e0d7f2c8f3eecc10c9c6333838.
+- The F0 registry/model contract is accepted as wsm_av_f0_gated_late_model.
+- F0 is the Stage 4 simple masked late/gated fusion baseline: projected frozen audio_cls plus masked-mean cached video, independent modality/task logits, and task-specific availability-aware convex gating.
+- Synthetic and real TASK-004A forward/loss/backward checks passed, including modality-collapse semantics, unavailable-modality invariance, masked-video invariance, and sparse NaN-label handling.
+- The accepted A+V DataModule, src/audio, and src/video remain frozen for the F0 run.
+- The fixed F0 experiment uses seed=42 and the same optimizer/training/instrumentation policy as the accepted video runs: AdamW lr=1e-4, weight_decay=0.01, batch_size=32, up to 30 epochs, mixed precision, grad clip 0.5, patience 6, and dev/mean_score as the sole selector.
+- DEV/TEST_NONE/TEST_SOFT/TEST_HARD must be reported every epoch. Test metrics remain monitoring-only and cannot drive any training or model-selection decision.
+- No hyperparameter sweep is authorized.
+
+Recommended next atomic task: TASK-004C — create the fixed F0 training config and run the real seed-42 F0 baseline. Preserve all artifacts and report the DEV-selected result, descriptive gate diagnostics, and descriptive comparison to frozen audio and video V2.
