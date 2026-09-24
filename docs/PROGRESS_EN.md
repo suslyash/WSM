@@ -2783,3 +2783,32 @@ Blocker: the fixed local CLIP processor/model must be provisioned by the manager
 Plan status: Stage 5 remains active/blocked; TASK-005A4 did not reach OOF semantic selection or full-DEV confirmation.
 
 Recommended next atomic task: provision/restore the exact local `openai/clip-vit-base-patch32` revision `main` model and processor, then rerun this unchanged semantic audit.
+
+### MANAGER-REVIEW-034 — TASK-005A4 requires corrective implementation before acceptance
+
+Status: corrective task required; TASK-005A4 is not accepted for merge yet. Stage 5 remains active/blocked.
+
+Evidence reviewed:
+
+- Branch `codex/task-005a4`, implementation commit `30410c0debde864ca2280b7e90b9c3af7f64ec10`, exactly one implementation commit ahead of the then-current `main`.
+- Tracked implementation scope is limited to the four authorized paths: `src/fusion/loss/ramps_r2_semantic.py`, `src/fusion/loss/__init__.py`, `scripts/common/prepare_ramps_r2_semantic_targets.py`, and `docs/PROGRESS_EN.md`.
+- The reported environment blocker is credible: local-only `openai/clip-vit-base-patch32` / revision `main` failed at processor loading; no download or substitute model is evidenced; the blocked artifacts were written and no `train_missing_targets.pt` was published.
+- `src/audio` and `src/video` are absent from the branch diff.
+
+Corrective findings:
+
+1. The required success path is not implemented. If depression passes the OOF/full-DEV gate, the script infers TRAIN and then unconditionally raises `RuntimeError("semantic TRAIN writer not reached in this blocked audit")`. Therefore the required two-head cache can never be published even after the exact local CLIP dependency is restored.
+2. `semantic_reliability` is not deployable as written for Family S2: it reads `records["ood_percentile"]`, while the records contract provides side-specific `ood_percentile_positive` and `ood_percentile_negative`. Reliability must be computed for the selected candidate side without target leakage.
+3. The fixed task contract is not enforced exactly. The CLI currently permits `precision_target > 0.90`, `min_support > 10`, and alternate CLIP model/revision values, although TASK-005A4 freezes these to `0.90`, `10`, `openai/clip-vit-base-patch32`, revision `main`.
+4. The required deterministic-seed step is absent from the production script.
+5. The PROGRESS entry calls a command containing `--overwrite` the "Exact production command", while the task-file exact command did not include that flag. A corrective rerun may use `--overwrite` only because the fixed output root is now non-empty, and that manager-authorized rerun deviation must be stated explicitly.
+
+Decision:
+
+- Do not merge the current implementation yet.
+- Do not broaden the semantic method, change prompts, add reliability families, lower reliability criteria, use Test, start student training, or start R3/R4.
+- Execute exactly one corrective task, TASK-005A4-C1, on the existing branch only under explicit manager authorization to reuse it.
+- The external CLIP provisioning blocker remains separate. The corrective task must make the code structurally complete for both blocked and pass outcomes; it must not download or substitute the CLIP model.
+
+Recommended next atomic task: TASK-005A4-C1 — complete the already-authorized TASK-005A4 success path and fixed-contract enforcement without changing the research method.
+
