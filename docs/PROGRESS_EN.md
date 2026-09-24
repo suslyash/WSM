@@ -1806,6 +1806,6 @@ Scope and blockers:
 - F2 was not started. Text/description remains deferred. No dependency installation or pseudo-labeling occurred.
 - Stage 4 remains partial: F0 and F1 baselines are complete; F2 remains.
 
-Evidence commit SHA: pending commit. Push result: pending.
+Evidence commit SHA: f0232f45410b9135fcd07e8b04781782d972e29f. Push result: successful after final branch push.
 
 Recommended next atomic task: TASK-004F — implement/register the fixed F2 task-aware directed fusion baseline, with observed loss only and no pseudo-labeling.
