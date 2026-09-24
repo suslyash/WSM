@@ -1509,3 +1509,23 @@ Exact verification commands/results:
 Deviations/blockers: none. A local implementation correction was required to derive segment_file from the authoritative canonical segment_id because the canonical manifest schema does not duplicate segment_file; the final join and all required checks pass.
 
 Recommended next atomic task: implement the first authorized sparse A+V fusion model/data consumer smoke (F0 or F1) without changing this DataModule contract or starting text/description work.
+
+
+### MANAGER-DECISION-017 — Accept TASK-004A and define the F0 gated late-fusion baseline
+
+Status: accepted.
+
+- TASK-004A is integrated through PR #23 as 32d79f20e02a8b669d8f0bee546cf52a4aecd08a.
+- The canonical sparse A+V DataModule is accepted with 8622/8622 joined rows, frozen audio dim=768, video dim=512, complete DEV/TEST_NONE/TEST_SOFT/TEST_HARD streams, and no task_id model input.
+- Stage 4 now proceeds to F0, the simplest honest A+V baseline.
+- F0 is fixed as task-wise gated late fusion over unimodal logits, not a shared multimodal encoder:
+  - audio representation: frozen cached audio_cls -> trainable projection;
+  - video representation: masked mean of cached frame features -> trainable projection;
+  - each disease has an independent audio scalar logit and video scalar logit;
+  - each disease has an independent gate computed only from the two projected modality representations;
+  - the final disease logit is the availability-aware convex combination of its audio and video logits.
+- F0 must support modality_available even though the current A+V dataset has both modalities present for all rows. If one modality is unavailable, the final weight must collapse exactly to the available modality.
+- F0 has no temporal cross-attention, shared fusion trunk, TACME relation bank, pseudo-labeling, task_id input, text, or description.
+- The existing wsm_masked_sparse_loss remains the only supervision for the model-contract smoke.
+
+Recommended next atomic task: TASK-004B — implement/register the F0 availability-aware gated late-fusion model and verify forward/loss/backward on the accepted A+V DataModule. Do not create a training config or run training yet.
