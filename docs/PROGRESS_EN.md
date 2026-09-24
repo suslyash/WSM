@@ -2265,5 +2265,5 @@ Bounded TRAIN smoke:
 Boundary and next step:
 
 - No `chimera-ml train`, epoch metrics, MLflow training run, Test iteration, source/config change, or optimizer step occurred.
-- Evidence commit SHA and push result will be recorded after this documentation commit.
+- Evidence commit SHA: `c982eb0` (final documentation reference commit follows); push result: pending.
 - Stage 4 strong-temporal-audio ablation is pre-training-ready. Recommended next atomic task: TASK-004I3 run the fixed seed-42 strong-temporal-audio F1 residual experiment using the accepted production config and repaired optimizer.
