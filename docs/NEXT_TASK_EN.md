@@ -1,526 +1,103 @@
-# TASK-005A4: Add Fixed CLIP Semantic Evidence for the Blocked Depression RAMPS Acceptance Gate
+# TASK-005A4-C1: Complete the Fixed CLIP Semantic Audit Success Path Without Changing the Method
 
-## Role
+## Task Identifier and Title
 
-You are the implementing Codex. Execute only this offline semantic/VLM RAMPS reliability task, update docs/PROGRESS_EN.md, commit on the required task branch, push to origin, then stop. Follow AGENTS.md.
+TASK-005A4-C1 — Complete the already-authorized TASK-005A4 success path and fixed-contract enforcement.
 
-Required branch:
+This is a corrective task only. The manager explicitly authorizes reuse of the existing branch:
 
     codex/task-005a4
 
-Do not train a student.
-Do not modify src/audio or src/video.
-Do not modify accepted models, checkpoints, caches, or the DataModule.
-Do not lower precision_target below 0.90.
-Do not lower min_support below 10.
-Do not use Test rows or Test metrics.
-Do not reselect or redesign the already-deployable Parkinson R2 rules.
-Do not start RAMPS R3/R4.
-Do not start the deferred general Text/Description Stage 3.
+Do not create another branch. Do not reset, overwrite, rebase away, or force-push existing TASK-005A4 work. Add one corrective implementation commit after the manager commits now present on this branch.
 
 ## Goal
 
-TASK-005A2 and TASK-005A3 established that depression cannot obtain a stable reliable missing-head acceptance subset from strong-audio confidence alone or from strong-audio plus independent-video reliability.
+Make the existing TASK-005A4 implementation faithful to its original contract without changing the research method.
 
-Parkinson already has accepted R2 deployment rules and must remain frozen.
+The local exact CLIP dependency may still be unavailable. This corrective task does not provision, download, or substitute it. Instead, make the code structurally complete so that:
 
-This task tests one fixed semantic/VLM bridge for the blocked depression head only.
+1. the current local-CLIP-unavailable path remains a valid blocked outcome with the required audit artifacts and no TRAIN cache; and
+2. if the exact local CLIP processor/model becomes available, the unchanged semantic audit can continue through OOF/full-DEV confirmation and, only if the two-head gate passes, build and validate the required two-head TRAIN cache.
 
-Use:
-- frozen strong temporal audio as the pseudo-target source;
-- the already selected frozen video V2 only where the fixed semantic family explicitly needs three-way agreement;
-- existing label-free cached CLIP image embeddings;
-- the matching local CLIP text encoder with one predeclared prompt bank;
-- deterministic 5-fold out-of-fold DEV selection;
-- unchanged final reliability gate: empirical precision >= 0.90 and support >= 10.
-
-If at least one depression side survives OOF selection and frozen full-DEV confirmation, combine that depression rule with the previously frozen Parkinson R2 rules and only then build a two-head TRAIN missing-target cache.
-
-Pseudo-target values must remain calibrated strong-audio probabilities. Semantic/video signals are acceptance evidence only.
-
-## Explicit Semantic-Embedding Authorization
-
-This task is a manager-authorized semantic label-embedding acceptance ablation under PROJECT_REQUIREMENTS Section 11 and the Stage-5 semantic bridge. It does not start the deferred general Text/Description stage.
-
-The existing CLIP image cache was extracted label-free. The fixed text prompts are global task-level semantic prototypes. No sample label, corpus identity, split, protocol, observed target, missing target, or model prediction may enter prompt construction.
-
-No prompt may be changed after seeing metrics. Negative prompts such as "no depression", "healthy instead of depression", or "not depressed" are prohibited.
+Do not start TASK-005B in this task.
 
 ## Required Reading
 
+Read in this order before editing:
+
 1. AGENTS.md
-2. docs/PROJECT_REQUIREMENTS.md Sections 2, 5, 6, 8, 9, 10, 11, 12, 13, 14
-3. docs/PLAN.md Stage 5
-4. docs/PROGRESS_EN.md through MANAGER-DECISION-033 and MANAGER-CORRECTION-033A
-5. docs/NEXT_TASK_EN.md
-6. docs/SOTA_REVIEW_EN.md Sections 4.4, 4.5, 7, 8, 9, 10, 11, 13
+2. docs/README.md
+3. docs/PROJECT_REQUIREMENTS.md
+4. docs/PLAN.md, especially Stage 5
+5. docs/PROGRESS_EN.md through MANAGER-REVIEW-034
+6. docs/NEXT_TASK_EN.md
 7. src/fusion/loss/ramps_r1_teacher.py
 8. src/fusion/loss/ramps_r2_reliability.py
-9. src/fusion/models/frozen_audio_temporal_adapter.py
-10. src/video/models/depart_v2.py
-11. src/video/features/clip_video_features.py
+9. src/fusion/loss/ramps_r2_semantic.py
+10. scripts/common/prepare_ramps_r2_semantic_targets.py
+11. src/fusion/models/frozen_audio_temporal_adapter.py
 12. src/fusion/data/wsm_av_fusion_datamodule.py
-13. scripts/video/extract_clip_video_features.py
+13. src/video/models/depart_v2.py
 
-## Allowed Tracked Files
+Use only the active English documentation listed in docs/README.md. Do not load archived Russian variants.
+
+## Allowed Files
+
+Codex may modify only:
 
 - src/fusion/loss/ramps_r2_semantic.py
 - src/fusion/loss/__init__.py
 - scripts/common/prepare_ramps_r2_semantic_targets.py
 - docs/PROGRESS_EN.md
 
-No other tracked file may be modified. No training config is authorized. No Chimera registration is required because this is an offline artifact-preparation/audit utility.
+The manager has already modified docs/NEXT_TASK_EN.md and docs/PROGRESS_EN.md on this branch. Preserve those manager changes.
 
-## Fixed Model/Caches
+## Forbidden Actions
 
-Strong-audio checkpoint:
+- Do not modify src/audio.
+- Do not modify src/video.
+- Do not modify src/fusion/models or src/fusion/data.
+- Do not modify checkpoints, accepted caches, manifests, configs, PROJECT_REQUIREMENTS.md, or PLAN.md.
+- Do not download any CLIP/VLM model or processor.
+- Do not substitute another model, revision, tokenizer, prompt bank, or image representation.
+- Do not add a fourth semantic reliability family.
+- Do not change any authorized prompt.
+- Do not lower or raise the fixed final reliability policy: precision_target must be exactly 0.90 and min_support exactly 10.
+- Do not change folds from exactly 5.
+- Do not reselect Parkinson rules.
+- Do not use Candidate B or any Stage-4 fusion model as a teacher.
+- Do not iterate Test rows or inspect Test metrics.
+- Do not call val_dataloader().
+- Do not read or re-extract raw video frames.
+- Do not train a student.
+- Do not start TASK-005B, R3, R4, Stage 6, Stage 7, or deferred general Text/Description work.
+- Do not claim missing-label correctness or comorbidity recovery.
 
-    logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt
+## Implementation Requirements
 
-Required SHA256:
+### 1. Complete the success path
 
-    0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2
+Remove the sentinel/unconditional failure that currently prevents a successful deployment path.
 
-Historical DEV:
-- depression Score = 0.7479183895
-- Parkinson Score = 0.8277353635
-- Mean_Score = 0.7878268765
+If and only if the frozen depression semantic OOF rule survives frozen full-DEV confirmation, then:
 
-Independent video checkpoint:
+- infer all 6325 canonical TRAIN rows exactly once;
+- use the full-DEV fitted audio/video temperatures and semantic calibrator;
+- apply only the confirmed depression rule(s);
+- for depression Family S2, use candidate-side OOD percentile/reference with no target leakage;
+- apply only the frozen Parkinson TASK-005A3 Family-A rules:
+  - positive tau_conf = 0.77;
+  - negative tau_conf = 0.50;
+- never semantically reselect Parkinson.
 
-    logs/wsm_mm_pd_dep_v1/depart_v2_prototype_gated_2026-09-24_14-39_wsm_video_depart_v2_model_0a7294f4/checkpoints/epoch=5_dev_mean_score=0.7066.pt
+Build and atomically publish:
 
-Required SHA256:
+    /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt
 
-    3e39778126db401a2fe17bb472a172191616e8a7b5265e982233c53dcd4af2f
+only after every required cache invariant passes.
 
-Historical DEV:
-- depression Score = 0.6201013364
-- Parkinson Score = 0.7930427585
-- Mean_Score = 0.7065720475
+The cache must contain every field required by the original TASK-005A4 contract:
 
-Strict-load epoch 5 exactly.
-
-Accepted video-cache CLIP identity:
-
-    openai/clip-vit-base-patch32
-    revision main
-    feature_dim 512
-
-Use matching local transformers.CLIPModel and transformers.CLIPProcessor with local_files_only=true. Do not download a model or use another VLM.
-
-The text model is inference-only, eval mode, requires_grad=false, torch.inference_mode, no optimizer.
-
-## Fixed Prompt Bank
-
-Exactly these prompts are authorized.
-
-Depression prompts:
-1. a video of a person with depression
-2. a person with depressive symptoms
-3. a person showing signs of depression
-
-Neutral prompts:
-1. a video of a person
-2. a person
-3. a video showing a person
-
-No additional prompt, paraphrase, prompt search, negative prompt, or Parkinson semantic prompt search.
-
-Record the exact ordered prompt bank and its canonical JSON SHA256.
-
-## Frozen Parkinson R2 Deployment Contract
-
-Do not search Parkinson semantic rules.
-
-Reproduce and freeze TASK-005A3 R2 Family-A rules.
-
-Positive:
-    tau_conf = 0.77
-
-Negative:
-    tau_conf = 0.50
-
-Family A definition:
-- audio/video predict the same side;
-- joint_confidence = min(audio_class_confidence, video_class_confidence);
-- accept when joint_confidence >= tau_conf.
-
-Re-fit only the required full-DEV audio/video temperatures on complete observed Parkinson DEV rows, then apply the fixed tau values.
-
-Require exact support reproduction and precision tolerance 1e-6:
-
-Positive:
-    support = 21
-    precision = 1.0
-
-Negative:
-    support = 193
-    precision = 0.9585492
-
-If these frozen rules do not reproduce, stop blocked. Do not reselect Parkinson.
-
-## Fixed Data
-
-Use WSMAVFusionDataModule.
-
-Roots:
-    data_root = /media/maxim/Databases/WSM_NEW
-    audio_feature_cache_root = /media/maxim/Databases/WSM_NEW/features
-    video_cache_root = /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache
-
-Expected:
-    train = 6325
-    dev = 933
-    test_none = 1364
-    test_soft = 1208
-    test_hard = 1014
-    joined_total = 8622
-    missing_audio = 0
-    missing_video = 0
-
-Only train_dataset and val_dataset may be iterated.
-
-Do not call val_dataloader().
-Do not iterate test_none, test_soft, or test_hard.
-
-## Fixed Output Root
-
-Write runtime artifacts outside git:
-
-    /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1
-
-Always write:
-- semantic_prompt_bank.json
-- semantic_search.json
-- audit.json
-
-Write only if the final two-head gate passes:
-- train_missing_targets.pt
-
-Refuse overwrite of a non-empty output root unless explicit --overwrite is supplied.
-
-## 1. Reusable Semantic Reliability Utilities
-
-Implement src/fusion/loss/ramps_r2_semantic.py.
-
-Required deterministic utilities:
-- normalize cached CLIP frame embeddings;
-- masked pooled CLIP image embedding;
-- normalize/average prompt embeddings;
-- semantic cosine-margin computation;
-- positive-monotonic scalar semantic calibration;
-- binary calibration metrics;
-- deterministic depression 5-fold records;
-- side-conditional OOD percentile with no label leakage;
-- exactly three semantic reliability-family search/evaluation functions;
-- rule application;
-- detached reliability calculation.
-
-No new dependency. Reuse R1/R2 utilities where safe.
-
-## 2. CLIP Image Semantic Representation
-
-Input cached video features:
-    video [B,T,512]
-    video_mask [B,T]
-
-For each valid frame:
-    frame_norm = L2_normalize(frame_feature)
-
-Then:
-    pooled = sum(frame_norm * mask) / valid_count
-    image_embedding = L2_normalize(pooled)
-
-Do not pass cached image embeddings back through the CLIP vision tower. Do not read/re-extract raw video frames.
-
-## 3. CLIP Text Semantic Representation
-
-Using the fixed prompt bank and matching local CLIP text encoder:
-
-1. tokenize all prompts exactly;
-2. compute get_text_features;
-3. L2-normalize each prompt embedding;
-4. average normalized embeddings inside each bank;
-5. L2-normalize the bank mean.
-
-Produce:
-    e_depression
-    e_neutral
-
-Record:
-- model identity/revision;
-- exact prompts;
-- prompt-bank JSON SHA256;
-- e_depression tensor SHA256;
-- e_neutral tensor SHA256.
-
-Use the same embeddings for every sample and fold.
-
-## 4. Fixed Semantic Margin
-
-For each sample:
-
-    s_dep = cosine(image_embedding, e_depression)
-    s_neutral = cosine(image_embedding, e_neutral)
-    semantic_margin = s_dep - s_neutral
-
-No alternative score and no prompt weighting.
-
-## 5. Positive-Monotonic Semantic Calibration
-
-Fit observed depression labels only.
-
-Model:
-
-    semantic_logit = scale * semantic_margin + bias
-    scale = exp(log_scale) > 0
-    p_semantic = sigmoid(semantic_logit)
-
-Fit log_scale and bias by deterministic full-batch BCE with torch LBFGS.
-
-Deployed bounds:
-    0.01 <= scale <= 100.0
-    -20.0 <= bias <= 20.0
-
-If unconstrained values leave bounds, clamp deployed values and recompute metrics. Record unconstrained/deployed values.
-
-The positive scale is mandatory: calibration may shift/rescale the fixed label margin but may not flip semantic direction.
-
-Record NLL, Brier, and ECE-15 for calibrated semantic probabilities.
-
-## 6. Deterministic Depression Five-Fold OOF Contract
-
-Use only observed depression DEV rows.
-
-Exactly five stratified folds.
-
-Assignment:
-1. split rows by binary depression label;
-2. inside each class sort by sha256("depression-semantic:" + segment_id);
-3. round-robin folds 0..4.
-
-Each held-out row appears exactly once.
-
-For each fold, using the other four folds only, fit:
-- strong-audio temperature;
-- video temperature;
-- semantic monotonic scale/bias;
-- normalized audio task-feature centroids for depression class 0/1;
-- class-specific audio feature distance reference distributions.
-
-No held-out row may fit its own parameter/statistic. Both classes must occur in each fitting partition.
-
-## 7. Correct Side-Conditional OOD Rule
-
-MANAGER-CORRECTION-033A is mandatory.
-
-When evaluating candidate side c:
-- compute row distance to centroid c;
-- compare it with the fitting-partition distance distribution for true class c.
-
-Do not use the held-out row's true class to choose its centroid.
-
-For observed held-out rows, true label may be used only afterward to calculate empirical precision/correctness.
-
-For missing TRAIN rows, candidate side alone chooses centroid/reference.
-
-## 8. OOF Evidence Per Depression Row
-
-For every held-out observed depression row compute:
-    p_audio
-    p_video
-    p_semantic
-    audio_entropy
-    video_entropy
-    semantic_entropy
-
-For candidate side c compute:
-    audio_conf_c
-    video_conf_c
-    semantic_conf_c
-    ood_percentile_c
-
-Agreement uses predicted side at 0.5.
-
-## 9. Exactly Three Depression Semantic Reliability Families
-
-Final precision_target remains 0.90.
-Final min_support remains 10.
-
-### Family S1 — Audio + Semantic Agreement
-
-Require audio and semantic same-side prediction.
-
-    joint_conf = min(audio_conf_c, semantic_conf_c)
-    joint_conf >= tau_conf
-
-tau_conf grid:
-    0.50, 0.51, ..., 0.99
-
-### Family S2 — Audio + Semantic + Uncertainty + Correct OOD
-
-Require S1 plus:
-
-    uncertainty = max(audio_entropy, semantic_entropy)
-    uncertainty <= tau_entropy
-    ood_percentile_c <= tau_ood
-
-tau_entropy:
-    0.25
-    0.50
-    0.75
-
-tau_ood:
-    0.80
-    0.90
-    0.95
-
-### Family S3 — Three-Way Audio + Video + Semantic Agreement
-
-Require audio, video, and semantic same-side prediction.
-
-    triple_conf = min(audio_conf_c, video_conf_c, semantic_conf_c)
-    uncertainty = max(audio_entropy, video_entropy, semantic_entropy)
-
-Accept when:
-    triple_conf >= tau_conf
-    uncertainty <= tau_entropy
-
-tau_conf:
-    0.50, 0.51, ..., 0.99
-
-tau_entropy:
-    0.25
-    0.50
-    0.75
-
-No fourth family, prompt change, or corpus-aware rule.
-
-## 10. Depression OOF Rule Selection
-
-Search positive and negative sides separately.
-
-For every configuration record:
-- family;
-- parameters;
-- support;
-- correct;
-- precision;
-- class coverage.
-
-Eligible iff:
-    support >= 10
-    precision >= 0.90
-
-Select deterministically:
-1. maximum support;
-2. maximum precision;
-3. lower complexity S1 before S2 before S3;
-4. lower tau_conf;
-5. higher tau_entropy where applicable;
-6. higher tau_ood where applicable.
-
-If no eligible rule for a side, disable it.
-
-Depression is OOF-recoverable if at least one side is enabled.
-
-## 11. Frozen Full-DEV Confirmation
-
-After OOF selection, fit deployment statistics using all observed depression DEV rows:
-- audio temperature;
-- video temperature;
-- semantic positive-monotonic scale/bias;
-- class 0/1 audio centroids;
-- class-specific distance reference distributions.
-
-Apply the exact OOF-selected rules only. Do not search again.
-
-Each selected side must again satisfy:
-    support >= 10
-    precision >= 0.90
-
-A failing side is disabled.
-
-Depression deployable iff at least one side survives.
-
-If depression remains undeployable:
-- write semantic_prompt_bank.json;
-- write semantic_search.json;
-- write audit.json;
-- do not infer TRAIN;
-- do not create train_missing_targets.pt;
-- exit with clear RuntimeError.
-
-## 12. Final Two-Head Deployment Rule
-
-Only if depression becomes deployable.
-
-Depression:
-    use confirmed semantic rule(s) from TASK-005A4.
-
-Parkinson:
-    use only frozen TASK-005A3 Family-A rules:
-      positive tau_conf=0.77
-      negative tau_conf=0.50
-
-Do not semantically reselect Parkinson.
-
-## 13. TRAIN Target Construction
-
-Only after complete two-head DEV gate passes.
-
-Infer all 6325 canonical TRAIN rows once.
-
-For missing depression:
-- compute audio/video probabilities;
-- compute semantic margin/probability;
-- apply confirmed semantic rule;
-- for S2 use candidate-side OOD centroid/reference.
-
-For missing Parkinson:
-- use frozen R2 Family-A audio/video agreement rules.
-
-For every accepted entry:
-    pseudo_target = calibrated strong-audio probability
-
-Do not use semantic probability as target.
-Do not use video probability as target.
-Do not average teachers.
-Do not harden to 0/1.
-
-Reliability:
-
-Depression S1:
-    min(audio_conf, semantic_conf)
-
-Depression S2:
-    min(audio_conf, semantic_conf) * (1 - uncertainty) * (1 - ood_percentile)
-
-Depression S3:
-    min(audio_conf, video_conf, semantic_conf) * (1 - uncertainty)
-
-Parkinson frozen Family A:
-    min(audio_conf, video_conf)
-
-Clamp numerically to [0,1]. Detach all cache values.
-
-Observed entries:
-    pseudo_accept_mask = false
-    pseudo_target = NaN
-    pseudo_reliability = 0
-    pseudo_class = -1
-
-Observed truth always wins.
-
-## 14. train_missing_targets.pt Contract
-
-Only if passed.
-
-Version:
-    ramps-r2-semantic-v1
-
-Required fields:
 - task_names
 - segment_ids
 - observed_mask
@@ -550,87 +127,180 @@ Required fields:
 - video_checkpoint_path
 - video_checkpoint_sha256
 
-Requirements:
-- rows=6325, tasks=2;
-- unique canonical IDs;
-- observed tensors unchanged;
-- no pseudo on observed;
-- accepted targets finite in [0,1];
-- every accepted target equals calibrated AUDIO probability exactly;
-- reliability finite in [0,1];
-- reliability zero on observed/rejected entries;
-- pseudo_class in {-1,0,1};
+Required cache invariants:
+
+- rows = 6325 and tasks = 2;
+- unique canonical segment IDs;
+- observed targets/masks preserved exactly;
+- no pseudo acceptance on observed entries;
+- observed/rejected pseudo_target is NaN;
+- observed/rejected pseudo_reliability is 0;
+- observed/rejected pseudo_class is -1;
+- accepted pseudo_target is finite in [0,1];
+- every accepted pseudo_target equals the calibrated strong-audio probability for that task exactly;
+- accepted reliability is finite in [0,1];
+- pseudo_class is only -1, 0, or 1;
 - accepted depression count > 0;
 - accepted Parkinson count > 0.
 
-## 15. Runtime JSON Contracts
+Observed truth always wins.
 
-semantic_prompt_bank.json always records:
-- version;
-- CLIP model/revision;
-- exact ordered prompt banks;
-- canonical JSON SHA256;
-- depression embedding SHA256;
-- neutral embedding SHA256;
-- no sample-specific information statement;
-- no negative-prompt statement.
+### 2. Correct detached semantic reliability
 
-semantic_search.json always records:
-- version/timestamp;
-- audio/video checkpoint paths + SHA256;
-- CLIP model/revision;
-- prompt bank + hashes;
-- canonical counts;
-- no-Test statement;
-- historical audio/video DEV reproduction;
-- frozen Parkinson R2 reproduction;
-- depression fold audit;
-- per-fold audio/video temperatures;
-- per-fold semantic scale/bias;
-- per-fold semantic calibration metrics;
-- full-DEV semantic scale/bias and metrics;
-- exact S1/S2/S3 definitions;
-- complete OOF candidate table;
-- selected OOF rules;
-- full-DEV confirmation;
-- depression deployable;
-- overall two-head deployable.
+Fix the detached semantic reliability utility so that it is explicitly candidate-side aware.
 
-audit.json always records blocked/pass state and no correctness/comorbidity claim. If passed also record per-task missing/accepted/rejected/coverage, accepted pos/neg, target/reliability statistics, and overwrite invariants.
+For depression:
 
-## 16. Production Script
+- S1 reliability:
+  min(audio_conf_c, semantic_conf_c)
+- S2 reliability:
+  min(audio_conf_c, semantic_conf_c) * (1 - uncertainty) * (1 - ood_percentile_c)
+- S3 reliability:
+  min(audio_conf_c, video_conf_c, semantic_conf_c) * (1 - uncertainty)
 
-Implement:
+The utility must use:
 
-    scripts/common/prepare_ramps_r2_semantic_targets.py
+- ood_percentile_positive when candidate side c=1;
+- ood_percentile_negative when candidate side c=0.
 
-Required sequence:
+It must not read a nonexistent generic `ood_percentile` field and must not use a held-out or missing target to choose a side.
 
-1. deterministic seeds;
-2. verify audio SHA;
-3. verify video SHA and strict epoch-5 load;
-4. build DataModule and canonical counts;
-5. build/freeze/eval audio/video teachers;
-6. load matching local CLIP text encoder;
-7. encode fixed prompt bank once;
-8. infer canonical DEV only: audio logits/features, video logits, cached CLIP semantic representation/margin;
-9. reproduce historical audio/video DEV metrics;
-10. reproduce frozen Parkinson R2 rules exactly;
-11. construct depression 5-fold OOF semantic records;
-12. search exactly S1/S2/S3;
-13. freeze OOF selected depression rules;
-14. full-DEV confirmation with no redesign;
-15. write semantic_prompt_bank.json + semantic_search.json;
-16. if depression blocked: write audit.json, do not infer TRAIN, do not write cache, exit RuntimeError;
-17. if depression passes: infer canonical TRAIN only, build two-head cache using semantic depression + frozen Parkinson, validate, write cache + audit.
+Parkinson frozen Family-A reliability remains:
 
-Do not call dm.val_dataloader().
-Do not infer Test.
-Do not re-extract raw frames.
+    min(audio_conf_c, video_conf_c)
 
-## Exact Production Command
+All reliability tensors must be detached and clamped to [0,1].
 
-Run:
+### 3. Enforce the fixed contract exactly
+
+The production script must reject any deviation from:
+
+    clip_model = openai/clip-vit-base-patch32
+    clip_revision = main
+    precision_target = 0.90
+    min_support = 10
+    folds = 5
+
+Do not merely reject values below the threshold; require exact equality for the fixed task policy.
+
+The audio/video checkpoint SHA and video epoch-5 strict-load requirements remain unchanged.
+
+### 4. Add deterministic initialization
+
+Add the required deterministic seed initialization before model/data inference.
+
+Use a single fixed seed of 42 for Python and Torch, including CUDA when available. Do not add a new dependency solely for seeding.
+
+Do not change the deterministic hash-based fold assignment.
+
+### 5. Preserve the blocked local-CLIP path
+
+If the exact local processor/model still cannot load with local_files_only=True:
+
+- do not access the network;
+- do not substitute another model;
+- write semantic_prompt_bank.json;
+- write semantic_search.json;
+- write audit.json;
+- set blocked=true;
+- set train_inference_ran=false;
+- set train_missing_targets_published=false;
+- keep depression/neutral embedding hashes null;
+- do not create train_missing_targets.pt;
+- exit with a clear RuntimeError.
+
+### 6. Preserve all semantic and evaluation invariants
+
+Keep exactly the original fixed prompts, semantic margin, positive-monotonic calibration, five-fold OOF contract, side-conditional OOD logic, S1/S2/S3 definitions, frozen full-DEV confirmation, and frozen Parkinson rule reproduction.
+
+Do not use Test for model, threshold, epoch, modality, reliability, or ablation selection.
+
+## Acceptance Criteria
+
+TASK-005A4-C1 passes only if all of the following are true:
+
+- tracked diff remains inside the four allowed implementation paths plus the pre-existing manager edits;
+- src/audio and src/video remain unchanged;
+- the sentinel success-path RuntimeError is gone;
+- the code contains a complete TRAIN cache construction/validation/publication path reachable only after the two-head DEV gate;
+- S2 reliability uses the correct candidate-side OOD percentile;
+- reliability is detached, finite, bounded, and target-leakage-free;
+- fixed CLIP identity/revision, precision_target=0.90, min_support=10, and folds=5 are enforced exactly;
+- deterministic seed 42 initialization is present;
+- fixed prompts and exactly S1/S2/S3 remain unchanged;
+- Parkinson frozen R2 rules remain unchanged and are not reselected;
+- no Test rows or metrics are used;
+- no raw-frame extraction is introduced;
+- no student training, TASK-005B, R3/R4, or general Stage-3 Text/Description work starts;
+- py_compile passes;
+- deterministic synthetic checks pass;
+- git diff --check passes;
+- the exact production rerun below is attempted.
+
+Production outcome handling:
+
+- If the exact local CLIP dependency is still unavailable, the corrective task may finish as environment-blocked only if the three blocked artifacts are rewritten correctly, no TRAIN cache exists, and the code review/synthetic checks prove the complete pass path is implemented.
+- If the exact local CLIP dependency is available, run the unchanged semantic audit through DEV. If depression remains undeployable, publish only the audit artifacts and no TRAIN cache. If depression becomes deployable, build and validate the full two-head TRAIN cache exactly as specified.
+
+Update docs/PROGRESS_EN.md with exact commands, results, branch, corrective commit SHA, push result, all deviations, and the remaining blocker/status.
+
+## Exact Verification Commands
+
+Run from the repository root on branch `codex/task-005a4`.
+
+1. Compile:
+
+    python3 -m py_compile \
+      src/fusion/loss/ramps_r2_semantic.py \
+      src/fusion/loss/__init__.py \
+      scripts/common/prepare_ramps_r2_semantic_targets.py
+
+2. Candidate-side reliability smoke:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import torch
+    from fusion.loss.ramps_r2_semantic import semantic_reliability
+
+    records = {
+        "audio_prob": torch.tensor([0.90, 0.10], dtype=torch.float64),
+        "video_prob": torch.tensor([0.80, 0.20], dtype=torch.float64),
+        "semantic_prob": torch.tensor([0.85, 0.15], dtype=torch.float64),
+        "audio_entropy": torch.tensor([0.20, 0.20], dtype=torch.float64),
+        "video_entropy": torch.tensor([0.20, 0.20], dtype=torch.float64),
+        "semantic_entropy": torch.tensor([0.20, 0.20], dtype=torch.float64),
+        "ood_percentile_positive": torch.tensor([0.10, 0.90], dtype=torch.float64),
+        "ood_percentile_negative": torch.tensor([0.90, 0.10], dtype=torch.float64),
+    }
+    rule = {"enabled": True, "family": "S2", "tau_conf": 0.50, "tau_entropy": 0.75, "tau_ood": 0.95}
+    mask = torch.tensor([True, True])
+
+    rp = semantic_reliability(records, rule, True, mask)
+    rn = semantic_reliability(records, rule, False, mask)
+
+    assert rp.shape == rn.shape == torch.Size([2])
+    assert torch.isfinite(rp).all() and torch.isfinite(rn).all()
+    assert ((0 <= rp) & (rp <= 1)).all()
+    assert ((0 <= rn) & (rn <= 1)).all()
+    assert not rp.requires_grad and not rn.requires_grad
+    assert rp[0] > rp[1], (rp, rn)
+    assert rn[1] > rn[0], (rp, rn)
+    print("candidate-side semantic reliability smoke: ok")
+    PY
+
+3. Verify the old sentinel is absent:
+
+    ! grep -n "semantic TRAIN writer not reached" scripts/common/prepare_ramps_r2_semantic_targets.py
+
+4. Verify fixed prompt/model strings remain present:
+
+    grep -n "openai/clip-vit-base-patch32" scripts/common/prepare_ramps_r2_semantic_targets.py
+    grep -n "a video of a person with depression" scripts/common/prepare_ramps_r2_semantic_targets.py
+    grep -n "a person with depressive symptoms" scripts/common/prepare_ramps_r2_semantic_targets.py
+    grep -n "a person showing signs of depression" scripts/common/prepare_ramps_r2_semantic_targets.py
+
+5. Production rerun.
+
+The manager authorizes `--overwrite` for this corrective rerun only because TASK-005A4 already populated the fixed output directory:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
       scripts/common/prepare_ramps_r2_semantic_targets.py \
@@ -647,143 +317,23 @@ Run:
       --folds 5 \
       --batch-size 32 \
       --num-workers 4 \
-      --device cuda
+      --device cuda \
+      --overwrite
 
-If CUDA unavailable, stop blocked.
-If local CLIP text model unavailable, stop blocked.
-Do not download it.
+6. Final repository checks:
 
-## Required Verification
-
-Compile:
-    python3 -m py_compile \
-      src/fusion/loss/ramps_r2_semantic.py \
-      src/fusion/loss/__init__.py \
-      scripts/common/prepare_ramps_r2_semantic_targets.py
-
-Synthetic checks:
-- fixed prompt-bank hash determinism;
-- semantic embedding normalization;
-- masked image pooling;
-- finite semantic margin;
-- positive semantic scale > 0;
-- finite NLL/Brier/ECE;
-- deterministic folds;
-- no held-out calibration leakage;
-- side-conditional OOD uses candidate side, not target;
-- S1/S2/S3 search/tie-breaking;
-- disabled side;
-- frozen Parkinson rule reproduction helper;
-- observed entry cannot become pseudo;
-- accepted target equals audio probability;
-- reliability in [0,1].
-
-Then run the exact production command.
-
-Afterward verify:
-- audio/video DEV reproduction;
-- prompt-bank hashes;
-- no teacher/text-encoder gradients;
-- no optimizer;
-- no Test;
-- no raw-frame extraction;
-- if blocked, cache absent;
-- if passed, complete TRAIN cache invariants.
-
-Finally:
     git diff --check
-    git diff -- src/audio
-    git diff -- src/video
-    git diff -- src/fusion/models
-    git diff -- src/fusion/data
+    git diff origin/main -- src/audio
+    git diff origin/main -- src/video
+    git diff origin/main -- src/fusion/models
+    git diff origin/main -- src/fusion/data
     git status --short
-
-Tracked diff must contain only the four allowed paths.
-
-## Acceptance Criteria
-
-Pass only if:
-- exact audio/video checkpoints verify;
-- historical DEV reproduction passes;
-- matching local CLIP text encoder loads;
-- fixed prompt bank remains exact;
-- no negative/sample-specific prompts;
-- no raw-frame extraction;
-- Parkinson frozen R2 rules reproduce exactly and are not reselected;
-- depression OOF uses exactly five deterministic folds;
-- semantic calibrator is positive-monotonic;
-- OOD implementation has no target leakage;
-- exactly S1/S2/S3 are searched;
-- precision_target remains 0.90;
-- min_support remains 10;
-- no Test;
-- depression keeps at least one enabled side after OOF + frozen full-DEV confirmation;
-- only then TRAIN inference runs;
-- depression and Parkinson both have accepted TRAIN missing targets;
-- accepted target is always calibrated audio probability;
-- observed truth is never overwritten;
-- no missing-label correctness claim;
-- no student training;
-- no R3/R4;
-- no general Stage-3 text/description work;
-- src/audio unchanged;
-- src/video unchanged;
-- models/DataModule unchanged;
-- git diff --check passes;
-- branch codex/task-005a4 committed and pushed;
-- main/master untouched.
-
-A blocked result is valid evidence if semantic depression still fails and:
-- semantic_prompt_bank.json, semantic_search.json, audit.json exist;
-- no train_missing_targets.pt exists;
-- no prompt/rule/reliability relaxation;
-- no Test/student training.
-
-## Required PROGRESS_EN Update
-
-Append TASK-005A4 evidence with:
-- branch;
-- implementation/evidence SHA;
-- push result;
-- audio/video checkpoint verification;
-- historical DEV reproduction;
-- CLIP model/revision/local-only load;
-- exact prompt bank + SHA;
-- text embedding hashes;
-- frozen Parkinson rule reproduction;
-- depression fold audit;
-- semantic per-fold/full-DEV scale+bias;
-- semantic calibration metrics;
-- selected depression OOF rules;
-- OOF support/precision/coverage;
-- full-DEV confirmation;
-- depression deployable state;
-- overall two-head gate;
-- artifact paths;
-- if passed, per-task TRAIN accepted/rejected/coverage, accepted pos/neg, reliability/target stats, overwrite audits;
-- if blocked, explicit no cache publication;
-- explicit 0.90/min_support=10 unchanged;
-- explicit no Test;
-- explicit no raw-frame extraction;
-- explicit no Candidate B/fusion teacher;
-- explicit no student training;
-- explicit no missing-label correctness/comorbidity claim;
-- R3/R4 not started;
-- general text/description remains deferred;
-- src/audio unchanged;
-- src/video unchanged;
-- Stage 5 status;
-- recommended next atomic task only.
-
-If TASK-005A4 passes:
-    recommended next = TASK-005B wire the accepted semantic+R2 two-head offline cache into an observed+pseudo sparse loss/data contract and prove direct missing-head gradients without full training.
-
-If TASK-005A4 remains blocked:
-    recommended next = manager review of whether to pause missing-label recovery until the deferred text/description stage or stop the RAMPS pseudo-target path; do not relax reliability criteria automatically.
+    git diff --stat origin/main...HEAD
+    git log -3 --oneline --decorate
 
 ## Required Handoff
 
-Respond in English using exactly:
+Respond in English with exactly:
 
 1. Outcome
 2. Changed files
@@ -792,30 +342,32 @@ Respond in English using exactly:
 5. Blockers and risks
 6. Next atomic step
 
-Explicitly include:
-- branch codex/task-005a4;
-- implementation/evidence SHA;
+Explicitly report:
+
+- branch `codex/task-005a4`;
+- corrective commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
-- audio/video checkpoint verification;
-- CLIP model/revision;
-- prompt-bank SHA;
-- frozen Parkinson rule reproduction;
-- depression selected OOF rules;
-- OOF/full-DEV precision/support;
-- depression deployable state;
-- whether two-head TRAIN cache was published;
-- if published, per-task accepted/rejected/coverage and pos/neg;
-- artifact paths;
-- unchanged precision_target=0.90/min_support=10;
+- whether manager commits were preserved;
+- whether the success-path sentinel was removed;
+- whether full TRAIN cache construction/validation is now implemented;
+- exact fixed-contract enforcement;
+- deterministic seed evidence;
+- candidate-side S2 reliability verification;
+- audio/video checkpoint verification reached by the production rerun;
+- exact CLIP model/revision and whether local-only load succeeded;
+- if CLIP loaded: historical audio/video DEV reproduction, frozen Parkinson rule reproduction, depression OOF/full-DEV results, deployable state, and cache publication status;
+- if CLIP did not load: exact exception, required blocked artifacts, and confirmation that train_missing_targets.pt is absent;
+- unchanged precision_target=0.90 and min_support=10;
 - no Test use;
 - no raw-frame extraction;
 - no Candidate B/fusion teacher;
 - no student training;
-- no missing-label correctness claim;
+- no missing-label correctness/comorbidity claim;
 - R3/R4 not started;
-- general text/description deferred;
+- general Text/Description still deferred;
 - src/audio unchanged;
-- src/video unchanged.
+- src/video unchanged;
+- Stage 5 status.
 
-Stop after this task.
+Stop after TASK-005A4-C1. Do not start TASK-005B.
