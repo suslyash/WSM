@@ -13,9 +13,11 @@ from chimera_ml.core.registry import DATAMODULES
 from chimera_ml.data.datamodule import DataModule
 from common.data.wsm_manifest import build_manifest
 from common.utils.segment_index import build_wsm_multitask_segment_index
+from video.features.clip_video_features import PREPROCESSING_VERSION, ROI_POLICY_VERSION
 
 MODEL_NAME = 'openai/clip-vit-base-patch32'
 MODEL_REVISION = 'b97b0100e55e367c057773c2a614676470b0d575'
+DEFAULT_CACHE_ROOT = '/media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache'
 YOLO_SHA256 = 'a6aead7bf0eccb35bd56731bfaa6ea19a4645a66150d2d0b19dd3fb1b116ef43'
 TARGET_FRAMES = 60
 FEATURE_DIM = 512
@@ -83,6 +85,10 @@ def _validate_artifact(record: dict[str, Any], row: dict[str, Any]) -> tuple[tor
     preprocessing = artifact.get('preprocessing')
     if not isinstance(preprocessing, dict) or preprocessing.get('target_frames') != TARGET_FRAMES:
         raise VideoCacheDataError(f'target_frames metadata mismatch for {row['segment_id']}')
+    if preprocessing.get('version') != PREPROCESSING_VERSION:
+        raise VideoCacheDataError(f'preprocessing version mismatch for {row['segment_id']}')
+    if preprocessing.get('roi_policy_version') != ROI_POLICY_VERSION:
+        raise VideoCacheDataError(f'ROI policy version mismatch for {row['segment_id']}')
     features = artifact.get('features')
     valid_mask = artifact.get('valid_mask')
     if not isinstance(features, torch.Tensor) or features.ndim != 2 or features.shape[1] != FEATURE_DIM:
@@ -92,6 +98,23 @@ def _validate_artifact(record: dict[str, Any], row: dict[str, Any]) -> tuple[tor
         raise VideoCacheDataError(f'invalid temporal length for {row['segment_id']}: {temporal_length}')
     if not isinstance(valid_mask, torch.Tensor) or valid_mask.dtype != torch.bool or tuple(valid_mask.shape) != (temporal_length,):
         raise VideoCacheDataError(f'valid_mask mismatch for {row['segment_id']}')
+    if not bool(valid_mask.all()):
+        raise VideoCacheDataError(f'valid_mask is not all true for {row['segment_id']}')
+    if not bool(torch.isfinite(features).all()):
+        raise VideoCacheDataError(f'features are not finite for {row['segment_id']}')
+    sources = artifact.get('frame_sources')
+    if not isinstance(sources, list) or len(sources) != temporal_length:
+        raise VideoCacheDataError(f'frame_sources mismatch for {row['segment_id']}')
+    if any(source not in {'body_roi', 'full_frame_fallback'} for source in sources):
+        raise VideoCacheDataError(f'invalid frame source for {row['segment_id']}')
+    detected = int(artifact.get('detected_body_count', -1))
+    fallback = int(artifact.get('full_frame_fallback_count', -1))
+    if detected + fallback != temporal_length or detected != sources.count('body_roi') or fallback != sources.count('full_frame_fallback'):
+        raise VideoCacheDataError(f'detection/fallback provenance mismatch for {row['segment_id']}')
+    if float(artifact.get('detection_coverage', -1.0)) != detected / temporal_length:
+        raise VideoCacheDataError(f'detection coverage mismatch for {row['segment_id']}')
+    if float(artifact.get('fallback_coverage', -1.0)) != fallback / temporal_length:
+        raise VideoCacheDataError(f'fallback coverage mismatch for {row['segment_id']}')
     sampled_indices = artifact.get('sampled_frame_indices')
     if not isinstance(sampled_indices, list) or len(sampled_indices) != temporal_length:
         raise VideoCacheDataError(f'sampled indices mismatch for {row['segment_id']}')
@@ -111,7 +134,11 @@ def _validate_artifact(record: dict[str, Any], row: dict[str, Any]) -> tuple[tor
         'cache_path': str(path),
         'cache_fingerprint': record['cache_fingerprint'],
         'temporal_length': temporal_length,
-        'detection_coverage': float(record.get('detection_coverage', artifact.get('detection_coverage', 0.0))),
+        'detected_body_count': int(record.get('detected_body_count', artifact['detected_body_count'])),
+        'full_frame_fallback_count': int(record.get('full_frame_fallback_count', artifact['full_frame_fallback_count'])),
+        'detection_coverage': float(record.get('detection_coverage', artifact['detection_coverage'])),
+        'fallback_coverage': float(record.get('fallback_coverage', artifact['fallback_coverage'])),
+        'frame_sources': list(artifact['frame_sources']),
     }
     return features.float(), valid_mask.clone(), metadata
 
@@ -169,7 +196,7 @@ def collate_wsm_video_cache(samples: list[dict[str, Any]]) -> Batch:
 
 
 class WSMVideoCacheDataModule(DataModule):
-    def __init__(self, data_root: str = '/media/maxim/Databases/WSM_NEW', cache_root: str = '/media/maxim/Programs/Features/WSM/video_depart_v1/cache', cache_index_path: str | None = None, batch_size: int = 32, num_workers: int = 0, pin_memory: bool = True, shuffle_train: bool = True, drop_last_train: bool = False) -> None:
+    def __init__(self, data_root: str = '/media/maxim/Databases/WSM_NEW', cache_root: str = DEFAULT_CACHE_ROOT, cache_index_path: str | None = None, batch_size: int = 32, num_workers: int = 0, pin_memory: bool = True, shuffle_train: bool = True, drop_last_train: bool = False) -> None:
         self.data_root = str(Path(data_root).expanduser().resolve())
         self.cache_root = str(Path(cache_root).expanduser().resolve())
         self.cache_index_path = str(Path(cache_index_path).expanduser().resolve()) if cache_index_path else str(Path(self.cache_root) / 'cache_index.jsonl')
