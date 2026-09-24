@@ -17,7 +17,7 @@ Final Test authorized: **no**.
 | 1. Manifest/partial-label contract | complete | Canonical manifest, separate DEV/Test consumer, masked sparse loss, zero video leakage, and owner-accepted speaker-independent split contract | TASK-001A through TASK-001E plus manager decision below |
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
-| 4. Fusion baselines | partial | Canonical sparse A+V DataModule and fixed F0 baseline complete; F1/F2 remain | TASK-004A, TASK-004B, TASK-004C |
+| 4. Fusion baselines | partial | Canonical sparse A+V DataModule and fixed F0/F1 baselines complete; F2 remains | TASK-004A through TASK-004E |
 | 5. RAMPS | not started | Direct reliable missing-head gradient | None |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
@@ -1734,3 +1734,78 @@ Status: accepted.
 - DEV/TEST_NONE/TEST_SOFT/TEST_HARD must be reported every epoch; Test remains monitoring-only.
 
 Recommended next atomic task: TASK-004E — create the fixed F1 training config and run the real seed-42 F1 baseline. Compare F1 to F0 on DEV only. After TASK-004E, proceed directly to F2 model implementation.
+
+
+### TASK-004E — Run the fixed F1 shared-representation sparse A+V MTL baseline
+
+Status: complete. Branch: codex/task-004e. The fixed seed-42 F1 run completed nine epochs and stopped by the configured DEV patience rule. Epoch 3 was selected solely by maximum `dev/mean_score`. No source, cache, loss, callback, Test-protocol, pseudo-label, F2, or text/description changes were made.
+
+Changed files:
+
+- configs/wsm_mm_pd_dep_v1/fusion/01_f1_shared_mtl.yaml
+- docs/PROGRESS_EN.md
+
+Config and pre-run evidence:
+
+- Config path: `configs/wsm_mm_pd_dep_v1/fusion/01_f1_shared_mtl.yaml`.
+- F0/F1 equivalence audit passed: seed, data, loss, optimizer, training, metrics, callbacks, loggers, selector, and all non-model semantics are identical. Intentional differences are run_name, model name, removal of F0 gate_hidden_dim, and addition of F1 fusion_hidden_dim=192.
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config --config-path configs/wsm_mm_pd_dep_v1/fusion/01_f1_shared_mtl.yaml` — passed.
+- Registry/build smoke passed with no project-module warnings; CUDA was NVIDIA GeForce RTX 4080. DataModule/model/loss/optimizer, five callbacks, and two loggers built. Counts were train/dev/test_none/test_soft/test_hard=6325/933/1364/1208/1014; joined_total=8622; missing audio/video=0/0; validation keys were exactly dev/test_none/test_soft/test_hard; checkpoint and early stopping monitored only dev/mean_score.
+- Production-size real batch forward/loss/backward smoke passed with finite loss=0.6653180122, output [32,2], and finite gradients.
+
+Exact training command:
+
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/01_f1_shared_mtl.yaml` — completed normally on CUDA; early stopping ended after epoch 9 with six non-improving DEV epochs.
+
+Selected result:
+
+- Best epoch: 3; best checkpoint: `logs/wsm_mm_pd_dep_v1/av_f1_shared_mtl_2026-09-24_17-31_wsm_av_f1_shared_mtl_model_b40c5290/checkpoints/epoch=3_dev_mean_score=0.7738.pt`.
+- DEV depression UAR/MF1/Score=0.690943/0.688473/0.689708.
+- DEV Parkinson UAR/MF1/Score=0.845204/0.870743/0.857973.
+- DEV Mean_Score=0.773841.
+- Same-epoch TEST_NONE depression UAR/MF1/Score=0.714216/0.699954/0.707085; Parkinson=0.796453/0.791264/0.793858; Mean_Score=0.750472.
+- Same-epoch TEST_SOFT depression UAR/MF1/Score=0.689719/0.674616/0.682167; Parkinson=0.799268/0.795972/0.797620; Mean_Score=0.739894.
+- Same-epoch TEST_HARD depression UAR/MF1/Score=0.685797/0.668158/0.676977; Parkinson=0.797928/0.787226/0.792577; Mean_Score=0.734777.
+- Top-2 checkpoints: `epoch=3_dev_mean_score=0.7738.pt` and `epoch=1_dev_mean_score=0.7690.pt`; last checkpoint: `last.pt`.
+
+Complete epoch table. Each triple is UAR/MF1/Score; Test metrics are monitoring-only:
+
+| epoch | train | DEV D | DEV P | DEV mean | NONE D | NONE P | NONE mean | SOFT D | SOFT P | SOFT mean | HARD D | HARD P | HARD mean |
+|---:|---:|---|---|---:|---|---|---:|---|---|---:|---|---|---:|
+| 1 | 0.427010 | 0.726424/0.724556/0.725490 | 0.804348/0.820556/0.812452 | 0.768971 | 0.781892/0.778071/0.779982 | 0.829003/0.818422/0.823712 | 0.801847 | 0.796215/0.789137/0.792676 | 0.833384/0.823418/0.828401 | 0.810539 | 0.805802/0.795292/0.800547 | 0.812780/0.798811/0.805795 | 0.803171 |
+| 2 | 0.187793 | 0.666387/0.666386/0.666386 | 0.752174/0.775154/0.763664 | 0.715025 | 0.800725/0.799857/0.800291 | 0.803785/0.809200/0.806493 | 0.803392 | 0.795507/0.794019/0.794763 | 0.801709/0.806767/0.804238 | 0.799500 | 0.794936/0.793333/0.794134 | 0.813372/0.809603/0.811488 | 0.802811 |
+| 3 | 0.105280 | 0.690943/0.688473/0.689708 | 0.845204/0.870743/0.857973 | 0.773841 | 0.714216/0.699954/0.707085 | 0.796453/0.791264/0.793858 | 0.750472 | 0.689719/0.674616/0.682167 | 0.799268/0.795972/0.797620 | 0.739894 | 0.685797/0.668158/0.676977 | 0.797928/0.787226/0.792577 | 0.734777 |
+| 4 | 0.071036 | 0.646732/0.646404/0.646568 | 0.857074/0.880153/0.868613 | 0.757591 | 0.742671/0.732427/0.737549 | 0.804018/0.794211/0.799115 | 0.768332 | 0.719794/0.710785/0.715289 | 0.800706/0.794936/0.797821 | 0.756555 | 0.713505/0.703489/0.708497 | 0.805899/0.792214/0.799056 | 0.753777 |
+| 5 | 0.044626 | 0.633660/0.632048/0.632854 | 0.761905/0.789871/0.775888 | 0.704371 | 0.699548/0.700282/0.699915 | 0.783611/0.800553/0.792082 | 0.745998 | 0.704351/0.702883/0.703617 | 0.791747/0.811006/0.801376 | 0.752497 | 0.705536/0.702690/0.704113 | 0.820846/0.827692/0.824269 | 0.764191 |
+| 6 | 0.030901 | 0.631186/0.631179/0.631182 | 0.856729/0.866837/0.861783 | 0.746483 | 0.751056/0.745021/0.748038 | 0.783025/0.759483/0.771254 | 0.759646 | 0.735054/0.729478/0.732266 | 0.778209/0.757231/0.767720 | 0.749993 | 0.728403/0.721939/0.725171 | 0.775011/0.749363/0.762187 | 0.743679 |
+| 7 | 0.026518 | 0.681979/0.681448/0.681714 | 0.840304/0.861265/0.850784 | 0.766249 | 0.715517/0.698206/0.706861 | 0.816627/0.798801/0.807714 | 0.757288 | 0.684355/0.667437/0.675896 | 0.811890/0.795922/0.803906 | 0.739901 | 0.676634/0.657492/0.667063 | 0.787435/0.769379/0.778407 | 0.722735 |
+| 8 | 0.019175 | 0.639402/0.639291/0.639346 | 0.787923/0.812055/0.799989 | 0.719668 | 0.763472/0.755654/0.759563 | 0.782699/0.778449/0.780574 | 0.770069 | 0.746934/0.739846/0.743390 | 0.792510/0.788487/0.790498 | 0.766944 | 0.738653/0.730368/0.734510 | 0.789117/0.777849/0.783483 | 0.758997 |
+| 9 | 0.013287 | 0.642951/0.642355/0.642653 | 0.752381/0.779649/0.766015 | 0.704334 | 0.727745/0.719471/0.723608 | 0.764814/0.784086/0.774450 | 0.749029 | 0.709532/0.700874/0.705203 | 0.776792/0.795806/0.786299 | 0.745751 | 0.700137/0.689852/0.694995 | 0.802133/0.809494/0.805814 | 0.750404 |
+
+Artifacts and MLflow:
+
+- Run directory: `logs/wsm_mm_pd_dep_v1/av_f1_shared_mtl_2026-09-24_17-31_wsm_av_f1_shared_mtl_model_b40c5290/`.
+- Preserved `train.log`, `summary.txt`, `code.zip`, resolved `01_f1_shared_mtl.yaml`, checkpoints, and `last.pt`.
+- MLflow experiment: `wsm_mm_pd_dep_v1`; run ID: `a77cf0f729cc4f02b446cd5224d28f8e`; final status: `FINISHED`; artifact URI: `/media/maxim/Programs/Projects/WSM/mlruns/5/a77cf0f729cc4f02b446cd5224d28f8e/artifacts`.
+
+Shared-task gradient diagnostic:
+
+- At the DEV-selected epoch-3 checkpoint, a deterministic four-row TRAIN sample was used: earliest observed depression negative/positive and Parkinson negative/positive rows, indices `[23,0,3668,3660]`; no parameters were updated.
+- Depression-only shared_fusion gradient L2 norm=0.113986999; Parkinson-only norm=0.007432150; cosine similarity=0.099285446. All gradient values were finite.
+
+DEV comparison:
+
+- F1 versus F0: DEV Mean_Score delta `+0.029630`; depression Score delta `+0.047488`; Parkinson Score delta `+0.011772`.
+- F1 versus frozen audio: DEV Mean_Score delta `-0.013986`; depression Score delta `-0.058210`; Parkinson Score delta `+0.030238`.
+- F1 versus selected video V2: DEV Mean_Score delta `+0.067269`; depression Score delta `+0.069607`; Parkinson Score delta `+0.064930`.
+- These conclusions use DEV only. Test metrics were monitoring outputs and never influenced epoch selection, tuning, thresholds, scheduler behavior, or architecture choice.
+
+Scope and blockers:
+
+- No source changes; src/audio and src/video are unchanged. Accepted A+V DataModule and F0/F1 model code are unchanged.
+- F2 was not started. Text/description remains deferred. No dependency installation or pseudo-labeling occurred.
+- Stage 4 remains partial: F0 and F1 baselines are complete; F2 remains.
+
+Evidence commit SHA: pending commit. Push result: pending.
+
+Recommended next atomic task: TASK-004F — implement/register the fixed F2 task-aware directed fusion baseline, with observed loss only and no pseudo-labeling.
