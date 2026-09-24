@@ -2562,3 +2562,24 @@ Plan status: Stage 4 bounded audio-first search is complete. No candidate meets 
 Blockers and risks: B improves aggregate DEV Mean_Score but has unacceptable depression negative transfer; A and C do not beat the frozen aggregate anchor. The same-row A audit differs slightly from the epoch summary because it is a direct selected-checkpoint replay; both are retained. Single-seed screening does not constitute promotion.
 
 Recommended next atomic task: manager review of the negative safe-winner result; do not add another fusion candidate automatically.
+
+
+### MANAGER-DECISION-031 — Accept TASK-004K, close Stage 4 without a safe fusion winner, and activate RAMPS R1
+
+Status: TASK-004K accepted; Stage 4 complete; Stage 5 R1 active.
+
+- TASK-004K is integrated through PR #35 as `1cc1301ff911420a07ef12ccef93473e6f729b10`.
+- The bounded search followed the frozen manifest and exactly three-candidate budget. No fourth model was added, all three used the exact frozen temporal-audio anchor, and Test metrics remained monitoring-only.
+- Candidate A: DEV Mean=0.783920, depression=-0.022513 vs frozen audio, Parkinson=+0.014701.
+- Candidate B: DEV Mean=0.809324, depression=-0.038989, Parkinson=+0.081983.
+- Candidate C: DEV Mean=0.776635, depression=-0.023581, Parkinson=+0.001198.
+- No candidate satisfies the predeclared safe-screen rule because B's aggregate gain is accompanied by unacceptable depression negative transfer, while A/C do not beat the frozen aggregate anchor.
+- Candidate B is retained as mechanistic evidence that temporal video carries a strong Parkinson signal. It is NOT promoted, and its Parkinson head will NOT be cherry-picked as a task-specific teacher because doing so would introduce a new post-hoc selection rule based on task-specific DEV behavior.
+- Stage 4 is therefore closed with the factual result: temporal video can improve one task substantially, but no searched A+V architecture safely improves the strong temporal-audio system across both tasks.
+- The safe anchor for Stage 5 is the exact frozen historical temporal-audio checkpoint, not Candidate B and not a pooled-audio fusion model.
+- RAMPS R1 begins by creating calibrated, auditable soft targets for genuinely missing task entries. No student training is authorized until the frozen-teacher calibration/target artifact is complete.
+- For each disease, the frozen strong-audio head is calibrated only on DEV rows where that disease is observed. No Test row or Test metric may enter calibration or acceptance-threshold fitting.
+- R1 uses soft missing-only targets, separate positive/negative acceptance thresholds, stop-gradient offline teacher outputs, and observed truth always overrides pseudo supervision.
+- The first R1 task does not claim correctness of genuinely missing cross-corpus labels because no dual-annotated ground truth is available.
+
+Recommended next atomic task: TASK-005A2 — calibrate the exact frozen strong temporal-audio disease heads and build an audited TRAIN missing-head soft-target cache. No student training and no Test evaluation.
