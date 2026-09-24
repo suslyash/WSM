@@ -1195,3 +1195,39 @@ Status: partially accepted for integration; not yet training-ready.
 - Real training remains blocked until the YAML uses durable repository/project log paths following the existing WSM config convention and passes config/build/selector validation again.
 
 Recommended next atomic task: TASK-002L2 — replace only the temporary production artifact/logging paths with durable WSM log paths, revalidate the config, and do not run the full experiment. After TASK-002L2 passes, proceed directly to TASK-002M real V1 video training.
+
+
+### TASK-002L2 - Replace temporary V1 artifact paths with durable WSM log paths
+
+Status: complete; Stage 2 is ready for TASK-002M real V1 video training.
+
+Branch: codex/task-002l2.
+Implementation commit: pending until the implementation commit is created.
+Push result: pending until the branch is pushed.
+
+Changed files:
+
+- configs/wsm_mm_pd_dep_v1/video/00_depart_v1.yaml;
+- docs/PROGRESS_EN.md.
+
+Correction:
+
+- checkpoint callback log_path is now logs;
+- snapshot callback log_path is now logs;
+- console_file_logger log_path is now logs;
+- mlflow_logger tracking_uri is now sqlite:///logs/mlflow.db.
+- No /tmp/wsm_task002l path remains in the production YAML.
+- All accepted TASK-002L model, data, optimizer, train, instrumentation, four-stream, and selector settings remain unchanged. The accepted selector remains dev/mean_score with mode=max, and no Test protocol is used as a monitor or selector.
+
+Exact verification commands/results:
+
+- No temporary path assertion passed.
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config --config-path configs/wsm_mm_pd_dep_v1/video/00_depart_v1.yaml - passed: Config is valid.
+- Selector firewall passed: checkpoint and early stopping monitor dev/mean_score/max; no test_none/test_soft/test_hard monitor or scheduler reference.
+- Durable path assertions passed for checkpoint, snapshot, console logging, and sqlite:///logs/mlflow.db.
+- Actual Chimera registry/build smoke without Trainer.fit passed for DataModule, model, masked loss, AdamW optimizer, five callbacks, and two loggers. Dataset counts remain train=6325, dev=933, test_none=1364, test_soft=1208, test_hard=1014. val_dataloader() keys remain dev, test_none, test_soft, test_hard.
+- python3 -m py_compile src/video/data/wsm_video_cache_datamodule.py and git diff --check passed.
+- src/audio diff is empty.
+- No full training experiment, Test performance evaluation, or model selection ran.
+
+Recommended next atomic task: TASK-002M real V1 video training run.
