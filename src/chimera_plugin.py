@@ -8,6 +8,7 @@ _MODULES_TO_REGISTER: tuple[str, ...] = (
     "common.callbacks.wsm_segment_callback",
     "common.callbacks.wsm_summary_callback",
     "common.loss.wsm_masked_sparse_loss",
+    "common.optimizers",
     "audio.data.wsm_audio_segment_datamodule",
     "audio.models.audio_mamba_segment",
     "audio.loss.wsm_audio_loss",
