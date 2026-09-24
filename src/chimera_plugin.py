@@ -14,6 +14,7 @@ _MODULES_TO_REGISTER: tuple[str, ...] = (
     "fusion.models.av_sync_mamba_segment",
     "fusion.data.wsm_manifest_datamodule",
     "video.models.depart_v1",
+    "video.models.depart_v2",
     "video.data.wsm_video_cache_datamodule",
 )
 

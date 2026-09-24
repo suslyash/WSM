@@ -15,7 +15,7 @@ Final Test authorized: **no**.
 | Paper/project analysis | complete | Baselines, structure, requirements, plan | BASELINES.md, PROJECT_INIT_STRUCTURE.md, PROJECT_REQUIREMENTS.md, PLAN.md |
 | 0. Reproducible base | complete | Canonical frozen audio config validates and registry/smoke gates pass | Verification records TASK-000-A and TASK-000B below |
 | 1. Manifest/partial-label contract | complete | Canonical manifest, separate DEV/Test consumer, masked sparse loss, zero video leakage, and owner-accepted speaker-independent split contract | TASK-001A through TASK-001E plus manager decision below |
-| 2. Video | partial | Deterministic V1 preprocessing/cache contract implemented; no model winner selected | TASK-002A |
+| 2. Video | partial | Deterministic V1 preprocessing/cache and V1/V2 model contracts implemented; no model winner selected | TASK-002A through TASK-002N |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | not started | Comparable F0/F1/F2 | None |
 | 5. RAMPS | not started | Direct reliable missing-head gradient | None |
@@ -1312,3 +1312,39 @@ Status: accepted.
 - The repository does not currently specify a more detailed V2 formula. The manager therefore fixes the minimal reproducible V2 contract: two learned class prototypes per task, cosine prototype evidence, a V1-style task MLP logit, and a learned scalar gate blending prototype and MLP logits. Contrastive supervision is NOT added yet; V2 must expose prototype geometry in ModelOutput.aux so a later controlled contrastive ablation can be added without changing the forward contract.
 
 Recommended next atomic task: TASK-002N — implement/register the prototype-aware V2 video model contract only, with synthetic forward/loss/backward and gating/prototype invariance checks. Do not create a V2 training config or run training yet.
+
+
+### TASK-002N — Implement and register the prototype-aware V2 video model contract
+
+Status: complete; V2 model contract implemented and synthetically verified. Stage 2 remains partial because no V2 training config or training run was authorized or performed.
+
+Changed files:
+
+- src/video/models/depart_v2.py
+- src/video/models/__init__.py
+- src/chimera_plugin.py
+- docs/PROGRESS_EN.md
+
+Implementation facts:
+
+- Added registry key wsm_video_depart_v2_model.
+- Preserved the V1 temporal encoder path: input LayerNorm, projection/GELU/dropout, learned positional embeddings, TransformerEncoder, output LayerNorm, and masked mean pooling.
+- Added learned prototypes with shape [2,2,H], ordered by task depression/Parkinson and class negative/positive.
+- Added cosine prototype evidence, independent V1-style MLP heads, independent representation-only gate MLPs, and the fixed convex blend of MLP and prototype logits.
+- ModelOutput exposes features, normalized_features, task_logits, mlp_logits, prototype_logits, prototype_similarities, prototype_gates, and normalized_prototypes. Final preds remain independent logits [B,2]; no sigmoid, softmax, labels, masks, corpus, split, protocol, task_id, pseudo-labeling, or contrastive loss enters forward.
+- Context-aware factory defaults video_feature_dim=512 and num_tasks=2, reads data.video_feature_dim, and rejects data.num_tasks other than 2.
+- V1 registry key and implementation remain intact.
+
+Exact verification commands/results:
+
+- python3 -m py_compile src/video/models/depart_v2.py src/video/models/__init__.py src/chimera_plugin.py — passed.
+- Required registry smoke with PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python — passed: V1 and V2 keys present and no video.models.depart_v2 project-module warning.
+- Synthetic V2 forward/loss/backward and gating/mask checks — passed: input [3,60,512], output [3,2], prototypes [2,2,192], similarities [3,2,2], MLP/prototype logits [3,2], gates [3,2] in [0,1], exact convex blend, masked-frame invariance, all-invalid ValueError, finite masked sparse loss, finite nonzero prototype gradients, and finite nonzero gate gradients.
+- Masked NaN targets were accepted only at unobserved positions by wsm_masked_sparse_loss; observed labels remained finite binary targets.
+- git diff --check — passed.
+- git diff -- src/audio — empty; frozen src/audio unchanged.
+- No V2 training config was created, no training run was performed, and no Test metrics were computed.
+
+Deviations/blockers: none. The standard PyTorch nested-tensor warning from norm_first=True was not a project-module import warning and did not affect the passing checks.
+
+Recommended next atomic task: manager review of the V2 contract and authorization of a fixed V2 training config/run; do not select a V2 model or epoch using Test metrics.
