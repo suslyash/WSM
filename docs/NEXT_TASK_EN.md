@@ -1,85 +1,82 @@
-# TASK-005A2: Calibrate the Frozen Strong-Audio Disease Teachers and Build the Audited RAMPS-R1 TRAIN Missing-Head Target Cache
+# TASK-005A3: Recover Two-Head RAMPS Reliability with Independent Video Agreement, Uncertainty, and OOD Filtering
 
 ## Role
 
-You are the implementing Codex. Execute only this task, update docs/PROGRESS_EN.md, commit on the required task branch, push to origin, then stop. Follow AGENTS.md.
+You are the implementing Codex. Execute only this offline RAMPS-R2 reliability task, update docs/PROGRESS_EN.md, commit on the required task branch, push to origin, then stop. Follow AGENTS.md.
 
 Required branch:
 
-    codex/task-005a2
+    codex/task-005a3
 
 Do not train a student.
-Do not modify the frozen audio checkpoint or src/audio.
-Do not modify src/video.
-Do not modify the accepted A+V DataModule.
-Do not use Candidate B or any Stage 4 fusion model as a task-specific teacher.
-Do not iterate or evaluate any Test protocol.
-Do not start RAMPS R2/R3/R4.
+Do not modify src/audio or src/video.
+Do not modify any accepted model or DataModule.
+Do not use Candidate B or any Stage-4 fusion model as a teacher.
+Do not lower the final precision target below 0.90.
+Do not lower min_support below 10.
+Do not iterate/evaluate any Test protocol.
+Do not start R3/R4.
 Do not start text/description work.
 
 ## Goal
 
-Start Stage 5 RAMPS R1 from the safe strong-audio anchor.
+TASK-005A2 established a genuine R1 blocker:
 
-Use the exact historical DEV-selected frozen temporal-audio checkpoint as the teacher for BOTH disease heads.
+- Parkinson missing-head pseudo-targets can be accepted at the fixed reliability standard.
+- Depression cannot accept any pseudo-target under strong-audio confidence alone at:
+      precision_target = 0.90
+      min_support = 10
 
-For each disease:
+Do NOT relax that standard.
 
-1. infer its frozen teacher logits on canonical DEV;
-2. fit one temperature using ONLY DEV rows where that disease label is observed;
-3. fit separate positive/negative acceptance thresholds using ONLY that same observed-task DEV data;
-4. infer all canonical TRAIN rows;
-5. create soft calibrated pseudo-targets ONLY for missing task entries;
-6. preserve observed truth as authoritative;
-7. write an audited, offline, stop-gradient target cache.
+Instead, test the next PLAN-authorized RAMPS reliability layer using independent evidence:
 
-This task produces teacher/calibration/target artifacts only.
+1. frozen strong temporal audio = primary teacher and pseudo-target source;
+2. independently selected Stage-2 video V2 = agreement evidence only;
+3. predictive entropy/disagreement = uncertainty evidence;
+4. class-conditional frozen-audio task-feature distance = OOD evidence;
+5. deterministic 5-fold out-of-fold DEV reliability selection;
+6. publish a TRAIN two-head missing-target cache only if both diseases recover an eligible rule at the unchanged reliability standard.
 
-It MUST NOT apply pseudo-supervision to a trainable student.
+The video model is NOT the pseudo-target source.
 
-## Why the Teacher Is Frozen Strong Audio
+For accepted TRAIN missing entries:
 
-Stage 4 found no safe multimodal winner.
+    pseudo_target = calibrated strong-audio probability
 
-Candidate B improved aggregate DEV and Parkinson strongly but failed the predeclared depression negative-transfer gate.
-
-Do NOT cherry-pick Candidate B as a Parkinson-only teacher.
-
-The accepted safe anchor is the exact frozen historical temporal-audio checkpoint:
-
-    DEV depression Score = 0.7479183895
-    DEV Parkinson Score = 0.8277353635
-    DEV Mean_Score = 0.7878268765
-
-RAMPS R1 therefore starts from one consistent, pre-existing, safe model-selection rule rather than task-specific post-hoc teacher selection.
+Video/uncertainty/OOD signals only decide acceptance/reliability.
 
 ## Required Reading
 
 1. AGENTS.md
 2. docs/PROJECT_REQUIREMENTS.md Sections 2, 5, 6, 8, 9, 10, 11, 12, 13, 14
 3. docs/PLAN.md Stage 5
-4. docs/PROGRESS_EN.md through MANAGER-DECISION-031
+4. docs/PROGRESS_EN.md through MANAGER-DECISION-032
 5. docs/NEXT_TASK_EN.md
-6. docs/SOTA_REVIEW_EN.md Sections 2, 3, 5, 7, 8, 9, 11
-7. src/fusion/models/frozen_audio_temporal_adapter.py
-8. src/fusion/data/wsm_av_fusion_datamodule.py
-9. src/common/loss/wsm_masked_sparse_loss.py
-10. src/common/callbacks/wsm_segment_callback.py
+6. docs/SOTA_REVIEW_EN.md Sections 5, 7, 8, 9, 10, 11, 13
+7. src/fusion/loss/ramps_r1_teacher.py
+8. src/fusion/models/frozen_audio_temporal_adapter.py
+9. src/video/models/depart_v2.py
+10. configs/wsm_mm_pd_dep_v1/video/01_depart_v2_prototype.yaml
+11. src/fusion/data/wsm_av_fusion_datamodule.py
+12. src/common/callbacks/wsm_segment_callback.py
 
 ## Allowed Tracked Files
 
-- src/fusion/loss/ramps_r1_teacher.py
+- src/fusion/loss/ramps_r2_reliability.py
 - src/fusion/loss/__init__.py
-- scripts/common/prepare_ramps_r1_strong_audio_targets.py
+- scripts/common/prepare_ramps_r2_av_targets.py
 - docs/PROGRESS_EN.md
 
 No other tracked file may be modified.
 
-No Chimera registry entry is required in this task because this is an offline teacher-calibration/target-preparation utility, not yet a training-selectable loss.
+No training config is authorized.
 
-## Fixed Teacher
+## Fixed Teachers
 
-Exact checkpoint:
+### Primary strong-audio teacher
+
+Checkpoint:
 
     logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt
 
@@ -87,46 +84,78 @@ Required SHA256:
 
     0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2
 
-Teacher adapter:
+Adapter:
 
     FrozenAudioTemporalAdapter
 
-Task order:
+Historical DEV reference:
 
-    0 = depression
-    1 = parkinson
+    depression Score = 0.7479183895
+    Parkinson Score = 0.8277353635
+    Mean_Score = 0.7878268765
 
-The teacher MUST be:
+The strong-audio calibrated probability remains the ONLY pseudo-target value.
 
-- loaded from the exact checkpoint;
-- checkpoint SHA-verified before inference;
+### Independent video agreement teacher
+
+Use the already Stage-2-selected V2 checkpoint:
+
+    logs/wsm_mm_pd_dep_v1/depart_v2_prototype_gated_2026-09-24_14-39_wsm_video_depart_v2_model_0a7294f4/checkpoints/epoch=5_dev_mean_score=0.7066.pt
+
+Model contract:
+
+    WSMVideoDepartV2Model
+    video_feature_dim=512
+    hidden_dim=192
+    num_layers=2
+    num_heads=4
+    ff_mult=4
+    dropout=0.2
+    sequence_steps=60
+    num_tasks=2
+    prototype_scale=10.0
+    gate_hidden_dim=64
+
+Strict-load the checkpoint model_state_dict.
+
+Require the checkpoint payload to identify epoch 5.
+
+Compute and record its SHA256.
+
+Before using it in reliability selection, reproduce canonical DEV within absolute tolerance 0.0005 for:
+
+    depression Score = 0.620101
+    Parkinson Score = 0.793043
+    Mean_Score = 0.706572
+
+If strict load or DEV reproduction fails:
+
+    STOP BLOCKED.
+
+Do not substitute V1, Candidate B, or another checkpoint.
+
+Both teachers must be:
+
 - eval-only;
-- requires_grad=false for all audio parameters;
-- run under torch.inference_mode() or equivalent;
-- never updated;
-- never placed in an optimizer.
+- requires_grad=false;
+- run under inference_mode/no_grad;
+- absent from any optimizer.
 
-Cached outputs are therefore detached/offline stop-gradient targets by construction.
+No optimizer is needed anywhere in TASK-005A3.
 
-## Fixed Data Inputs
+## Fixed Data
 
-Data root:
-
-    /media/maxim/Databases/WSM_NEW
-
-Audio feature cache:
-
-    /media/maxim/Databases/WSM_NEW/features
-
-Video feature cache:
-
-    /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache
-
-Use the accepted:
+Use:
 
     WSMAVFusionDataModule
 
-Expected canonical counts:
+Roots:
+
+    data_root = /media/maxim/Databases/WSM_NEW
+    audio_feature_cache_root = /media/maxim/Databases/WSM_NEW/features
+    video_cache_root = /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache
+
+Expected counts:
 
     train = 6325
     dev = 933
@@ -137,453 +166,548 @@ Expected canonical counts:
     missing_audio = 0
     missing_video = 0
 
-You MAY instantiate the DataModule even though it defines Test datasets.
+Only:
 
-You MUST NOT iterate, infer, evaluate, calibrate, threshold-fit, or compute metrics on:
+    train_dataset
+    val_dataset
+
+may be iterated.
+
+MUST NOT call:
+
+    val_dataloader()
+
+MUST NOT iterate or infer:
 
     test_none
     test_soft
     test_hard
 
-Only TRAIN and DEV may be consumed.
-
 ## Fixed Output Root
 
-Write generated runtime artifacts outside Git tracking to:
+Write runtime artifacts outside Git to:
 
-    /media/maxim/Programs/Features/WSM/ramps_r1_strong_audio_teacher_v1
+    /media/maxim/Programs/Features/WSM/ramps_r2_av_reliability_v1
 
-Required artifacts:
+Required always:
 
-    teacher_calibration.json
-    train_missing_targets.pt
+    reliability_search.json
     audit.json
 
-Do not add these artifacts to git.
+Write only if the two-head gate passes:
 
-The preparation script must refuse to overwrite an existing non-empty output root unless an explicit --overwrite flag is supplied.
+    train_missing_targets.pt
 
-Do not use --overwrite in the production run unless the existing directory is first verified to be an incomplete artifact from this same task.
+Do not add runtime artifacts to git.
 
-## 1. Reusable Binary Calibration Utilities
+The production script must refuse overwrite of a non-empty output root unless explicit --overwrite is supplied.
 
-Implement in:
+## 1. Reusable R2 Reliability Utilities
 
-    src/fusion/loss/ramps_r1_teacher.py
+Implement:
 
-The module must be deterministic and independent of Test data.
+    src/fusion/loss/ramps_r2_reliability.py
 
-### Binary temperature scaling
+Reuse R1 temperature/calibration utilities rather than duplicating them where appropriate.
 
-For one disease task:
+Implement deterministic utilities for:
 
-    calibrated_logit = raw_logit / T
-    calibrated_prob = sigmoid(calibrated_logit)
+- normalized binary entropy;
+- deterministic stratified 5-fold assignment;
+- class confidence;
+- audio/video same-class agreement;
+- normalized audio task-feature class-centroid cosine distance;
+- empirical OOD percentile against a reference distance distribution;
+- bounded reliability-rule search;
+- rule application;
+- detached reliability weights.
 
-with:
+No sklearn/scipy/new dependency.
 
-    T > 0
+## 2. Deterministic Stratified Five-Fold DEV Contract
 
-Fit one scalar temperature independently for depression and Parkinson using ONLY observed DEV labels for that task.
+Perform reliability-family selection separately for each disease.
 
-Use a stable positive parameterization, e.g.:
+Use ONLY rows where that disease is observed.
 
-    T = exp(log_temperature)
+Create exactly 5 folds, stratified by binary label.
 
-Use torch only. Do not install dependencies.
+Deterministic assignment:
 
-Fit by minimizing binary NLL / BCE-with-logits on that task's observed DEV rows.
+1. within each class, sort rows by:
+       sha256(f"{task_name}:{segment_id}")
+2. assign round-robin fold indices 0..4.
 
-Use deterministic optimization.
+Require:
 
-Allowed deployed temperature interval:
+- each observed row appears in exactly one held-out fold;
+- no held-out row is used to fit its own audio temperature;
+- no held-out row is used to fit its own video temperature;
+- no held-out row is used to fit its own class centroid/OOD reference distribution;
+- both labels are present in every fitting partition.
 
-    0.05 <= T <= 20.0
+If a fitting partition lacks either class:
 
-If an unconstrained fit leaves this interval:
+    STOP BLOCKED.
 
-- clamp only the final deployed temperature;
-- recompute all reported post-calibration metrics using the deployed value;
-- record the unclamped and deployed values.
+## 3. Out-of-Fold Teacher Calibration
 
-### Calibration metrics
+For each task and each fold:
 
-Implement reusable functions for:
+Using the other four folds only:
 
-- binary NLL/BCE;
-- Brier score;
-- ECE with 15 equal-width probability bins.
+- fit audio temperature with fit_binary_temperature;
+- fit video temperature with fit_binary_temperature;
+- compute normalized frozen-audio task-feature centroid for class 0;
+- compute normalized frozen-audio task-feature centroid for class 1;
+- compute fit-partition cosine-distance reference distribution to each row's true-class centroid.
 
-For each disease record BEFORE and AFTER temperature scaling:
+On the held-out fold compute:
 
-- NLL;
-- Brier;
-- ECE-15.
+    p_audio
+    p_video
+    audio class confidence
+    video class confidence
+    joint_confidence
+    normalized audio entropy
+    normalized video entropy
+    uncertainty = max(audio_entropy, video_entropy)
+    class-conditional audio OOD percentile
 
-Also record:
+Binary entropy:
 
-- observed DEV count;
-- positive count;
-- negative count.
+    H(p) = -(p*ln(p) + (1-p)*ln(1-p)) / ln(2)
 
-Do not fabricate monotonic ECE/Brier improvement.
+Use numerical clamping only to avoid log(0).
 
-The fitted objective is NLL; report all metrics factually.
+Class side:
 
-## 2. Fixed Class-Specific Acceptance Threshold Policy
+    positive if p >= 0.5
+    negative if p < 0.5
 
-Fit separate positive and negative thresholds for each disease using ONLY calibrated predictions on that disease's observed DEV labels.
+A row can enter a side-specific acceptance rule only when BOTH teachers predict the same side.
 
-Fixed policy:
+For side c:
 
-    precision_target = 0.90
-    min_support = 10
-    threshold_step = 0.01
+    audio_conf = p_audio      if c=1 else 1-p_audio
+    video_conf = p_video      if c=1 else 1-p_video
+    joint_confidence = min(audio_conf, video_conf)
 
-### Positive side
+Audio OOD distance:
 
-Accept positive pseudo-target if:
+- L2-normalize frozen audio task feature;
+- L2-normalize class centroid;
+- distance = 1 - cosine_similarity(feature, centroid).
 
-    p >= tau_pos
+OOD percentile:
 
-Candidate thresholds:
+- compare held-out distance to the fitting partition's distance distribution for the candidate class side;
+- percentile = fraction of reference distances <= held-out distance;
+- lower percentile = more in-distribution.
 
-    0.50, 0.51, ..., 0.99
+Store one pooled out-of-fold record per observed DEV row.
 
-For each threshold compute precision among accepted predictions.
+## 4. Exactly Three Predeclared Reliability Families
 
-Choose the LOWEST threshold satisfying:
+The search is limited to exactly these families.
+
+The FINAL empirical precision target remains:
+
+    0.90
+
+Minimum support remains:
+
+    10
+
+### Family A — Agreement + Joint Confidence
+
+Require same-class audio/video agreement.
+
+Accept side c when:
+
+    joint_confidence >= tau_conf
+
+Grid:
+
+    tau_conf = 0.50, 0.51, ..., 0.99
+
+### Family B — Agreement + Joint Confidence + Low Entropy
+
+Require Family A plus:
+
+    uncertainty <= tau_entropy
+
+Fixed entropy cutoffs:
+
+    0.25
+    0.50
+    0.75
+
+Search the cross-product of:
+
+    tau_conf grid
+    tau_entropy set
+
+### Family C — Agreement + Joint Confidence + Low Entropy + In-Distribution Audio Feature
+
+Require Family B plus:
+
+    ood_percentile <= tau_ood
+
+Fixed OOD percentile cutoffs:
+
+    0.80
+    0.90
+    0.95
+
+Search:
+
+    tau_conf grid
+    tau_entropy set
+    tau_ood set
+
+Do NOT add a fourth family.
+
+Do NOT use a semantic/VLM feature in this task.
+
+## 5. OOF Family Selection Policy
+
+For each:
+
+    task in {depression, parkinson}
+    side in {positive, negative}
+
+evaluate all allowed rule configurations on the pooled OOF DEV records.
+
+For each configuration record:
+
+- family;
+- parameters;
+- support;
+- correct;
+- empirical precision;
+- class coverage = correct / number of true DEV examples of that class.
+
+Eligible iff:
 
     support >= 10
     precision >= 0.90
 
-This maximizes accepted coverage under the fixed reliability target.
+Select the eligible configuration using deterministic ordering:
 
-### Negative side
+1. maximum support;
+2. then maximum precision;
+3. then lower complexity:
+       Family A before B before C;
+4. then lower tau_conf;
+5. for B/C, higher tau_entropy;
+6. for C, higher tau_ood.
 
-Accept negative pseudo-target if:
+If no rule is eligible for a side:
 
-    p <= tau_neg
+    side enabled = false
 
-Candidate thresholds:
+A disease is OOF-recoverable if at least ONE side is enabled.
 
-    0.01, 0.02, ..., 0.50
+Do not require both positive and negative sides to be enabled.
 
-Define negative precision as:
+Record full coverage curves/search tables in reliability_search.json.
 
-    accepted true negatives / accepted negative predictions
+## 6. Full-DEV Confirmation of the OOF-Selected Rule
 
-Choose the HIGHEST threshold satisfying:
+After OOF selection, fit deployment statistics on ALL observed DEV rows for each disease:
+
+- one full-DEV audio temperature;
+- one full-DEV video temperature;
+- class 0/1 audio task-feature centroids;
+- full-DEV class-specific distance reference distributions.
+
+Apply the EXACT OOF-selected family/hyperparameters without redesigning or changing thresholds.
+
+For every enabled side require again on full observed DEV:
 
     support >= 10
     precision >= 0.90
 
-This maximizes accepted negative coverage under the fixed reliability target.
+If an OOF-selected side fails full-DEV confirmation:
 
-### Disabled side
+    disable that side
 
-If no candidate satisfies the fixed support/precision requirement:
+Do NOT refit another rule after seeing the full-DEV failure.
 
-- enabled=false;
-- threshold=null;
-- do NOT relax precision;
-- do NOT lower min_support;
-- do NOT use Test;
-- continue the audit.
+A disease is deployable only if at least one side remains enabled after full-DEV confirmation.
 
-For each disease/class side record:
+The overall R2 two-head gate passes only if BOTH diseases are deployable.
 
-- enabled;
-- threshold or null;
-- accepted DEV support;
-- accepted DEV precision;
-- accepted DEV coverage/recall;
-- precision_target;
-- min_support.
+## 7. TRAIN Missing-Head Target Construction
 
-## 3. TRAIN Missing-Head Soft Targets
+Only if the overall two-head gate passes:
 
-Run the calibrated frozen teacher over ALL canonical TRAIN rows.
+Infer all 6325 canonical TRAIN rows exactly once with both frozen teachers.
 
-For each row/task:
+Use the full-DEV deployment temperatures/centroids/reference distributions.
 
-### Observed entry
+For each missing task entry:
 
-If:
+1. determine audio/video probabilities;
+2. determine agreed side;
+3. compute joint confidence, uncertainty, and audio OOD percentile;
+4. apply that task/side's confirmed selected rule.
 
-    observed_mask == true
+If accepted:
 
-then:
+    pseudo_target = calibrated_audio_probability
+
+NOT video probability.
+NOT an average.
+NOT a hard 0/1 label.
+
+Pseudo class:
+
+    1 for accepted positive
+    0 for accepted negative
+
+Reliability weight:
+
+Family A:
+
+    reliability = joint_confidence
+
+Family B:
+
+    reliability = joint_confidence * (1 - uncertainty)
+
+Family C:
+
+    reliability = joint_confidence * (1 - uncertainty) * (1 - ood_percentile)
+
+Clamp only numerically to [0,1].
+
+Reliability is detached/offline.
+
+For observed entries:
 
     pseudo_accept_mask = false
     pseudo_target = NaN
     pseudo_reliability = 0
     pseudo_class = -1
 
-Observed ground truth remains authoritative.
+Observed truth always wins.
 
-Never duplicate, overwrite, blend, or replace observed supervision in this task.
+For rejected missing entries use the same null contract.
 
-### Missing entry
+## 8. train_missing_targets.pt Contract
 
-If:
+If the two-head gate passes, save at least:
 
-    observed_mask == false
-
-compute calibrated probability p.
-
-Positive accepted if:
-
-    positive side enabled
-    and p >= tau_pos
-
-Negative accepted if:
-
-    negative side enabled
-    and p <= tau_neg
-
-Otherwise rejected.
-
-For accepted missing entries:
-
-    pseudo_target = p
-
-Keep the target SOFT.
-
-Do NOT convert accepted probabilities to hard 0/1 labels.
-
-Base R1 reliability:
-
-    pseudo_reliability = 2 * abs(p - 0.5)
-
-Accepted class:
-
-    1 for accepted positive
-    0 for accepted negative
-
-For rejected missing entries:
-
-    pseudo_target = NaN
-    pseudo_reliability = 0
-    pseudo_class = -1
-
-All saved pseudo tensors must be detached CPU tensors.
-
-R2 will later add uncertainty, modality agreement, and OOD evidence. Do not add those here.
-
-## 4. train_missing_targets.pt Contract
-
-Save a torch artifact containing at least:
-
-    version = "ramps-r1-strong-audio-v1"
-
+    version = "ramps-r2-av-reliability-v1"
     task_names = ["depression", "parkinson"]
-
     segment_ids
     observed_mask
     observed_targets
-    raw_teacher_logits
-    calibrated_probs
+
+    raw_audio_logits
+    calibrated_audio_probs
+    raw_video_logits
+    calibrated_video_probs
+
+    audio_task_features
+
     pseudo_accept_mask
     pseudo_targets
     pseudo_reliability
     pseudo_class
 
-    temperatures
-    thresholds
+    selected_rules
+    audio_temperatures
+    video_temperatures
 
-    teacher_checkpoint_path
-    teacher_checkpoint_sha256
-    adapter_source = "fusion.models.frozen_audio_temporal_adapter.FrozenAudioTemporalAdapter"
-
-Expected tensor/table contract:
-
-    rows = 6325
-    tasks = 2
+    audio_checkpoint_path
+    audio_checkpoint_sha256
+    video_checkpoint_path
+    video_checkpoint_sha256
 
 Requirements:
 
-- exactly 6325 TRAIN rows;
-- canonical order retained;
-- unique segment_ids;
-- observed_mask matches DataModule targets;
-- observed targets unchanged;
-- pseudo_accept_mask & observed_mask is always false;
-- pseudo_targets NaN on every observed entry;
-- pseudo_targets NaN on every rejected missing entry;
-- accepted pseudo_targets finite and in [0,1];
-- accepted pseudo_reliability finite and in [0,1];
-- pseudo_reliability exactly zero on observed/rejected entries;
-- pseudo_class exactly {-1,0,1} with semantics above.
+- rows=6325, tasks=2;
+- unique canonical segment IDs;
+- observed mask/targets unchanged;
+- no pseudo values on observed entries;
+- accepted target finite [0,1];
+- accepted target equals calibrated AUDIO probability for that entry;
+- reliability finite [0,1];
+- reliability zero on observed/rejected entries;
+- pseudo_class in {-1,0,1};
+- at least one accepted missing entry for depression;
+- at least one accepted missing entry for Parkinson.
 
-## 5. teacher_calibration.json Contract
+If the overall two-head gate fails:
 
-Record at least:
+    DO NOT write train_missing_targets.pt.
+
+## 9. reliability_search.json Contract
+
+Always write, even if R2 remains blocked.
+
+Include:
 
 - artifact version;
-- UTC generation timestamp;
-- exact checkpoint path;
-- checkpoint SHA256;
-- exact adapter class;
-- task order;
-- DataModule/cache roots;
-- canonical train/dev/join counts;
-- exact calibration procedure;
-- exact threshold-selection procedure;
-- fixed precision_target/min_support/threshold_step/ECE bins;
-- per-task temperature;
-- per-task raw/calibrated DEV NLL;
-- per-task raw/calibrated DEV Brier;
-- per-task raw/calibrated DEV ECE-15;
-- per-task observed DEV count;
-- per-task positive/negative counts;
-- per-task positive threshold audit;
-- per-task negative threshold audit;
-- explicit statement:
-  "No Test rows or Test metrics were used."
+- generation UTC;
+- exact audio/video checkpoint paths and SHA256;
+- teacher/model class names;
+- data/cache roots;
+- canonical counts;
+- no-Test statement;
+- 5-fold construction rule;
+- per-fold class counts;
+- per-fold fitted audio/video temperatures;
+- full-DEV fitted audio/video temperatures;
+- historical teacher DEV reproduction metrics;
+- all three family definitions;
+- full OOF candidate audit table per task/side;
+- selected OOF rule per task/side or disabled;
+- full-DEV confirmation per selected side;
+- whether each disease is deployable;
+- whether overall two-head gate passes.
 
-Do NOT include Test metric values.
+Do not include Test values.
 
-## 6. audit.json Contract
+## 10. audit.json Contract
 
-For each missing task separately record:
+Always write.
 
-- missing-entry count;
+If blocked, audit the failed reliability selection.
+
+If passed, additionally audit TRAIN target construction.
+
+Include per task:
+
+- missing TRAIN count;
 - accepted total;
 - rejected total;
-- coverage = accepted / missing;
-- accepted positive count;
-- accepted negative count;
-- accepted positive fraction;
-- calibrated probability mean/std/min/max among accepted;
-- pseudo reliability mean/std/min/max among accepted.
+- coverage;
+- accepted positive/negative counts;
+- selected family/rule per side;
+- OOF precision/support per enabled side;
+- full-DEV precision/support per enabled side;
+- accepted calibrated-audio probability stats;
+- reliability stats;
+- audio/video agreement rate among missing rows.
 
-Overall record:
+Overall:
 
     train_rows = 6325
-    train_missing_entries
-    accepted_missing_entries
-    accepted_overall_coverage
     observed_overwrite_violations = 0
     duplicate_segment_ids = 0
     nonfinite_accepted_targets = 0
     pseudo_values_on_observed_entries = 0
     pseudo_acceptance_on_observed_entries = 0
 
-IMPORTANT:
+Do NOT claim missing-label accuracy/correctness/comorbidity recovery.
 
-The truly missing cross-corpus labels are unknown.
-
-Therefore DO NOT report or claim pseudo-label accuracy, recall, F1, correctness, or comorbidity recovery on missing TRAIN entries.
-
-The only precision values are those measured on corresponding observed-task DEV labels during threshold fitting.
-
-## 7. Production Script
+## 11. Production Script
 
 Implement:
 
-    scripts/common/prepare_ramps_r1_strong_audio_targets.py
+    scripts/common/prepare_ramps_r2_av_targets.py
 
-Required script sequence:
+Required sequence:
 
-1. set deterministic seeds;
-2. verify checkpoint SHA256;
-3. build accepted A+V DataModule;
-4. verify canonical counts;
-5. build FrozenAudioTemporalAdapter;
-6. verify teacher stop-gradient/eval-only;
-7. infer DEV only;
-8. fit independent disease temperatures on observed DEV labels;
-9. fit class-specific DEV acceptance thresholds;
-10. infer TRAIN only;
-11. build missing-only soft pseudo-target cache;
-12. validate every artifact invariant;
-13. write artifacts atomically where practical;
-14. print concise calibration + coverage summary.
+1. deterministic seeds;
+2. verify audio checkpoint SHA;
+3. compute video checkpoint SHA;
+4. strict-load exact video V2 checkpoint and verify epoch=5;
+5. build accepted A+V DataModule;
+6. verify canonical counts;
+7. build/freeze/eval both teachers;
+8. infer canonical DEV only, collecting:
+   - segment IDs;
+   - targets/observed masks;
+   - audio logits/task features;
+   - video logits;
+9. reproduce historical DEV metrics for BOTH teachers;
+10. construct deterministic stratified 5-fold OOF records;
+11. evaluate exactly Families A/B/C;
+12. freeze selected OOF rules;
+13. run full-DEV confirmation with no fallback redesign;
+14. write reliability_search.json;
+15. if two-head gate fails:
+       write audit.json;
+       exit with RuntimeError explaining which task/side failed;
+       do not infer TRAIN;
+       do not write target cache;
+16. if two-head gate passes:
+       infer canonical TRAIN only;
+       construct missing-only AUDIO soft targets using R2 acceptance;
+       validate invariants;
+       write train_missing_targets.pt and audit.json.
 
-The script MUST NOT call:
+Do not call dm.val_dataloader().
 
-    dm.val_dataloader()
-
-because that exposes Test streams.
-
-Use:
-
-    dm.val_dataset
-
-directly for DEV.
-
-Use TRAIN dataset/loader directly for TRAIN.
-
-The script must not import/iterate test_none/test_soft/test_hard datasets for inference.
+Do not infer Test.
 
 ## Exact Production Command
 
-Run from repository root:
+Run:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
-      scripts/common/prepare_ramps_r1_strong_audio_targets.py \
+      scripts/common/prepare_ramps_r2_av_targets.py \
       --data-root /media/maxim/Databases/WSM_NEW \
       --audio-feature-cache-root /media/maxim/Databases/WSM_NEW/features \
       --video-cache-root /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache \
-      --teacher-checkpoint logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt \
-      --output-root /media/maxim/Programs/Features/WSM/ramps_r1_strong_audio_teacher_v1 \
+      --audio-checkpoint logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt \
+      --video-checkpoint logs/wsm_mm_pd_dep_v1/depart_v2_prototype_gated_2026-09-24_14-39_wsm_video_depart_v2_model_0a7294f4/checkpoints/epoch=5_dev_mean_score=0.7066.pt \
+      --output-root /media/maxim/Programs/Features/WSM/ramps_r2_av_reliability_v1 \
       --precision-target 0.90 \
       --min-support 10 \
-      --threshold-step 0.01 \
-      --ece-bins 15 \
-      --batch-size 64 \
+      --folds 5 \
+      --batch-size 32 \
       --num-workers 4 \
       --device cuda
 
-If CUDA is unavailable:
+If CUDA unavailable:
 
     STOP BLOCKED.
 
-Do not silently switch production inference to CPU.
+No CPU fallback.
 
 ## Required Verification
 
 Compile:
 
     python3 -m py_compile \
-      src/fusion/loss/ramps_r1_teacher.py \
+      src/fusion/loss/ramps_r2_reliability.py \
       src/fusion/loss/__init__.py \
-      scripts/common/prepare_ramps_r1_strong_audio_targets.py
+      scripts/common/prepare_ramps_r2_av_targets.py
 
-Run focused synthetic checks for:
+Synthetic/unit checks must cover:
 
-- finite temperature fit;
-- deployed temperature interval;
-- NLL/Brier/ECE finite;
-- positive threshold selection;
-- negative threshold selection;
-- threshold-disabled behavior;
-- observed entry can never become pseudo entry;
-- accepted soft target remains probability;
+- entropy finite and [0,1];
+- deterministic stratified folds;
+- no held-out leakage into temperature/centroid fitting;
+- OOD percentile in [0,1];
+- Family A selection;
+- Family B selection;
+- Family C selection;
+- disabled side behavior;
+- deterministic tie-breaking;
+- observed truth cannot become pseudo;
+- pseudo target uses audio probability exactly;
 - reliability in [0,1].
 
 Then run the exact production command.
 
-After production load all three artifacts and assert their complete contracts.
+Afterward verify:
 
-Additionally verify:
+- checkpoint/model DEV reproductions;
+- no teacher gradients;
+- no optimizer instantiated;
+- no Test iteration or metric;
+- artifact contracts;
+- if blocked, no train_missing_targets.pt exists;
+- if passed, all TRAIN cache invariants pass.
 
-Teacher stop-gradient:
-
-- all audio parameters requires_grad=false;
-- all teacher parameter grads are None;
-- teacher remains eval-only;
-- no optimizer instantiated for teacher.
-
-No-Test proof:
-
-- no Test loader is iterated;
-- no Test prediction is generated;
-- no Test metric value is produced;
-- no Test-derived threshold/calibration value exists.
-
-Then:
+Finally:
 
     git diff --check
     git diff -- src/audio
@@ -595,101 +719,104 @@ Then:
 Before commit inspect only:
 
     git diff -- \
-      src/fusion/loss/ramps_r1_teacher.py \
+      src/fusion/loss/ramps_r2_reliability.py \
       src/fusion/loss/__init__.py \
-      scripts/common/prepare_ramps_r1_strong_audio_targets.py \
+      scripts/common/prepare_ramps_r2_av_targets.py \
       docs/PROGRESS_EN.md
-
-After commit/push:
-
-    git status --short
-    git rev-parse --abbrev-ref HEAD
-    git rev-parse HEAD
-    git diff --stat origin/main...HEAD
-    git diff --name-only origin/main...HEAD
 
 ## Acceptance Criteria
 
-Pass only if:
+TASK-005A3 passes as an R2 target-preparation step only if:
 
-- exact checkpoint SHA matches;
-- frozen strong-audio teacher loads;
-- teacher remains fully stop-gradient/eval-only;
-- only observed DEV labels are used for calibration;
-- only observed DEV labels are used for threshold fitting;
-- no Test row/metric is consumed;
-- one temperature is fit per disease;
-- positive/negative threshold policy is executed separately per disease;
-- a class side is disabled rather than relaxed if fixed reliability cannot be met;
-- all 6325 TRAIN rows are inferred exactly once;
-- pseudo-targets exist only on missing entries;
+- exact audio checkpoint SHA matches;
+- exact video V2 checkpoint strict-loads and epoch=5;
+- video checkpoint SHA is recorded;
+- audio DEV reproduction passes;
+- video V2 DEV reproduction passes;
+- both teachers frozen/eval/no-grad;
+- no optimizer exists;
+- no Candidate B/fusion teacher;
+- deterministic 5-fold OOF protocol passes;
+- exactly three reliability families are searched;
+- final precision target remains 0.90;
+- min_support remains 10;
+- no Test row/metric is used;
+- selected rules are frozen from OOF evidence before full-DEV confirmation;
+- no fallback redesign after full-DEV failure;
+- both diseases retain at least one enabled side after OOF + full-DEV reliability gates;
+- TRAIN inference occurs only after that two-head DEV gate passes;
+- accepted TRAIN targets come only from calibrated audio probabilities;
 - observed truth is never overwritten;
-- accepted targets remain soft probabilities;
-- reliability is detached and in [0,1];
-- calibration metrics are recorded;
-- coverage/class balance is recorded separately per missing disease head;
-- no missing-label correctness claim is made;
-- at least one accepted missing pseudo-target exists for depression;
-- at least one accepted missing pseudo-target exists for Parkinson;
-- otherwise R1 is blocked rather than thresholds being relaxed;
+- at least one accepted missing target exists for each disease;
+- no missing-label correctness claim;
 - no student training;
-- no training config;
-- no Test evaluation;
-- no Candidate B teacher/cherry-picking;
-- no R2/R3/R4;
-- text/description remains deferred;
+- no R3/R4;
+- text/description deferred;
 - src/audio unchanged;
 - src/video unchanged;
-- accepted fusion models/DataModule unchanged;
+- accepted models/DataModule unchanged;
 - git diff --check passes;
 - tracked diff contains only the four allowed paths;
-- branch codex/task-005a2 committed and pushed;
+- branch codex/task-005a3 committed and pushed;
 - main/master untouched.
+
+If the reliability search is blocked because one disease remains undeployable, the task is a valid BLOCKED evidence task if:
+
+- reliability_search.json and audit.json are complete;
+- no target cache is published;
+- no thresholds are relaxed;
+- no Test is used;
+- no student training occurs.
 
 ## Required PROGRESS_EN Update
 
-Append TASK-005A2 evidence without erasing prior records.
+Append TASK-005A3 evidence.
 
 Record:
 
 - branch;
-- implementation commit SHA;
+- implementation/evidence commit SHA;
 - push result;
-- checkpoint path + SHA256;
-- adapter class;
-- CUDA/device;
-- canonical train/dev/join counts;
-- output artifact root/filenames;
-- per-task observed DEV support and class counts;
-- per-task fitted temperature;
-- raw/calibrated NLL, Brier, ECE-15;
-- positive/negative thresholds or disabled states;
-- DEV threshold support/precision/coverage;
-- per-missing-head TRAIN accepted/rejected counts;
-- accepted positive/negative counts;
-- missing-head coverage;
-- probability/reliability statistics;
-- observed-overwrite audit;
-- duplicate/nonfinite audits;
-- teacher stop-gradient proof;
+- audio checkpoint path/SHA;
+- video checkpoint path/SHA;
+- strict video load/epoch proof;
+- CUDA/GPU;
+- canonical counts;
+- audio DEV reproduction;
+- video V2 DEV reproduction;
+- 5-fold construction/audit;
+- audio/video full-DEV temperatures;
+- OOF selected rule per task/side;
+- OOF support/precision/coverage;
+- full-DEV confirmation support/precision;
+- disease deployable/blocked states;
+- output artifact paths;
+- if passed:
+  - per-task TRAIN accepted/rejected/coverage;
+  - accepted pos/neg counts;
+  - target/reliability stats;
+  - observed-overwrite audit;
+- if blocked:
+  - explicit no target-cache publication;
+- explicit unchanged 0.90/min_support=10 statement;
 - explicit no-Test statement;
-- explicit no-Candidate-B-teacher statement;
-- explicit no pseudo-label correctness claim;
+- explicit no Candidate B/fusion teacher;
+- explicit no missing-label correctness claim;
 - explicit no student training;
-- confirmation R2/R3/R4 not started;
-- confirmation text/description deferred;
+- R3/R4 not started;
+- text/description deferred;
 - src/audio unchanged;
 - src/video unchanged;
-- Stage 5 R1 status;
+- Stage 5 status;
 - recommended next atomic task only.
 
-If TASK-005A2 passes:
+If TASK-005A3 passes the two-head gate:
 
-    recommended next = TASK-005B wire the accepted offline targets into a sparse observed+pseudo RAMPS-R1 loss/data contract and prove a nonzero direct gradient reaches the missing head, without running a full experiment.
+    recommended next = TASK-005B wire the accepted R2 offline cache into an observed+pseudo sparse loss/data contract and prove direct missing-head gradients without full training.
 
-If blocked:
+If TASK-005A3 remains blocked:
 
-    recommend only a narrow correction for the exact failed calibration/coverage gate.
+    recommended next = manager review for a semantic/VLM evidence step; do not lower the reliability target automatically.
 
 ## Required Handoff
 
@@ -704,23 +831,24 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch codex/task-005a2;
-- implementation commit SHA;
+- branch codex/task-005a3;
+- implementation/evidence commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
-- checkpoint SHA verification;
-- fitted depression/Parkinson temperatures;
-- positive/negative thresholds or disabled sides;
-- raw/calibrated calibration metrics;
-- TRAIN missing-head accepted/rejected/coverage counts for both tasks;
-- accepted positive/negative counts;
+- audio checkpoint SHA verification;
+- video checkpoint SHA and DEV reproduction;
+- OOF selected rules for depression/Parkinson sides;
+- OOF and full-DEV precision/support;
+- whether each disease is deployable;
+- whether a valid two-head TRAIN cache was published;
+- if published: accepted/rejected/coverage and pos/neg counts per disease;
 - artifact paths;
-- teacher stop-gradient confirmation;
+- unchanged precision_target=0.90/min_support=10;
 - no Test use;
-- no Candidate B teacher;
+- no Candidate B/fusion teacher;
 - no student training;
 - no missing-label correctness claim;
-- R2/R3/R4 not started;
+- R3/R4 not started;
 - text/description deferred;
 - src/audio unchanged;
 - src/video unchanged.
