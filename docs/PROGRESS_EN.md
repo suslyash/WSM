@@ -2123,8 +2123,8 @@ Blocking defect:
 
 Verification and scope:
 
-- `git diff --check` and final scope audit are pending the evidence commit; no source file was changed and no `src/audio` or `src/video` change was made.
+- `git diff --check` — passed; final scope audit contains only the allowed config and progress files. No source file was changed and no `src/audio` or `src/video` change was made.
 - No audio retraining, fusion training, Test metric inspection, RAMPS, F2-temporal, or text/description work was performed.
-- Evidence commit SHA and push result will be recorded after this documentation update.
+- Evidence commit SHA: `f9b8fa9` (final documentation commit will follow); push result: pending.
 
 Recommended next atomic task: manager-authorized repair of the optimizer construction path so frozen audio parameters are excluded from optimizer groups, followed by rerunning TASK-004I’s pre-run gates. Do not train until that firewall passes.
