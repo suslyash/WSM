@@ -4,7 +4,7 @@
 
 Plan initialized: 2026-09-23.
 
-Current stage: **Stage 2 in progress**.
+Current stage: **Stage 4 in progress**.
 
 Final Test authorized: **no**.
 
@@ -17,7 +17,7 @@ Final Test authorized: **no**.
 | 1. Manifest/partial-label contract | complete | Canonical manifest, separate DEV/Test consumer, masked sparse loss, zero video leakage, and owner-accepted speaker-independent split contract | TASK-001A through TASK-001E plus manager decision below |
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
-| 4. Fusion baselines | not started | Comparable F0/F1/F2 | None |
+| 4. Fusion baselines | partial | Canonical sparse A+V DataModule ready; F0/F1/F2 models not implemented | TASK-004A |
 | 5. RAMPS | not started | Direct reliable missing-head gradient | None |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
@@ -1455,3 +1455,57 @@ Status: accepted.
 - Fusion must start with audio+video only, using the frozen audio representation contract and the accepted full-coverage video cache. Existing legacy fusion code that selects a task via task_id is not acceptable as the new final sparse two-head formulation.
 
 Recommended next atomic task: TASK-004A — implement/register the canonical sparse two-head audio+video fusion DataModule, joining frozen WavLM layer9/pool4 audio features and the full-coverage video cache by canonical segment identity, with four epoch-level evaluation streams. Do not implement or train a fusion model yet.
+
+
+### TASK-004A — Implement the canonical sparse audio+video fusion DataModule
+
+Status: complete; canonical A+V fusion data contract implemented and validated. No fusion model, training config, training run, or Test metric computation was performed. Text/description remains deferred.
+
+Branch: codex/task-004a.
+
+Changed files:
+
+- src/fusion/data/wsm_av_fusion_datamodule.py
+- src/fusion/data/__init__.py
+- src/chimera_plugin.py
+- docs/PROGRESS_EN.md
+
+Registry and frozen cache contracts:
+
+- Registered wsm_av_fusion_datamodule and imported it explicitly from src/chimera_plugin.py with no project-module warning.
+- Audio cache consumed read-only at /media/maxim/Databases/WSM_NEW/features using extractor transformers_ssl, microsoft/wavlm-base-plus, layer 9, temporal_pool 4, with payload keys audio_temporal and audio_cls.
+- Detected frozen audio feature dimension: 768.
+- Video cache consumed read-only at /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache, feature dimension 512, temporal length 1..60, all real positions valid, accepted CLIP/YOLO/preprocessing identities checked.
+- Canonical segment_id remained authoritative; segment_file was derived from its JSON identity tuple rather than joined positionally.
+
+Join/audit results:
+
+- canonical_total=8622; joined_total=8622; unique_join=8622.
+- audio_cache_files_found=8622; video_cache_records_found=8622.
+- missing_audio=0; missing_video=0; duplicate_join=0; no_dropped_rows=true.
+- Dataset counts: train=6325, dev=933, test_none=1364, test_soft=1208, test_hard=1014.
+- Every selected row had one validated audio payload and one validated video artifact. Deterministic sampled identity checks covered both depression and Parkinson corpora and train/dev/test_none/test_soft/test_hard streams.
+
+Batch contract evidence:
+
+- Real mixed train batch (batch_size=4): audio [4,625,768], audio_cls [4,768], video [4,60,512], targets [4,2].
+- audio_mask and video_mask are bool; observed_mask and modality_available are [4,2] bool; modality_available is all true.
+- Independent padding is exact zero wherever the corresponding mask is false.
+- Unknown targets remain NaN with observed_mask=false.
+- inputs contains audio, audio_cls, and video only; task_id/task_ids, corpus IDs, split IDs, Test protocol IDs, and labels are not model inputs.
+- val_dataloader keys are exactly dev, test_none, test_soft, test_hard; DEV and Test datasets remain separate.
+
+Exact verification commands/results:
+
+- python3 -m py_compile src/fusion/data/wsm_av_fusion_datamodule.py src/fusion/data/__init__.py src/chimera_plugin.py — passed.
+- Required registry smoke with PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python — passed: wsm_av_fusion_datamodule present and no fusion.data.wsm_av_fusion_datamodule project warning.
+- Full WSMAVFusionDataModule construction and real mixed-batch smoke — passed across all 8622 canonical joins with the counts, audit, padding, sparse targets, and no-task-id assertions above.
+- Deterministic canonical identity audit — passed for both corpora and each train/dev/Test protocol, including audio path identity and video artifact identity.
+- git diff --check — passed.
+- git diff -- src/audio — empty; frozen src/audio unchanged.
+- git diff -- src/video — empty; video source unchanged.
+- No fusion model/config, training, Test metrics, text work, description work, audio extraction, or video extraction was performed.
+
+Deviations/blockers: none. A local implementation correction was required to derive segment_file from the authoritative canonical segment_id because the canonical manifest schema does not duplicate segment_file; the final join and all required checks pass.
+
+Recommended next atomic task: implement the first authorized sparse A+V fusion model/data consumer smoke (F0 or F1) without changing this DataModule contract or starting text/description work.
