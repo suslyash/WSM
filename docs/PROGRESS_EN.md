@@ -1809,3 +1809,29 @@ Scope and blockers:
 Evidence commit SHA: f0232f45410b9135fcd07e8b04781782d972e29f. Push result: successful after final branch push.
 
 Recommended next atomic task: TASK-004F — implement/register the fixed F2 task-aware directed fusion baseline, with observed loss only and no pseudo-labeling.
+
+
+### MANAGER-DECISION-021 — Accept TASK-004E and define the fixed F2 task-aware directed relation baseline
+
+Status: accepted.
+
+- TASK-004E is integrated through PR #27 as a4ab9af308b9125041898bbd47aaa3e4c9704650.
+- The fixed seed-42 F1 run completed 9 epochs with DEV-only early stopping; best epoch=3 by dev/mean_score=0.773841.
+- Best DEV task Scores: depression=0.689708, Parkinson=0.857973.
+- Same DEV-selected epoch monitoring values: test_none=0.750472, test_soft=0.739894, test_hard=0.734777.
+- F1 improves F0 by +0.029630 DEV Mean_Score. It is -0.013986 below the frozen historical audio DEV Mean_Score and +0.067269 above selected video V2. These are DEV-only/descriptive comparisons.
+- The DEV-selected shared_fusion gradient diagnostic is accepted: depression norm=0.113986999, Parkinson norm=0.007432150, cosine=0.099285446 on a deterministic four-row TRAIN sample. This is diagnostic evidence only.
+- MLflow provenance is complete: experiment=wsm_mm_pd_dep_v1, run_id=a77cf0f729cc4f02b446cd5224d28f8e, status=FINISHED.
+- Stage 4 now proceeds to F2, whose purpose is to isolate task-aware directed cross-modal relations relative to the measured F1 shared-representation baseline.
+- F2 is fixed as a minimal pooled-feature TACME-like adaptation:
+  - retain the exact F1 audio_cls input, masked-mean video input, modality projections, hard availability masking, and shared_fusion trunk;
+  - add one shared directed relation expert for audio->video and one for video->audio;
+  - the two relation experts form one shared expert bank used by both disease tasks;
+  - each disease has its own expert-scoring gate over the same shared bank; softmax weights choose a task-specific mixture when both modalities are available;
+  - the task-specific relation mixture is added residually to the F1 shared representation and normalized before the independent disease head;
+  - if fewer than two modalities are available, no cross-modal relation expert is valid: relation weights are exactly zero and the task feature falls back to the F1 shared representation;
+  - no external task_id/task_ids are inputs; task specificity is internal through separate learned gate/head modules;
+  - observed sparse loss remains the only supervision.
+- F2 does NOT include pseudo-labeling, flow matching, PAGB, auxiliary relation losses, text/description, semantic label embeddings, or Test-driven selection.
+
+Recommended next atomic task: TASK-004F — implement/register the fixed F2 availability-aware task-specific directed relation-bank model and verify synthetic/real forward-loss-backward behavior. Do not create an F2 training config or run training yet.
