@@ -3620,3 +3620,123 @@ Each resolved config uses model wsm_av_r3_disease_query_model, dimensions 768/51
 Frozen promotion conclusion: R3-B is a valid three-seed ablation result but is NOT promoted as an R-full component because PLAN Section 7 requires the DEV effect to repeat across at least three seeds and only seed42 improves over F2. Seed43/44 are below the predeclared Parkinson floor 0.842104. The positive three-seed average is retained descriptively, not as proof of a stable gain; no significance, final-model, missing-label correctness, or comorbidity claim is made. Stage 5 remains active because R4 has not been evaluated; R4 was not started in C2.
 
 C2 changed only this progress ledger after the manager assignment. src/audio, src/video, src/fusion, src/common, and src/chimera_plugin.py were unchanged.
+
+### MANAGER-DECISION-044 — Accept/merge R3 evidence and freeze the bounded R4 balancing interaction test
+
+Status: R3 evidence bundle accepted and integrated; Stage 5 remains active.
+
+Integration:
+
+- PR #42 was manager-reviewed and merged to `main` as `e4b48038b8d502d609a8d0daf11516311f168277`.
+- Corrected R3 firewall: `bd346482f2cdaa1c5edb0c0e416ef4a681cc6e7f`.
+- Corrected production evidence: `e0482a42f94b4930aa2f21be5f639f420eaf5201`.
+- Checkpoint-identity audit: `e7798eccdb330e5c9c0aff29f2cec35716987e3f`.
+- Manager corrected one documentation-only seed43 resolved-config absolute-path typo before merge; no research evidence changed.
+
+Frozen R3 conclusion:
+
+- R3-B is retained as a valid three-seed ablation.
+- Corrected R3-B DEV D/P/Mean:
+  - seed42: `0.695808/0.893824/0.794816`;
+  - seed43: `0.694349/0.841176/0.767762`;
+  - seed44: `0.698378/0.838989/0.768684`.
+- Three-seed mean/std:
+  - depression `0.696178/0.002040`;
+  - Parkinson `0.857996/0.031047`;
+  - Mean `0.777087/0.015360`.
+- R3-B is NOT promoted into R-full because the DEV/Mean gain does not repeat across all three seeds; only seed42 exceeds F2.
+- The selected corrected checkpoint identities for seeds42/43/44 are pairwise distinct at both full-file SHA256 and model-state tensor digest level.
+- R2 remains a negative standalone result and R3 remains a non-promoted ablation result.
+
+Why R4 is still required:
+
+- PLAN Stage 5 explicitly requires R4 comparison: equal weights, static STCH, progress/PAGB-style comparator, and RA-STCH.
+- Stage-5 gate includes non-zero direct missing-head gradient on the opposite corpus. A final observed-only R3 composition cannot satisfy that gate.
+- Therefore R4 will be evaluated as one bounded **interaction hypothesis** using the already-frozen components together:
+  - exact R3 disease-query model;
+  - frozen R2 semantic pseudo-aware DataModule/cache;
+  - frozen pseudo warm-up `mu(e)=clamp((e-3)/5,0,1)`;
+  - frozen R3 auxiliary supervision/agreement coefficients `0.25/0.10`;
+  - no new architecture or pseudo-label search.
+- This does NOT retroactively promote R2 or R3 individually. The combined composition must earn promotion on its own.
+
+Frozen per-task objective for R4:
+
+For disease task `t`:
+
+    L_t =
+        L_obs_t
+        + pseudo_scale * L_pseudo_t
+        + 0.25 * L_aux_t
+        + 0.10 * L_agree_t
+
+where:
+
+- `L_obs_t` is mean observed BCE for task `t`;
+- `L_pseudo_t` is the existing detached reliability-weighted accepted-pseudo BCE for missing task `t`;
+- `L_aux_t` is observed+modality-valid auxiliary BCE pooled across audio/video for task `t`;
+- `L_agree_t` is observed, both-modality-valid squared probability disagreement for task `t`;
+- unknown labels remain masked and observed truth always overrides pseudo supervision.
+
+Frozen R4 scalarizers:
+
+1. **Equal**
+   - `0.5 * L_D + 0.5 * L_P`.
+
+2. **Static STCH**
+   - `tau=0.1`;
+   - fixed preference `lambda=[0.5,0.5]`;
+   - ideal/reference point `z*=[0,0]`;
+   - stable `tau * logsumexp(lambda_t * (L_t-z_t*) / tau)`.
+
+3. **Progress comparator**
+   - epoch 1 weights `[0.5,0.5]`;
+   - fixed F2 DEV reference scores `[0.697035,0.852104]`;
+   - after epoch `e`, for next epoch:
+     - `p_t = clip((DEVScore_t(e)-reference_t)/(1-reference_t+eps), -1, 1)`;
+     - `raw_t = exp(-p_t/0.25)`;
+     - normalize to sum 1;
+     - clamp each normalized weight to `[0.2,0.8]` and renormalize;
+   - DEV only; Test cannot enter controller state.
+
+4. **RA-STCH**
+   - same `tau=0.1`, `z*=[0,0]`;
+   - epoch 1 `alpha=[0.5,0.5]`;
+   - task gradient statistics are computed from each `L_t` against the shared R3 `features_audio/features_video`, detached from the final optimization graph after measurement;
+   - batch gradient-norm EMA decay `0.9`;
+   - batch gradient-cosine EMA decay `0.9`;
+   - accepted pseudo-reliability EMA per task decay `0.9`;
+   - epoch-end progress deficit uses the exact progress formula above;
+   - `g_factor_t = clip(mean_grad/(grad_norm_t+eps), 0.5, 2.0)^(1+max(0,-grad_cos))`;
+   - `r_factor_t = 0.5 + 0.5 * reliability_ema_t`;
+   - `raw_alpha_t = progress_raw_t * g_factor_t * r_factor_t`;
+   - normalize, clamp each to `[0.2,0.8]`, renormalize;
+   - epoch-to-epoch controller EMA: `alpha_next = 0.8*alpha_current + 0.2*alpha_target`, then bounded renormalization;
+   - alpha and all controller diagnostics are stop-gradient/detached.
+- No claim is allowed that dynamic RA-STCH inherits fixed-weight STCH theory.
+
+Frozen R4 experiment bundle:
+
+- maximum six production invocations;
+- all code/configs/controller formulas/screens committed before the first production run;
+- seed42 runs in fixed order:
+  1. equal;
+  2. static STCH;
+  3. progress comparator;
+  4. RA-STCH.
+- RA-STCH continues to true seeds43/44 only if its seed42 run:
+  - DEV Mean is strictly above corrected R3-B seed42 `0.794816`;
+  - depression Score >= `0.685808`;
+  - Parkinson Score >= `0.883824`;
+  - and RA-STCH DEV Mean is strictly above each of the three R4 seed42 controls.
+- If RA does not satisfy all conditions, stop after the four seed42 runs.
+- If it continues, promotion requires:
+  - RA DEV Mean beats the same-seed R3-B comparator on seeds42,43,44;
+  - three-seed RA Mean exceeds R3-B three-seed Mean `0.777087`;
+  - neither three-seed task mean is more than 0.010000 below the corresponding R3-B mean;
+  - diagnostics remain finite and support the intended balancing mechanism.
+- Test protocols remain monitoring-only throughout.
+- No Final Test, R4 follow-up tuning, Text/Description, Stage 6, or Stage 7 is authorized inside this bundle.
+
+Recommended next atomic task: TASK-005F-BUNDLE — implement the frozen R4 task-balancing loss/controller, freeze all six configs before training, run the four seed42 controls, conditionally run RA-STCH seeds43/44, and stop.
+
