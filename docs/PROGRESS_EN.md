@@ -18,7 +18,7 @@ Final Test authorized: **no**.
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | complete | Bounded strong-temporal-audio search complete; no safe A+V winner under the predeclared task-balance gate | TASK-004A through TASK-004K |
-| 5. RAMPS | active | Fixed semantic cache, direct-gradient contract, and frozen pseudo-scale warm-up contract passed; student training remains manager-gated | TASK-005A2/TASK-005C |
+| 5. RAMPS | active | Fixed semantic cache, direct-gradient contract, frozen pseudo-scale warm-up contract, and one bounded seed-42 R2 student run completed; R2 continuation screen failed | TASK-005A2/TASK-005C/TASK-005D |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
 
@@ -3238,3 +3238,50 @@ Predeclared continuation screen for this single seed:
 
 Recommended next atomic task: TASK-005D — run exactly one bounded seed-42 R2 student experiment with the frozen cache/warm-up, select only by DEV/Mean_Score, preserve four-stream monitoring without Test-driven decisions, and perform a same-row DEV comparison to the sparse F2 baseline.
 
+
+
+### TASK-005D — Run the first bounded seed-42 R2 student experiment
+
+Outcome: complete, valid negative result. Exactly one production training invocation ran with the frozen F2 architecture, frozen semantic cache, seed 42, and manager-frozen pseudo-scale warm-up. Selection used only DEV/mean_score. TEST_NONE/SOFT/HARD were monitoring only. No second run, pseudo-label regeneration, recalibration, threshold change, missing-label correctness claim, comorbidity claim, or Final Test was performed.
+
+Changed files:
+- configs/wsm_mm_pd_dep_v1/fusion/05_ramps_r2_student_seed42.yaml
+- docs/PROGRESS_EN.md
+
+Pre-run verification:
+- python3 -m py_compile src/common/callbacks/wsm_pseudo_scale_warmup_callback.py src/fusion/data/wsm_ramps_semantic_datamodule.py src/fusion/loss/ramps_observed_pseudo_loss.py src/fusion/models/av_f2_task_aware_directed.py src/chimera_plugin.py — passed.
+- .venv/bin/chimera-ml validate-config -c configs/wsm_mm_pd_dep_v1/fusion/05_ramps_r2_student_seed42.yaml — passed.
+- Registered firewall — passed: counts TRAIN/DEV/TEST_NONE/TEST_SOFT/TEST_HARD 6325/933/1364/1208/1014; cache SHA256 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945; accepted missing counts depression/Parkinson 376/1801; warm-up [0.0,0.0,0.0,0.2,0.4,0.6,0.8,1.0,1.0,1.0]; student/F2 parameters 736004/736004; finite CPU forward/loss/backward passed with no optimizer step; plugin registration had no project-module warning.
+
+Exactly one production command:
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/05_ramps_r2_student_seed42.yaml
+
+Run: logs/wsm_mm_pd_dep_v1/ramps_r2_student_seed42_2026-09-25_12-33_wsm_av_f2_task_aware_directed_model_a2f143d4
+Selected DEV checkpoint: checkpoints/epoch=6_dev_mean_score=0.7703.pt. Training completed normally and early-stopped after epoch 12.
+
+Epoch evidence from summary.txt (epoch | train/loss | pseudo_scale | DEV D Score | DEV P Score | DEV Mean | TEST_NONE Mean | TEST_SOFT Mean | TEST_HARD Mean):
+1 | 0.390081 | 0.0 | 0.708695 | 0.816174 | 0.762434 | 0.763927 | 0.770305 | 0.749819
+2 | 0.181808 | 0.0 | 0.645860 | 0.811169 | 0.728515 | 0.806107 | 0.805360 | 0.804952
+3 | 0.105752 | 0.0 | 0.653918 | 0.804695 | 0.729306 | 0.799948 | 0.799565 | 0.801323
+4 | 0.196895 | 0.2 | 0.678575 | 0.767299 | 0.722937 | 0.747839 | 0.737341 | 0.740403
+5 | 0.255631 | 0.4 | 0.671506 | 0.803910 | 0.737708 | 0.772465 | 0.762068 | 0.767239
+6 | 0.333602 | 0.6 | 0.682324 | 0.858227 | 0.770275 | 0.779924 | 0.776085 | 0.773071
+7 | 0.411689 | 0.8 | 0.646450 | 0.727852 | 0.687151 | 0.789355 | 0.789054 | 0.796270
+8 | 0.486405 | 1.0 | 0.644229 | 0.811830 | 0.728030 | 0.763836 | 0.759232 | 0.744973
+9 | 0.474311 | 1.0 | 0.602710 | 0.783868 | 0.693289 | 0.779782 | 0.784911 | 0.773453
+10 | 0.472076 | 1.0 | 0.681714 | 0.765679 | 0.723697 | 0.761803 | 0.755509 | 0.735666
+11 | 0.469243 | 1.0 | 0.622717 | 0.786704 | 0.704710 | 0.771866 | 0.766582 | 0.751818
+12 | 0.467373 | 1.0 | 0.631149 | 0.706474 | 0.668811 | 0.793504 | 0.795124 | 0.788232
+
+Selected epoch 6 full DEV metrics: depression UAR/MF1/Score 0.682353/0.682295/0.682324; Parkinson UAR/MF1/Score 0.847481/0.868972/0.858227; Mean 0.770275. Same-epoch Test monitoring: 0.779924/0.776085/0.773071 (NONE/SOFT/HARD), inspected only after DEV selection.
+
+Frozen F2 comparator D/P/Mean 0.697035/0.852104/0.774569. Selected deltas D/P/Mean -0.014711/+0.006123/-0.004294. Screen: FAIL because Mean was not strictly above 0.774569 and D was below 0.687035; P passed 0.842104. Historical audio-context deltas were D -0.0655943895, P +0.0304916365, Mean -0.0175518765.
+
+DEV-only same-row calibration audit used 933 DEV rows, observed counts depression/Parkinson 621/312, binary_brier and binary_ece(bins=15), with no Test iteration or recalibration:
+- F2 Brier/ECE15: D 0.2868599089/0.2846146859; P 0.0997317462/0.0919712774.
+- R2 Brier/ECE15: D 0.2763933298/0.2763543689; P 0.0856277455/0.0606708825.
+- R2 minus F2: D -0.0104665791/-0.0082603169; P -0.0141040007/-0.0313003949.
+
+MLflow: experiment wsm_mm_pd_dep_v1 (ID 5); run UUID b94d2389455347d4b189cd323d14cb86; status FINISHED; artifact URI /media/maxim/Programs/WSM/mlruns/5/b94d2389455347d4b189cd323d14cb86/artifacts; run name ramps_r2_student_seed42_2026-09-25_12-33_wsm_av_f2_task_aware_directed_model_a2f143d4; parameters included epochs=30, mixed_precision=True, optimizer lr=0.0001, weight decay=0.01.
+
+No source file changed; src/audio stayed unchanged. git diff --check passed. Stage 5 remains active; R2 failed the predeclared continuation screen, so R3/R4 and further experiments remain manager-gated. Recommended next atomic step: manager review and explicit authorization of any next Stage-5 task.
