@@ -3356,3 +3356,32 @@ Manager policy for this bundle:
 
 This override supersedes only the previous "stop after TASK-005E" and one-run-per-manager-cycle restriction for this R3 bundle. All project invariants remain in force.
 
+
+
+### TASK-005E-BUNDLE pre-training firewall
+
+Status: contract complete and experiment bundle frozen before any production training invocation. Branch: codex/task-005e, based on manager origin/main commit c999cb5.
+
+Implemented and registered:
+- model wsm_av_r3_disease_query_model in src/fusion/models/av_r3_disease_query.py;
+- loss wsm_r3_aux_agreement_loss in src/fusion/loss/r3_aux_agreement_loss.py;
+- plugin imports in src/chimera_plugin.py.
+
+The R3 model uses audio 768, video 512, hidden 192, two learned disease queries initialized with normal standard deviation 0.02, task-specific candidate LayerNorms, one shared query-conditioned modality gate, exact availability masking, independent disease heads, and validity-masked audio/video auxiliary heads. It has 381671 trainable parameters versus frozen F2 count 736004. It receives no corpus identity, observed mask, disease labels, or task identifiers as features.
+
+R3-B is frozen at aux_weight=0.25, agreement_weight=0.10, eps=1e-8. It uses observed-only main BCE, observed-and-valid auxiliary BCE, and observed-and-both-valid sigmoid agreement. Unknown targets never enter any term; zero-valid auxiliary/agreement cases are differentiable finite zero terms. No pseudo targets, semantic scores, Test information, or R2 warm-up/cache/loss are present.
+
+All seven configs were created before training: 06_ramps_r3_disease_query_contract.yaml, 07_r3_a_sparse_seed42.yaml, 08_r3_b_agreement_seed42.yaml, 09_r3_a_sparse_seed43.yaml, 10_r3_a_sparse_seed44.yaml, 11_r3_b_agreement_seed43.yaml, and 12_r3_b_agreement_seed44.yaml. A uses wsm_masked_sparse_loss; B uses the frozen auxiliary loss. All preserve seed-specific run names, canonical data, AdamW 1e-4/0.01, batch size 32, 30 epochs, mixed precision, gradient clipping 0.5, required instrumentation/loggers, and DEV/mean_score max-only checkpointing/early stopping with patience 6 and min_delta 0.0005.
+
+Frozen comparator and branch rule:
+- F2 comparator depression/Parkinson/Mean: 0.697035/0.852104/0.774569.
+- A or B seed 42 passes only if DEV Mean is strictly above 0.774569, depression Score is at least 0.687035, and Parkinson Score is at least 0.842104.
+- If neither passes, stop. If exactly one passes, continue it at seeds 43 and 44. If both pass, choose higher DEV Mean; ties within 1e-6 use higher minimum task-score delta versus F2, then R3-A.
+- TEST_NONE/SOFT/HARD are monitoring only and cannot affect selection or branching. Maximum production invocations: four.
+
+Pre-training verification:
+- python3 -m py_compile src/fusion/models/av_r3_disease_query.py src/fusion/loss/r3_aux_agreement_loss.py src/chimera_plugin.py — passed.
+- chimera-ml validate-config on each of the seven R3 YAMLs — all passed.
+- Synthetic R3 contract smoke — passed: availability invariance, all-unavailable guard, sparse and auxiliary losses, finite main/auxiliary/projection gradients, finite agreement, and zero-valid cases; no optimizer step.
+- Registered real TRAIN-only smoke — passed on 6325 TRAIN rows; finite R3-B forward/loss/backward; parameter count 381671. No DEV or Test rows were iterated.
+- No production training has started at this firewall checkpoint.
