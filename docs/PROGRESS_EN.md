@@ -3492,3 +3492,43 @@ Corrected firewall evidence before any C1 production run:
 - No DEV/Test rows were iterated in the corrected firewall.
 
 Corrected bundle screen and run policy remain frozen exactly: F2 D/P/Mean 0.697035/0.852104/0.774569; seed-42 pass requires Mean >0.774569, D >=0.687035, P >=0.842104; A then B seed42, followed only by the DEV-selected continuation at true seeds43/44; maximum four new production invocations; Test monitoring cannot affect any decision. The C1 firewall must be committed and pushed before production training.
+### MANAGER-REVIEW-042 — TASK-005E-BUNDLE is not gate-valid; exact frozen R3 architecture and true continuation seeds must be restored
+
+Status: corrective bundle required; do not merge the current R3 branch yet. Stage 5 remains active.
+
+Accepted evidence from the completed bundle:
+
+- branch `codex/task-005e` preserved the manager base and has firewall commit `dec745e9076c676c29fc994f1a2714b25857443b` plus evidence commit `91e4791f130524d9adab26224a7605bc27d9785d`;
+- scope remained inside the manager-authorized R3 bundle paths;
+- registry/config/smoke infrastructure exists;
+- R3-A and R3-B seed-42 production runs completed with DEV-only selection and Test monitoring only;
+- the implemented exploratory R3-B seed-42 run scored DEV depression/Parkinson/Mean `0.702376/0.866187/0.784281` and passed the frozen numerical screen;
+- no R2 pseudo path, R4, text/description, Stage 6/7, or Final Test was used.
+
+Two blocking contract violations invalidate promotion of the bundle results:
+
+1. **Continuation seed configs are not true seeds 43/44.**
+   - `09_r3_a_sparse_seed43.yaml`, `10_r3_a_sparse_seed44.yaml`, `11_r3_b_agreement_seed43.yaml`, and `12_r3_b_agreement_seed44.yaml` all contain top-level `seed: 42`.
+   - Therefore the reported R3-B seeds 43/44 are repetitions of seed 42 with different run names.
+   - The reported three-seed standard deviation `0.000000` is not multi-seed evidence and must not be used.
+
+2. **The implemented R3 model does not match the frozen TASK-005E architecture.**
+   - required constructor field `gate_hidden_dim=192` is absent;
+   - projection blocks omit the required `Dropout(dropout)`;
+   - required one shared candidate `LayerNorm` per task is replaced by separate audio/video norms;
+   - candidate features omit the required query addition `LayerNorm_t(modality_feature + q_t)`;
+   - the shared gate omits required `LayerNorm(2H)`, uses `2H -> H/4 -> 1` instead of `2H -> gate_hidden_dim(192) -> 1`, and concatenates in a different order;
+   - main heads use `H -> H/2 -> 1` without the required leading LayerNorm instead of the frozen `LN(H) -> H -> H -> 1` structure;
+   - auxiliary heads use the larger hidden head rather than frozen `LN(H) -> Linear(H,1)`, and consume base projected features instead of task-conditioned candidates;
+   - required aux fields `features_audio`, `features_video`, `task_audio_features`, `task_video_features`, `task_modality_weights`, and `task_logits` are not exposed under the frozen names.
+   - The frozen architecture is expected to remain comfortably below the F2 cap; the parameter cap does not justify these substitutions.
+
+Decision:
+
+- preserve the four completed runs as exploratory/debug evidence only;
+- do not treat the current `0.784281` R3-B result as gate-valid R3 evidence;
+- do not merge PR/branch yet;
+- do not advance to R4 or Stage 6;
+- execute exactly one corrective bounded bundle, TASK-005E-BUNDLE-C1, on the same branch under explicit manager authorization;
+- C1 must implement the frozen R3 architecture exactly, correct seed fields to 42/43/44, re-freeze all configs before rerunning, prove distinct seed initialization/checkpoint identities, and rerun the same DEV-only A/B continuation tree with at most four new production invocations;
+- preserve `src/fusion/loss/r3_aux_agreement_loss.py` unchanged unless an exact runtime blocker in that already-frozen loss is demonstrated; no post-hoc loss-weight tuning is authorized.
