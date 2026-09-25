@@ -3759,3 +3759,48 @@ Pre-production verification:
 - Actual TRAIN-only semantic-cache smoke passed for all four modes with no optimizer step and no DEV/Test loader access. Frozen cache SHA was 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945; accepted counts remained D/P 376/1801.
 
 The firewall commit must be pushed before any production invocation. The frozen production tree is equal42 -> static42 -> progress42 -> RA-STCH42, with RA seeds43/44 conditional only on all predeclared DEV criteria. No production run or Test evaluation has occurred yet.
+
+
+### TASK-005F-BUNDLE — final R4 production evidence
+
+Status: complete for the authorized bounded bundle; four seed-42 invocations ran, the RA continuation gate failed, and seeds 43/44 were correctly not run. Stage 5 remains active. No Final Test, Stage 6/7, text/description, or post-hoc tuning occurred.
+
+Firewall commit: c2f7c19, pushed before the first production run. Final evidence commit will follow. All four commands used the required form PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path <authorized-config>.
+
+1. Equal seed42
+- Config: configs/wsm_mm_pd_dep_v1/fusion/13_r4_equal_seed42.yaml.
+- Run: logs/wsm_mm_pd_dep_v1/r4_equal_seed42_2026-09-25_15-06_wsm_av_r3_disease_query_model_fd38ebd6.
+- MLflow: 2bda8ec44ed847e0ab0016fd51b393c2; FINISHED; artifact URI /media/maxim/Programs/Projects/WSM/mlruns/5/2bda8ec44ed847e0ab0016fd51b393c2/artifacts.
+- 18 epochs; DEV-selected epoch 12; checkpoint checkpoints/epoch=12_dev_mean_score=0.7779.pt; SHA256 d84d4f107fb5e927491b9f628d6ad9f913c8a7a2dc82689f9149ac32d206f690.
+- DEV D UAR/MF1/Score 0.712652/0.712344/0.712498; P 0.833126/0.853557/0.843342; Mean 0.777920.
+- Same-epoch Test NONE/SOFT/HARD Mean 0.767613/0.755936/0.754400, monitoring only. Delta versus corrected R3-B seed42 D/P/Mean +0.016690/-0.050482/-0.016896.
+
+2. Static STCH seed42
+- Config: configs/wsm_mm_pd_dep_v1/fusion/14_r4_static_stch_seed42.yaml.
+- Run: logs/wsm_mm_pd_dep_v1/r4_static_stch_seed42_2026-09-25_15-13_wsm_av_r3_disease_query_model_9ca24e51.
+- MLflow: b9749922fccf4f0d9a4c43f7f39cca9d; FINISHED; artifact URI /media/maxim/Programs/Projects/WSM/mlruns/5/b9749922fccf4f0d9a4c43f7f39cca9d/artifacts.
+- 18 epochs; DEV-selected epoch 12; checkpoint checkpoints/epoch=12_dev_mean_score=0.7873.pt; SHA256 a1ad7dc4eb4e19e438ce14854d0981ce175e67c75e454c111cf44994f6fb8373.
+- DEV D UAR/MF1/Score 0.725350/0.724803/0.725077; P 0.840235/0.858735/0.849485; Mean 0.787281.
+- Same-epoch Test NONE/SOFT/HARD Mean 0.759991/0.746876/0.744817, monitoring only. Delta versus corrected R3-B seed42 D/P/Mean +0.029269/-0.044339/-0.007535.
+
+3. Progress seed42
+- Config: configs/wsm_mm_pd_dep_v1/fusion/15_r4_progress_seed42.yaml.
+- Run: logs/wsm_mm_pd_dep_v1/r4_progress_seed42_2026-09-25_15-20_wsm_av_r3_disease_query_model_925bff85.
+- MLflow: 58f46630191b4eab8d23e132a5be3ad6; FINISHED; artifact URI /media/maxim/Programs/Projects/WSM/mlruns/5/58f46630191b4eab8d23e132a5be3ad6/artifacts.
+- 15 epochs; DEV-selected epoch 9; checkpoint checkpoints/epoch=9_dev_mean_score=0.7856.pt; SHA256 436d1a3af2458982d5ab4025573b22dc65696531c7bdf7221fc57fc2d9cc78cb.
+- DEV D UAR/MF1/Score 0.714332/0.714119/0.714226; P 0.847412/0.866371/0.856892; Mean 0.785559.
+- Same-epoch Test NONE/SOFT/HARD Mean 0.818206/0.817376/0.827782, monitoring only. Delta versus corrected R3-B seed42 D/P/Mean +0.019877/+0.004788/+0.010990.
+- Controller weights at selected epoch were D/P 0.251831/0.748169; progress signals -0.073198/-0.345416. Complete epoch tables are in the resolved run summary.txt.
+
+4. RA-STCH seed42
+- Config: configs/wsm_mm_pd_dep_v1/fusion/16_r4_ra_stch_seed42.yaml.
+- Run: logs/wsm_mm_pd_dep_v1/r4_ra_stch_seed42_2026-09-25_15-26_wsm_av_r3_disease_query_model_7fa6914b.
+- MLflow: 94591ba6a8a54312b0ee8f3b07a9296f; FINISHED; artifact URI /media/maxim/Programs/WSM/mlruns/5/94591ba6a8a54312b0ee8f3b07a9296f/artifacts.
+- 19 epochs; DEV-selected epoch 13; checkpoint checkpoints/epoch=13_dev_mean_score=0.7826.pt; SHA256 53397e3bbcbfc95abd30bdf63fec018a28f0effc2d92d66231061fb2d051254a.
+- DEV D UAR/MF1/Score 0.701261/0.700724/0.700992; P 0.854589/0.874007/0.864298; Mean 0.782645.
+- Same-epoch Test NONE/SOFT/HARD Mean 0.777133/0.767804/0.760071, monitoring only. Delta versus corrected R3-B seed42 D/P/Mean +0.005184/-0.029526/-0.012171.
+- Controller weights at selected epoch D/P 0.269192/0.730808; progress signals 0.020070/-0.151804; gradient-norm EMAs 0.248995/0.121096; cosine EMA 0.009814; reliability EMAs 0.671974/0.773563. Complete epoch tables and trajectories are in summary.txt.
+
+Frozen RA continuation gate: RA Mean 0.782645 exceeded equal 0.777920 but did not exceed static STCH 0.787281 or progress 0.785559; RA Parkinson Score 0.864298 was below the required 0.883824. Therefore the gate failed and RA seeds43/44 were not run. No Test metric influenced this decision.
+
+Test streams were inspected only after DEV selection as monitoring outputs. No checkpoint, controller, branching, or stopping decision used Test values. R4 is an interaction result only; R2/R3 standalone promotion was not retroactively changed, and no significance, missing-label correctness, comorbidity, or final-model claim is made.
