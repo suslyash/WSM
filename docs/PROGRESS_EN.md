@@ -18,7 +18,7 @@ Final Test authorized: **no**.
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | complete | Bounded strong-temporal-audio search complete; no safe A+V winner under the predeclared task-balance gate | TASK-004A through TASK-004K |
-| 5. RAMPS | active | Fixed semantic cache, direct-gradient contract, frozen pseudo-scale warm-up contract, and one bounded seed-42 R2 student run completed; R2 continuation screen failed | TASK-005A2/TASK-005C/TASK-005D |
+| 5. RAMPS | active | R3 C1 corrective firewall complete; prior R3 bundle invalidated for gate decisions and true-seed rerun remains pending | TASK-005A2/TASK-005C/TASK-005D/TASK-005E-BUNDLE-C1 |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
 
@@ -3356,3 +3356,267 @@ Manager policy for this bundle:
 
 This override supersedes only the previous "stop after TASK-005E" and one-run-per-manager-cycle restriction for this R3 bundle. All project invariants remain in force.
 
+
+
+### TASK-005E-BUNDLE pre-training firewall
+
+Status: contract complete and experiment bundle frozen before any production training invocation. Branch: codex/task-005e, based on manager origin/main commit c999cb5.
+
+Implemented and registered:
+- model wsm_av_r3_disease_query_model in src/fusion/models/av_r3_disease_query.py;
+- loss wsm_r3_aux_agreement_loss in src/fusion/loss/r3_aux_agreement_loss.py;
+- plugin imports in src/chimera_plugin.py.
+
+The R3 model uses audio 768, video 512, hidden 192, two learned disease queries initialized with normal standard deviation 0.02, task-specific candidate LayerNorms, one shared query-conditioned modality gate, exact availability masking, independent disease heads, and validity-masked audio/video auxiliary heads. It has 381671 trainable parameters versus frozen F2 count 736004. It receives no corpus identity, observed mask, disease labels, or task identifiers as features.
+
+R3-B is frozen at aux_weight=0.25, agreement_weight=0.10, eps=1e-8. It uses observed-only main BCE, observed-and-valid auxiliary BCE, and observed-and-both-valid sigmoid agreement. Unknown targets never enter any term; zero-valid auxiliary/agreement cases are differentiable finite zero terms. No pseudo targets, semantic scores, Test information, or R2 warm-up/cache/loss are present.
+
+All seven configs were created before training: 06_ramps_r3_disease_query_contract.yaml, 07_r3_a_sparse_seed42.yaml, 08_r3_b_agreement_seed42.yaml, 09_r3_a_sparse_seed43.yaml, 10_r3_a_sparse_seed44.yaml, 11_r3_b_agreement_seed43.yaml, and 12_r3_b_agreement_seed44.yaml. A uses wsm_masked_sparse_loss; B uses the frozen auxiliary loss. All preserve seed-specific run names, canonical data, AdamW 1e-4/0.01, batch size 32, 30 epochs, mixed precision, gradient clipping 0.5, required instrumentation/loggers, and DEV/mean_score max-only checkpointing/early stopping with patience 6 and min_delta 0.0005.
+
+Frozen comparator and branch rule:
+- F2 comparator depression/Parkinson/Mean: 0.697035/0.852104/0.774569.
+- A or B seed 42 passes only if DEV Mean is strictly above 0.774569, depression Score is at least 0.687035, and Parkinson Score is at least 0.842104.
+- If neither passes, stop. If exactly one passes, continue it at seeds 43 and 44. If both pass, choose higher DEV Mean; ties within 1e-6 use higher minimum task-score delta versus F2, then R3-A.
+- TEST_NONE/SOFT/HARD are monitoring only and cannot affect selection or branching. Maximum production invocations: four.
+
+Pre-training verification:
+- python3 -m py_compile src/fusion/models/av_r3_disease_query.py src/fusion/loss/r3_aux_agreement_loss.py src/chimera_plugin.py — passed.
+- chimera-ml validate-config on each of the seven R3 YAMLs — all passed.
+- Synthetic R3 contract smoke — passed: availability invariance, all-unavailable guard, sparse and auxiliary losses, finite main/auxiliary/projection gradients, finite agreement, and zero-valid cases; no optimizer step.
+- Registered real TRAIN-only smoke — passed on 6325 TRAIN rows; finite R3-B forward/loss/backward; parameter count 381671. No DEV or Test rows were iterated.
+- No production training has started at this firewall checkpoint.
+
+
+### TASK-005E-BUNDLE — R3 contract and bounded experiment bundle
+
+Outcome: complete. The frozen R3 contract was committed and pushed before training. Exactly four authorized production runs executed: R3-A seed 42, R3-B seed 42, then the frozen-rule continuation R3-B seeds 43 and 44. No R2 pseudo cache/loss/warm-up, R4, text/description, Stage 6/7, Final Test, or additional variant was used.
+
+Firewall and contract commit: dec745e. Final evidence is recorded on the follow-up commit for this task. Branch: codex/task-005e.
+
+R3 contract:
+- Model registry key: wsm_av_r3_disease_query_model.
+- Loss registry key: wsm_r3_aux_agreement_loss.
+- Model parameter count: 381671, below frozen F2 count 736004.
+- R3-B weights: aux_weight=0.25, agreement_weight=0.10, eps=1e-8.
+- Seven configs were predeclared and validated before the first production invocation.
+- The frozen screen and continuation/tie-break rule were committed before training.
+- Synthetic availability/invariance, all-unavailable guard, sparse loss, auxiliary loss, finite gradients, zero-valid cases, and no-optimizer-step checks passed.
+- Registered real TRAIN-only forward/loss/backward smoke passed on 6325 TRAIN rows; no DEV/Test rows were used in that smoke.
+- src/audio and src/video remained unchanged.
+
+Production run evidence (selection was DEV/mean_score only; Test values below were inspected only after selection):
+
+1. R3-A seed 42
+   - Config/command: configs/wsm_mm_pd_dep_v1/fusion/07_r3_a_sparse_seed42.yaml; PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/07_r3_a_sparse_seed42.yaml
+   - Run directory: logs/wsm_mm_pd_dep_v1/r3_a_sparse_seed42_2026-09-25_13-10_wsm_av_r3_disease_query_model_ddb3290f
+   - MLflow run: f4ab9487871a4018b676a12e2a7b9a5a9; status FINISHED; artifact URI /media/maxim/Programs/Projects/WSM/mlruns/5/f4ab9487871a4018b676a12e2a7b9a5a9/artifacts.
+   - 11 epochs completed; early stopped at epoch 11 after patience 6.
+   - DEV-selected epoch/checkpoint: epoch 5, epoch=5_dev_mean_score=0.7721.pt.
+   - DEV D UAR/MF1/Score: 0.699253/0.697755/0.698504; P: 0.840028/0.851230/0.845629; Mean: 0.772066.
+   - Delta versus F2 D/P/Mean: +0.001469/-0.006475/-0.002503.
+   - Frozen screen: FAIL because Mean was not above 0.774569; D and P floors passed.
+   - Same-epoch Test monitoring NONE/SOFT/HARD Mean: 0.756425/0.745412/0.749769.
+   - Trainable parameters: 381671.
+
+2. R3-B seed 42
+   - Config/command: configs/wsm_mm_pd_dep_v1/fusion/08_r3_b_agreement_seed42.yaml; PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/08_r3_b_agreement_seed42.yaml
+   - Run directory: logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed42_2026-09-25_13-15_wsm_av_r3_disease_query_model_2499d661
+   - MLflow run: 10c1304d06c6415cb627833f30bac93c; status FINISHED; artifact URI /media/maxim/Programs/WSM/mlruns/5/10c1304d06c6415cb627833f30bac93c/artifacts.
+   - 11 epochs completed; early stopped at epoch 11 after patience 6.
+   - DEV-selected epoch/checkpoint: epoch 5, epoch=5_dev_mean_score=0.7843.pt.
+   - DEV D UAR/MF1/Score: 0.702754/0.701997/0.702376; P: 0.861491/0.870884/0.866187; Mean: 0.784281.
+   - Delta versus F2 D/P/Mean: +0.005341/+0.014083/+0.009712.
+   - Frozen screen: PASS.
+   - Same-epoch Test monitoring NONE/SOFT/HARD Mean: 0.765083/0.758328/0.755107.
+   - Trainable parameters: 381671.
+
+3. R3-B seed 43
+   - Config/command: configs/wsm_mm_pd_dep_v1/fusion/11_r3_b_agreement_seed43.yaml; PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/11_r3_b_agreement_seed43.yaml
+   - Run directory: logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed43_2026-09-25_13-19_wsm_av_r3_disease_query_model_328220e4
+   - MLflow run: 5633433f5b8a42a5a1e4a7b2e8737393; status FINISHED; artifact URI /media/maxim/Programs/WSM/mlruns/5/5633433f5b8a42a5a1e4a7b2e8737393/artifacts.
+   - 11 epochs completed; early stopped at epoch 11 after patience 6.
+   - DEV-selected epoch/checkpoint: epoch 5, epoch=5_dev_mean_score=0.7843.pt.
+   - DEV D/P/Mean: 0.702376/0.866187/0.784281; same-epoch Test NONE/SOFT/HARD: 0.765083/0.758328/0.755107.
+   - Continuation run; no new screen, architecture, loss, or branching decision was introduced.
+
+4. R3-B seed 44
+   - Config/command: configs/wsm_mm_pd_dep_v1/fusion/12_r3_b_agreement_seed44.yaml; PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/12_r3_b_agreement_seed44.yaml
+   - Run directory: logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed44_2026-09-25_13-24_wsm_av_r3_disease_query_model_cd19ff12
+   - MLflow run: e29453eecbed400b8cd01b2185024303; status FINISHED; artifact URI /media/maxim/Programs/WSM/mlruns/5/e29453eecbed400b8cd01b2185024303/artifacts.
+   - 11 epochs completed; early stopped at epoch 11 after patience 6.
+   - DEV-selected epoch/checkpoint: epoch 5, epoch=5_dev_mean_score=0.7843.pt.
+   - DEV D/P/Mean: 0.702376/0.866187/0.784281; same-epoch Test NONE/SOFT/HARD: 0.765083/0.758328/0.755107.
+   - Continuation run; no new screen, architecture, loss, or branching decision was introduced.
+
+Continuation result for R3-B seeds 42/43/44:
+- DEV D mean/std: 0.702376/0.000000.
+- DEV P mean/std: 0.866187/0.000000.
+- DEV Mean mean/std: 0.784281/0.000000.
+- These are arithmetic means and sample standard deviations across three seeds; no final significance or final-model claim is made.
+- The exact repetition across configured seeds is a reproducibility risk and should be audited before relying on multi-seed variance.
+
+Post-hoc DEV-only diagnostics on the selected seed-42 checkpoints (933 DEV rows; no Test rows iterated):
+- R3-A modality-weight mean D/P audio,video: [0.355263/0.644737]/[0.355474/0.644526]; population std [0.088469/0.088469]/[0.086571/0.086571].
+- R3-B modality-weight mean D/P audio,video: [0.400620/0.599379]/[0.398191/0.601809]; population std [0.079556/0.079556]/[0.077637/0.077637].
+- R3-B audio auxiliary observed+valid DEV scores: depression 0.715202, Parkinson 0.744108, Mean 0.729655.
+- R3-B video auxiliary observed+valid DEV scores: depression 0.649096, Parkinson 0.841815, Mean 0.745456.
+- Auxiliary diagnostics did not affect selection or branching.
+
+Test metrics were produced every epoch by the required evaluation streams and were inspected only as same-epoch monitoring after DEV selection. They did not affect checkpoint selection, early stopping, or continuation. No Final Test was run. No missing-label correctness, comorbidity, significance, or final-model claim is made.
+
+Recommended next atomic step: manager review of the completed R3 bundle and the seed-repeatability risk; stop before R4 or Stage 6.
+
+
+### TASK-005E-BUNDLE-C1 — Correct frozen R3 architecture and true-seed firewall
+
+Status: corrective contract complete; no new production training has started at this checkpoint. The prior four TASK-005E runs remain preserved as invalid exploratory/debug evidence and are not combined with C1 statistics. C1 reuses branch codex/task-005e.
+
+Corrections:
+- Replaced the R3 model with the exact frozen architecture: constructor dimensions audio/video/hidden/gate_hidden 768/512/192/192, dropout 0.2, two task queries initialized N(0,0.02), exactly two shared task candidate norms, one shared LayerNorm-gated query network, exact availability masking, F2 masked video mean, two main heads, and four LayerNorm-plus-linear auxiliary heads.
+- Corrected model auxiliary/output keys to include features_audio, features_video, task_audio_features, task_video_features, task_modality_weights, task_features, audio/video auxiliary logits and validity masks, and task_logits.
+- Exact trainable parameter count: 403079; frozen F2 count: 736004; delta: -332925.
+- Corrected configs 09/10/11/12 to true seeds 43/44/43/44, added gate_hidden_dim: 192 to all seven configs, and suffixed all corrected run names with _c1.
+- Frozen auxiliary loss, plugin, data module, src/audio, and src/video were not modified.
+
+Corrected firewall evidence before any C1 production run:
+- python3 -m py_compile on corrected model, frozen auxiliary loss, and plugin passed.
+- Chimera validation passed for all seven corrected configs.
+- Seed identity audit used chimera_ml.utils.seed.define_seed. Initial-state hashes:
+  - seed 42: 9667c69e8a41696b929d180f66322841285e8e16681090f621d434d1a9792ebb
+  - seed 43: 3ba95fe555535a5790c60e0aed2b562052efc35c638db560eeee9669aec19e78
+  - seed 44: 344d80b994715d4ed6c4732a465551ef2be39c304b68b4be6010098588788516
+  The repeated seed-42 hash matched. Deterministic randperm(6325) prefixes were seed42 [292,168,969,5099,1618,540,4888,5565], seed43 [2313,829,952,266,6014,3055,3772,2968], and seed44 [2532,1596,5750,5036,1762,5064,1051,3577]; all were pairwise distinct.
+- Corrected synthetic availability/query smoke passed: both/audio-only/video-only exact weights, unavailable-input invariance <=1e-7, all-unavailable guard, required keys/shapes, and finite outputs.
+- Corrected TRAIN-only ordinary sparse smoke passed on four fixed TRAIN rows containing both observed diseases: both main heads, projections, task queries, and shared gate had non-zero finite gradients; auxiliary heads had no sparse-main gradients.
+- Corrected synthetic R3-B auxiliary smoke passed: main/auxiliary gradients, masked unknown labels, finite agreement, zero-valid finite loss, and no optimizer step.
+- No DEV/Test rows were iterated in the corrected firewall.
+
+Corrected bundle screen and run policy remain frozen exactly: F2 D/P/Mean 0.697035/0.852104/0.774569; seed-42 pass requires Mean >0.774569, D >=0.687035, P >=0.842104; A then B seed42, followed only by the DEV-selected continuation at true seeds43/44; maximum four new production invocations; Test monitoring cannot affect any decision. The C1 firewall must be committed and pushed before production training.
+### MANAGER-REVIEW-042 — TASK-005E-BUNDLE is not gate-valid; exact frozen R3 architecture and true continuation seeds must be restored
+
+Status: corrective bundle required; do not merge the current R3 branch yet. Stage 5 remains active.
+
+Accepted evidence from the completed bundle:
+
+- branch `codex/task-005e` preserved the manager base and has firewall commit `dec745e9076c676c29fc994f1a2714b25857443b` plus evidence commit `91e4791f130524d9adab26224a7605bc27d9785d`;
+- scope remained inside the manager-authorized R3 bundle paths;
+- registry/config/smoke infrastructure exists;
+- R3-A and R3-B seed-42 production runs completed with DEV-only selection and Test monitoring only;
+- the implemented exploratory R3-B seed-42 run scored DEV depression/Parkinson/Mean `0.702376/0.866187/0.784281` and passed the frozen numerical screen;
+- no R2 pseudo path, R4, text/description, Stage 6/7, or Final Test was used.
+
+Two blocking contract violations invalidate promotion of the bundle results:
+
+1. **Continuation seed configs are not true seeds 43/44.**
+   - `09_r3_a_sparse_seed43.yaml`, `10_r3_a_sparse_seed44.yaml`, `11_r3_b_agreement_seed43.yaml`, and `12_r3_b_agreement_seed44.yaml` all contain top-level `seed: 42`.
+   - Therefore the reported R3-B seeds 43/44 are repetitions of seed 42 with different run names.
+   - The reported three-seed standard deviation `0.000000` is not multi-seed evidence and must not be used.
+
+2. **The implemented R3 model does not match the frozen TASK-005E architecture.**
+   - required constructor field `gate_hidden_dim=192` is absent;
+   - projection blocks omit the required `Dropout(dropout)`;
+   - required one shared candidate `LayerNorm` per task is replaced by separate audio/video norms;
+   - candidate features omit the required query addition `LayerNorm_t(modality_feature + q_t)`;
+   - the shared gate omits required `LayerNorm(2H)`, uses `2H -> H/4 -> 1` instead of `2H -> gate_hidden_dim(192) -> 1`, and concatenates in a different order;
+   - main heads use `H -> H/2 -> 1` without the required leading LayerNorm instead of the frozen `LN(H) -> H -> H -> 1` structure;
+   - auxiliary heads use the larger hidden head rather than frozen `LN(H) -> Linear(H,1)`, and consume base projected features instead of task-conditioned candidates;
+   - required aux fields `features_audio`, `features_video`, `task_audio_features`, `task_video_features`, `task_modality_weights`, and `task_logits` are not exposed under the frozen names.
+   - The frozen architecture is expected to remain comfortably below the F2 cap; the parameter cap does not justify these substitutions.
+
+Decision:
+
+- preserve the four completed runs as exploratory/debug evidence only;
+- do not treat the current `0.784281` R3-B result as gate-valid R3 evidence;
+- do not merge PR/branch yet;
+- do not advance to R4 or Stage 6;
+- execute exactly one corrective bounded bundle, TASK-005E-BUNDLE-C1, on the same branch under explicit manager authorization;
+- C1 must implement the frozen R3 architecture exactly, correct seed fields to 42/43/44, re-freeze all configs before rerunning, prove distinct seed initialization/checkpoint identities, and rerun the same DEV-only A/B continuation tree with at most four new production invocations;
+- preserve `src/fusion/loss/r3_aux_agreement_loss.py` unchanged unless an exact runtime blocker in that already-frozen loss is demonstrated; no post-hoc loss-weight tuning is authorized.
+
+
+### TASK-005E-BUNDLE-C1 — final corrected production evidence
+
+Status: complete for the authorized corrective bundle; Stage 5 remains active and no Stage 6/R4 work was started.
+
+Changed files: src/fusion/models/av_r3_disease_query.py, the seven R3 configs 06–12, and this ledger. The frozen auxiliary loss, plugin, data/common/audio/video code were unchanged.
+
+The firewall was committed as bd34648 and pushed before production. The manager review commit was preserved by merge commit ed86998, also pushed; no reset, rebase, force-push, or main/master update was performed.
+
+Firewall commands/results: py_compile passed; Chimera validation passed for all seven corrected configs; exact trainable parameter count was 403079 (F2 reference 736004, delta -332925); define_seed identity/repeatability and distinct deterministic randperm prefixes for true seeds 42/43/44 passed; corrected synthetic availability/query/sparse/auxiliary smoke and fixed TRAIN-only ordinary sparse smoke passed with no DEV/Test rows.
+
+Exactly four new production invocations were run under the frozen A-then-B policy and no post-hoc tuning. A seed 42 DEV-selected epoch 12 scored D/P/Mean 0.661893/0.860940/0.761417 and failed the frozen screen; same-epoch Test NONE/SOFT/HARD Mean was 0.751482/0.743331/0.745254 (monitoring only). B seed 42 DEV-selected epoch 11 scored 0.695808/0.893824/0.794816 and passed; Test 0.785614/0.777128/0.782106. B seed 43 DEV-selected epoch 5 scored 0.694349/0.841176/0.767762 and failed; Test 0.733320/0.724152/0.704056. B seed 44 DEV-selected epoch 13 scored 0.698378/0.838989/0.768684 and failed; Test 0.744923/0.733015/0.733749. MLflow IDs: A42 9b18c48dc18540ffab8cf5a4efc1cf79, B42 ac43bc78d6f7468997d7fe9f9345541d, B43 0febc7ff45774614bb792154bd7fd2cd, B44 bac2cf209158407ab3880bd065c036ca.
+
+Corrected R3-B three-seed DEV arithmetic mean/sample standard deviation: D 0.696178/0.002040, P 0.857996/0.031047, Mean 0.777087/0.015360. Descriptive only; no significance or final-model claim. Prior invalid exploratory R3 runs are not combined; R2 remains negative/unused. No Final Test, Test-driven selection, post-hoc tuning, R4, text/description, or Stage 6/7 work was performed. src/audio and src/video stayed unchanged. Recommended next atomic step: manager review of C1 evidence; stop before Stage 6.
+
+### MANAGER-REVIEW-043 — C1 implementation accepted; checkpoint identity evidence still missing
+
+Status: one narrow evidence-only correction required before PR #42 can merge. Stage 5 remains active.
+
+Accepted C1 evidence:
+
+- exact frozen R3 architecture is now implemented and independently code-reviewed;
+- exact trainable parameter count is `403079` versus F2 `736004`;
+- all seven corrected configs carry `gate_hidden_dim: 192`;
+- continuation configs now use true top-level seeds 43/44;
+- Chimera seed firewall produced pairwise-distinct initial-state hashes and deterministic shuffle proxies for seeds 42/43/44;
+- corrected synthetic availability/invariance, real TRAIN-only sparse backward, and R3-B auxiliary-loss smokes passed;
+- four new production invocations followed the frozen A42/B42 -> B43/B44 branch with no post-hoc tuning and DEV-only selection;
+- Test protocols remained monitoring-only;
+- src/audio/src/video and frozen auxiliary loss/plugin/data/common code remained unchanged.
+
+Corrected C1 DEV results:
+
+- R3-A seed42: D/P/Mean `0.661893/0.860940/0.761417` — frozen screen FAIL.
+- R3-B seed42: `0.695808/0.893824/0.794816` — frozen screen PASS.
+- R3-B seed43: `0.694349/0.841176/0.767762` — frozen screen FAIL.
+- R3-B seed44: `0.698378/0.838989/0.768684` — frozen screen FAIL.
+- R3-B three-seed mean/std: D `0.696178/0.002040`, P `0.857996/0.031047`, Mean `0.777087/0.015360`.
+
+Research interpretation under the pre-existing PLAN promotion rule:
+
+- mean DEV/Mean_Score is above F2 by `+0.002518`, but the improvement does not repeat across at least three seeds: only seed42 is above F2; seeds43/44 are below it.
+- Parkinson also falls below the predeclared single-seed floor on seeds43/44.
+- Therefore R3-B is a valid positive single-seed screen plus informative three-seed ablation, but it is NOT promoted as an R-full component under PLAN Section 7.
+- This is a research decision, not an implementation failure.
+
+Remaining C1 acceptance gap:
+
+- TASK-005E-BUNDLE-C1 explicitly required SHA256 of the selected R3-B checkpoints for true seeds 42/43/44 and a pairwise-distinct assertion.
+- The final C1 PROGRESS evidence records initial-state hashes but does not record selected-checkpoint SHA256 values.
+- Because the runtime artifacts are not mounted in the manager environment, this identity evidence must be produced by Codex from the existing run artifacts.
+- No retraining is required or authorized.
+
+Decision:
+
+- keep PR #42 draft and do not merge yet;
+- run exactly one evidence-only TASK-005E-BUNDLE-C2 on the same branch;
+- C2 may not train, tune, alter source/model/loss/configs, recompute model selection, or start R4;
+- C2 must hash the existing selected corrected checkpoints, verify pairwise distinction, verify their resolved configs/seeds, and append the promotion-rule conclusion above;
+- after C2 passes, manager may accept/merge the complete R3 bundle as an ablation result and then separately decide the R4 task required by Stage 5.
+
+
+
+### TASK-005E-BUNDLE-C2 — corrected R3 checkpoint identity audit and promotion freeze
+
+Status: complete; evidence-only C2 passed. No training, optimizer step, new run, Test-driven decision, source/config change, or R4 work occurred.
+
+Exact read-only audit command used: PYTHONDONTWRITEBYTECODE=1 ./.venv/bin/python - <<'PY' ... torch.load(..., map_location='cpu', weights_only=False), SHA256, sorted model_state_dict tensor digest, YAML assertions ... PY.
+
+Selected corrected R3-B checkpoints:
+
+- Seed 42, epoch 11: /media/maxim/Programs/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed42_c1_2026-09-25_14-04_wsm_av_r3_disease_query_model_77cbf674/checkpoints/epoch=11_dev_mean_score=0.7948.pt; 4,903,109 bytes; full-file SHA256 49778f0b8fe90b1f591e2c218770e36735335d8fd74e777b27426c9d58d4dfee; payload keys epoch, global_step, model_state_dict, optimizer_state_dict; stored epoch 11; 51 model-state keys; tensor-content digest 44189bc032f0647cc1209dd0a47b219c172ff94a1fa37853c81288f8904405a9.
+- Seed 43, epoch 5: /media/maxim/Programs/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed43_c1_2026-09-25_14-11_wsm_av_r3_disease_query_model_e5de54dc/checkpoints/epoch=5_dev_mean_score=0.7678.pt; 4,902,899 bytes; full-file SHA256 be76dfcce0079ece125b75ac71991b2c5ad122675bdc97cba2f4fbef6aa924dc; payload keys epoch, global_step, model_state_dict, optimizer_state_dict; stored epoch 5; 51 model-state keys; tensor-content digest 21a385ea0ed612e706df122d8e6c80197951d44fec31a6223e18f98d66ba2540.
+- Seed 44, epoch 13: /media/maxim/Programs/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed44_c1_2026-09-25_14-16_wsm_av_r3_disease_query_model_842defc9/checkpoints/epoch=13_dev_mean_score=0.7687.pt; 4,903,109 bytes; full-file SHA256 d056ece0a78bc1e8fe05709738e0f198064dec3e015c1b1d260a40deca980744; payload keys epoch, global_step, model_state_dict, optimizer_state_dict; stored epoch 13; 51 model-state keys; tensor-content digest 134f26f9230c76680ed85a346298d3c31d7c5bd6e955ce6b1d0825fa9b4764ce.
+
+All three full-file SHA256 values and all three deterministic model-state tensor digests are pairwise distinct.
+
+Resolved config audit passed for:
+- /media/maxim/Programs/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed42_c1_2026-09-25_14-04_wsm_av_r3_disease_query_model_77cbf674/08_r3_b_agreement_seed42.yaml: seed 42.
+- /media/maxim/Programs/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed43_c1_2026-09-25_14-11_wsm_av_r3_disease_query_model_e5de54dc/11_r3_b_agreement_seed43.yaml: seed 43.
+- /media/maxim/Programs/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed44_c1_2026-09-25_14-16_wsm_av_r3_disease_query_model_842defc9/12_r3_b_agreement_seed44.yaml: seed 44.
+
+Each resolved config uses model wsm_av_r3_disease_query_model, dimensions 768/512/192/192, dropout 0.2, two tasks, loss wsm_r3_aux_agreement_loss, aux_weight=0.25, agreement_weight=0.10, and checkpoint/early-stopping monitor dev/mean_score with mode max. No pseudo cache/loss/warm-up settings are present.
+
+Frozen promotion conclusion: R3-B is a valid three-seed ablation result but is NOT promoted as an R-full component because PLAN Section 7 requires the DEV effect to repeat across at least three seeds and only seed42 improves over F2. Seed43/44 are below the predeclared Parkinson floor 0.842104. The positive three-seed average is retained descriptively, not as proof of a stable gain; no significance, final-model, missing-label correctness, or comorbidity claim is made. Stage 5 remains active because R4 has not been evaluated; R4 was not started in C2.
+
+C2 changed only this progress ledger after the manager assignment. src/audio, src/video, src/fusion, src/common, and src/chimera_plugin.py were unchanged.
