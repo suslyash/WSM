@@ -3328,3 +3328,31 @@ Next R3 design principle:
 
 Recommended next atomic task: TASK-005E — implement/register the bounded R3 disease-query, availability-aware A+V model contract plus config/smokes only; use the ordinary observed-label sparse loss and do not train.
 
+### OWNER/MANAGER-OVERRIDE-041 — Allow one bounded R3 experiment bundle to reduce orchestration latency
+
+Status: active override for the current R3 cycle only.
+
+Owner intent:
+
+- Reduce idle orchestration time by allowing Codex to execute a small predeclared bundle of R3 experiments without returning to the manager after every individual run.
+- This override does NOT permit open-ended tuning, adaptive architecture invention after seeing metrics, Test-driven decisions, or broad sweeps.
+
+Manager policy for this bundle:
+
+- Codex must first complete and verify the TASK-005E R3 model contract.
+- Before the first production training invocation, Codex must freeze all experiment variants, loss formulas/weights, configs, seeds, branch logic, DEV screens, and tie-break rules in tracked files and PROGRESS_EN.md.
+- After the first production run starts, no architecture, loss coefficient, optimizer, schedule, seed policy, or screen may change based on observed results.
+- TEST_NONE/SOFT/HARD remain monitoring-only and cannot influence branching, ranking, or follow-up.
+- Maximum production training invocations in this bundle: 4.
+- Bundle structure:
+  1. R3-A: disease-query model with ordinary observed sparse loss, seed 42.
+  2. R3-B: same R3 model with exactly one predeclared auxiliary unimodal-agreement formulation, seed 42.
+  3. If neither A nor B passes the frozen DEV screen, stop.
+  4. If one or both pass, choose the continuation variant using DEV-only frozen rules and run seeds 43 and 44 for that one variant only.
+- No R2 pseudo cache/loss/warm-up is allowed in any R3 bundle run.
+- No R4, text/description, Stage 6/7, or Final Test work is authorized.
+- Negative results must be preserved.
+- The manager will audit and merge only after the bundle completes or stops by a frozen rule.
+
+This override supersedes only the previous "stop after TASK-005E" and one-run-per-manager-cycle restriction for this R3 bundle. All project invariants remain in force.
+
