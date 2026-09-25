@@ -22,6 +22,8 @@ _MODULES_TO_REGISTER: tuple[str, ...] = (
     "fusion.models.av_audio_confidence_gated",
     "fusion.data.wsm_manifest_datamodule",
     "fusion.data.wsm_av_fusion_datamodule",
+    "fusion.data.wsm_ramps_semantic_datamodule",
+    "fusion.loss.ramps_observed_pseudo_loss",
     "video.models.depart_v1",
     "video.models.depart_v2",
     "video.data.wsm_video_cache_datamodule",
