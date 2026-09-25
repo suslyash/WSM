@@ -3285,3 +3285,46 @@ DEV-only same-row calibration audit used 933 DEV rows, observed counts depressio
 MLflow: experiment wsm_mm_pd_dep_v1 (ID 5); run UUID b94d2389455347d4b189cd323d14cb86; status FINISHED; artifact URI /media/maxim/Programs/WSM/mlruns/5/b94d2389455347d4b189cd323d14cb86/artifacts; run name ramps_r2_student_seed42_2026-09-25_12-33_wsm_av_f2_task_aware_directed_model_a2f143d4; parameters included epochs=30, mixed_precision=True, optimizer lr=0.0001, weight decay=0.01.
 
 No source file changed; src/audio stayed unchanged. git diff --check passed. Stage 5 remains active; R2 failed the predeclared continuation screen, so R3/R4 and further experiments remain manager-gated. Recommended next atomic step: manager review and explicit authorization of any next Stage-5 task.
+
+### MANAGER-DECISION-040 — Accept TASK-005D negative R2 result and stop the direct-pseudo branch
+
+Status: TASK-005D accepted and integrated as a valid negative result; Stage 5 remains active.
+
+Integration:
+
+- PR #41 was manager-reviewed and merged to `main` as `f102a8190a277fa225b99005d4b20aa651c32fd8`.
+- TASK-005D evidence commit: `a1cf23b517242829215a2bd003287a4fa1baf978`.
+- The production config differs from the accepted warm-up contract only by `run_name`; the F2 trainable parameter count remained `736004`.
+- Exactly one seed-42 production training invocation ran.
+- Selection used only `dev/mean_score`; Test protocols were monitoring-only and did not alter selection or the continuation decision.
+
+Accepted negative research result:
+
+- selected epoch: 6;
+- DEV depression Score: `0.682324`;
+- DEV Parkinson Score: `0.858227`;
+- DEV Mean_Score: `0.770275`;
+- deltas versus sparse F2: depression `-0.014711`, Parkinson `+0.006123`, Mean `-0.004294`;
+- the predeclared screen failed because Mean did not exceed `0.774569` and depression fell below `0.687035`.
+- DEV-only calibration nevertheless improved: Brier/ECE deltas versus F2 were depression `-0.0104665791/-0.0082603169` and Parkinson `-0.0141040007/-0.0313003949`.
+- Calibration improvement is retained as diagnostic evidence but does not override the predeclared DEV continuation gate.
+
+Manager decision:
+
+- Do not retune the R2 pseudo cache, thresholds, reliability rules, semantic prompts, warm-up, optimizer, or pseudo scale from this result.
+- Do not run additional R2 seeds at this stage.
+- Direct R2 pseudo-supervision is NOT promoted into the continuing Stage-5 composition.
+- Preserve the semantic cache, direct-gradient contract, warm-up callback, and TASK-005D run as negative/ablation evidence.
+- R3 will be evaluated as an independent A+V architecture hypothesis using observed sparse supervision only; it will NOT inherit the failed pseudo-supervision path.
+- General Text/Description remains deferred. R4, Stage 6, Stage 7, and Final Test remain locked.
+
+Next R3 design principle:
+
+- Freeze the R3 architecture contract before any training.
+- Use disease-specific learned query tokens to produce label-specific audio/video gates.
+- Respect `modality_available` exactly, with normalized weights over available modalities only.
+- Expose auxiliary unimodal logits for later agreement/consistency work, but do not invent an auxiliary loss or train them in the contract task.
+- Keep the R3 model trainable parameter count at or below the sparse F2 count `736004`; any later DEV gain therefore cannot be explained by increased parameter count.
+
+Recommended next atomic task: TASK-005E — implement/register the bounded R3 disease-query, availability-aware A+V model contract plus config/smokes only; use the ordinary observed-label sparse loss and do not train.
+
