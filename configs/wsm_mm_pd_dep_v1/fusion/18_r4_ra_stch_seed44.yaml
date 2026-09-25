@@ -3,7 +3,7 @@ seed: 44
 experiment_info:
   params:
     experiment_name: wsm_mm_pd_dep_v1
-    run_name: r4_ra_stch_seed44
+    run_name: r4_ra_stch_seed44_c1
 
 data:
   name: wsm_ramps_semantic_datamodule

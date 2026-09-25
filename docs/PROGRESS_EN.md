@@ -3854,3 +3854,22 @@ Decision:
 - conditionally run corrected RA-STCH seeds43/44 only if corrected RA passes the original frozen continuation gate using the retained valid Equal/Static controls and corrected Progress;
 - no Equal/Static rerun, no tuning, no new method, no Stage 6/7/Text/Final Test.
 
+
+
+### TASK-005F-BUNDLE-C1 — corrected scalarization and RA diagnostic firewall
+
+Status: implementation/firewall phase complete; corrected production runs have not started. Original Equal and Static-STCH runs are retained and were not rerun. Original Progress and RA seed42 evidence remains invalid/exploratory and is excluded from C1 branching.
+
+Authorized changes are limited to src/fusion/loss/r4_ramps_balance_loss.py, configs 15–18 run names, and this ledger. The corrected progress scalarizer now uses detached current weights in the exact linear sum w_D*L_D + w_P*L_P. STCH remains exclusive to stch and ra_stch. RA gradient-norm/cosine diagnostics now require mode ra_stch and both task objectives active; single-active batches preserve gradient EMAs unchanged. Reliability EMA remains independently updated from accepted pseudo entries.
+
+Corrected configs use run names r4_progress_seed42_c1, r4_ra_stch_seed42_c1, r4_ra_stch_seed43_c1, and r4_ra_stch_seed44_c1. All other seeds, methods, data/cache, model, loss/controller constants, and instrumentation are unchanged.
+
+C1 regressions and smokes:
+- python3 -m py_compile src/fusion/loss/r4_ramps_balance_loss.py src/common/callbacks/wsm_r4_balance_callback.py src/chimera_plugin.py — passed.
+- Chimera validation for configs 15–18 — passed; direct YAML diff/assertions confirmed run_name-only config changes.
+- Fixed scalar regression: 0.25*0.7 + 0.75*1.3 = 1.15, distinct from weighted-STCH reference 0.6548587; public synthetic ModelOutput+Batch progress call matched the exact linear objective.
+- Equal exact 0.5/0.5, stable STCH, finite all-mode objectives, structural pseudo target/reliability stop-gradient, and controller lifecycle regressions — passed.
+- RA both-active diagnostics produced finite non-zero task gradient norms and finite cosine. A deterministic single-active batch left both gradient-norm EMAs and cosine EMA unchanged while reliability EMA updated independently. No second-order graph was created.
+- Corrected actual-cache TRAIN-only progress/RA forward/loss/backward smoke — passed; frozen cache SHA 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945 and accepted counts D/P 376/1801 remained unchanged; no optimizer step and no DEV/Test access.
+
+Retained valid controls remain Equal seed42 Mean 0.777920 and Static-STCH seed42 Mean 0.787281. The corrected production sequence is Progress seed42 once, then RA-STCH seed42 once; RA seeds43/44 are conditional only on the original DEV-only gate. No corrected production invocation has run before the C1 firewall commit.

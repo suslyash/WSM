@@ -128,11 +128,12 @@ class WSMR4RampsBalanceLoss(BaseLoss):
         active = bool(obs.any() or pseudo_mask.any())
         return observed_loss + self.pseudo_scale * pseudo_loss + self.aux_weight * aux_loss + self.agreement_weight * agreement, active
 
-    def _update_diagnostics(self, objectives: list[torch.Tensor], features_audio: torch.Tensor, features_video: torch.Tensor,
-                            pseudo_mask: torch.Tensor, reliability: torch.Tensor) -> None:
+    def _update_diagnostics(self, objectives: list[torch.Tensor], active: list[bool], features_audio: torch.Tensor,
+                            features_video: torch.Tensor, pseudo_mask: torch.Tensor, reliability: torch.Tensor) -> None:
         norms: list[float | None] = [None, None]
         grads: list[torch.Tensor | None] = [None, None]
-        if features_audio.requires_grad and features_video.requires_grad:
+        both_active = active == [True, True]
+        if self.mode == "ra_stch" and both_active and features_audio.requires_grad and features_video.requires_grad:
             for task, objective in enumerate(objectives):
                 try:
                     ga, gv = torch.autograd.grad(objective, (features_audio, features_video), retain_graph=True, create_graph=False, allow_unused=True)
@@ -145,7 +146,7 @@ class WSMR4RampsBalanceLoss(BaseLoss):
                 except RuntimeError:
                     pass
         self.last_batch_grad_norms = norms
-        if grads[0] is not None and grads[1] is not None and grads[0].numel() == grads[1].numel():
+        if self.mode == "ra_stch" and both_active and grads[0] is not None and grads[1] is not None and grads[0].numel() == grads[1].numel():
             cosine = F.cosine_similarity(grads[0].unsqueeze(0), grads[1].unsqueeze(0)).item()
             if math.isfinite(cosine):
                 self.last_batch_grad_cosine = float(max(-1.0, min(1.0, cosine)))
@@ -154,7 +155,7 @@ class WSMR4RampsBalanceLoss(BaseLoss):
         else:
             self.last_batch_grad_cosine = None
         for task in range(2):
-            if norms[task] is not None:
+            if self.mode == "ra_stch" and both_active and norms[task] is not None:
                 decay = self.grad_ema
                 self.grad_norm_ema[task] = norms[task] if self.grad_norm_ema[task] is None else decay * self.grad_norm_ema[task] + (1 - decay) * norms[task]
             accepted = pseudo_mask[:, task]
@@ -197,10 +198,13 @@ class WSMR4RampsBalanceLoss(BaseLoss):
                 total = 0.5 * objectives[0] + 0.5 * objectives[1]
             elif self.mode == "stch":
                 total = self.tau * torch.logsumexp(torch.stack([0.5 * objectives[0] / self.tau, 0.5 * objectives[1] / self.tau]), dim=0)
+            elif self.mode == "progress":
+                weights = self.weights.to(device=logits.device, dtype=logits.dtype).detach()
+                total = (weights * torch.stack(objectives)).sum()
             else:
-                weights = self.weights.to(device=logits.device, dtype=logits.dtype)
+                weights = self.weights.to(device=logits.device, dtype=logits.dtype).detach()
                 total = self.tau * torch.logsumexp(weights * torch.stack(objectives) / self.tau, dim=0)
-        self._update_diagnostics(objectives, output.aux["features_audio"], output.aux["features_video"], accept & ~observed, reliability)
+        self._update_diagnostics(objectives, active, output.aux["features_audio"], output.aux["features_video"], accept & ~observed, reliability)
         return total
 
     def update_controller(self, depression_score: float, parkinson_score: float) -> None:
