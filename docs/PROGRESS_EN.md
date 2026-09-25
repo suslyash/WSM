@@ -3990,3 +3990,62 @@ No candidate may self-promote or close Stage 5. The manager will make the Stage-
 
 Recommended next atomic task: TASK-005G-BUNDLE — run true seeds43/44 for Equal, Static-STCH, and corrected Progress, compute three-seed promotion/calibration evidence, and stop.
 
+### OWNER/MANAGER-OVERRIDE-047 — Expand TASK-005G confirmation bundle to five total seeds per method
+
+Status: active owner override before TASK-005G execution.
+
+Owner intent:
+
+- Increase the confirmation budget to reduce orchestration latency and obtain stronger repeatability evidence in one bounded cycle.
+- Preserve a symmetric comparison design across Equal, Static-STCH, and corrected Progress.
+- Avoid an asymmetric exact-10-run design that would give one method more seeds than another.
+
+Revised experiment budget:
+
+- retain existing valid seed42 results for Equal, Static-STCH, and corrected Progress;
+- run all three methods on true seeds43, 44, 45, and 46;
+- this authorizes exactly 12 NEW production invocations;
+- together with retained seed42, each method will have 5 total seeds.
+
+All prior scientific firewalls remain:
+
+- no source-code changes;
+- no seed42 rerun;
+- no RA-STCH rerun;
+- no Test-driven selection;
+- no post-hoc tuning;
+- all 12 configs must be frozen and committed before the first new production run;
+- all 12 runs must execute in a fixed predeclared order regardless of intermediate DEV outcomes;
+- no Stage 6/7, Text/Description, or Final Test work is authorized.
+
+Revised repeatability criterion:
+
+- evaluate Static-STCH and Progress against Equal on the SAME seeds42/43/44/45/46;
+- a candidate passes the balancing-repeat criterion only if:
+  1. its DEV Mean exceeds Equal on at least 4 of 5 seeds;
+  2. its five-seed mean DEV Mean exceeds Equal five-seed mean;
+  3. its five-seed depression mean is no more than 0.010000 below Equal depression mean;
+  4. its five-seed Parkinson mean is no more than 0.010000 below Equal Parkinson mean;
+  5. the direction of the effect is not driven by a single extreme seed.
+- record the exact number of seeds won versus Equal and all per-seed deltas.
+
+Revised R-full viability diagnostic against corrected R3-B:
+
+- retain corrected R3-B seeds42/43/44 as the existing three-seed comparator;
+- for seeds45/46 there is no same-seed R3-B comparator unless separately authorized later;
+- therefore use R3-B only as an existing three-seed contextual comparator, not as a five-seed paired comparator;
+- Stage-5 balancing promotion remains based primarily on the five-seed paired Equal comparison plus calibration/negative-transfer diagnostics.
+
+Candidate nomination after all 12 new runs:
+
+1. exclude Static or Progress if it fails the revised five-seed balancing-repeat criterion;
+2. if exactly one remains, nominate it for manager Stage-5 composition review;
+3. if both remain, compare five-seed DEV Mean;
+4. if absolute five-seed Mean difference <= 0.001000, treat DEV as practically tied and compare:
+   - worst task-mean delta versus Equal;
+   - DEV-only Brier/ECE-15 versus Equal;
+   - controller complexity/stability;
+5. if still tied, prefer Static-STCH as the simpler fixed scalarizer.
+
+No candidate may self-promote or close Stage 5. Manager review remains mandatory.
+
