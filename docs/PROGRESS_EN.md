@@ -3110,3 +3110,52 @@ Exact verification commands/results:
 Plan status: Stage 5 remains active. TASK-005B-C1 is complete and only corrects the stop-gradient contract; TASK-005C/R3/R4, training, Stage 6/7, and general Text/Description work were not started. General Text/Description remains deferred.
 
 Recommended next atomic step: manager acceptance/merge of TASK-005B, followed by a separate warm-up-schedule task.
+
+### MANAGER-DECISION-038 — Accept TASK-005B-C1, merge the direct pseudo-gradient contract, and freeze the first warm-up schedule
+
+Status: TASK-005B accepted and integrated; Stage 5 remains active.
+
+Integration:
+
+- PR #39 was manager-reviewed after TASK-005B-C1, marked ready, and merged to `main` as `8a4a7e13de7789a359b3849b65f9af8b39b0cc28`.
+- Original TASK-005B implementation commit: `109b1e9902a193bd277be864c81614c9d9634378`.
+- Corrective stop-gradient commit: `6ede0789a345d521904676cf369beb011d8fcdd0`.
+
+Accepted TASK-005B evidence:
+
+- The frozen semantic TRAIN cache is validated against canonical TRAIN identity and observed truth.
+- Cache SHA256 remains `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`.
+- Frozen accepted counts remain depression `376/2665` missing and Parkinson `1801/3660` missing; class counts remain depression `376/0` positive/negative and Parkinson `212/1589`.
+- The registered pseudo-aware DataModule, observed+pseudo loss, plugin wiring, and contract config validate.
+- With `pseudo_scale=1.0`, accepted missing depression and Parkinson entries receive non-zero direct logit gradients; rejected missing entries receive exactly zero direct gradients.
+- With `pseudo_scale=0.0`, every missing entry receives zero direct gradient while observed entries remain supervised.
+- Pseudo targets and pseudo reliability are structurally detached before pseudo-loss validation/use; a synthetic `requires_grad=True` regression proves teacher-side gradients are absent.
+- Model/task-head gradients in the pseudo-on smoke are finite and non-zero.
+- No optimizer step, epoch training, Test-row iteration, Test metric use, pseudo regeneration/reselection, or cache mutation occurred.
+- `src/audio`, `src/video`, and existing fusion models/data remained unchanged by the corrective task.
+- No missing-label correctness or comorbidity recovery claim is authorized.
+
+Stage-5 gate status:
+
+- The direct pseudo-supervision data/loss/gradient portion of the Stage-5 gate is now closed.
+- Stage 5 is NOT complete. A predeclared warm-up is still required before any bounded student run, and later RAMPS composition/ablation gates remain.
+- R3/R4, Stage 6, Stage 7, and general Text/Description remain locked/deferred.
+
+Manager-frozen warm-up for the first bounded R2 student experiment:
+
+The PLAN requires `mu(e)` warm-up but does not numerically specify it. To avoid post-hoc tuning, the manager freezes the first schedule now, before any student run:
+
+- one-based epochs;
+- observed-only warm-up for epochs 1-3: `mu(e)=0`;
+- linear ramp across epochs 4-8:
+  - epoch 4: `0.2`
+  - epoch 5: `0.4`
+  - epoch 6: `0.6`
+  - epoch 7: `0.8`
+  - epoch 8 and later: `1.0`;
+- equivalently `mu(e)=clamp((e-3)/5, 0, 1)`;
+- this schedule is fixed for the first bounded student experiment and MUST NOT be changed using Test metrics;
+- TASK-005C implements and verifies only this schedule contract. It does not run student training.
+
+Recommended next atomic task: TASK-005C — implement a registered pseudo-scale warm-up callback plus a config-selectable warm-up contract and verify exact epoch-to-scale behavior without optimizer steps or training.
+
