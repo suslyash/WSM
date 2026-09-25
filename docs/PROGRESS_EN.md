@@ -3071,3 +3071,42 @@ Decision:
 
 Recommended next atomic task: TASK-005B-C1 — enforce structural stop-gradient on pseudo targets/reliability and reproduce the accepted actual-cache direct-gradient smoke.
 
+
+
+### TASK-005B-C1 — Enforce structural stop-gradient on pseudo targets and reliability
+
+Outcome: complete. The pseudo loss now structurally detaches both teacher-side tensors immediately after device/dtype conversion, before validation or pseudo-loss use:
+
+```python
+pseudo = pseudo_targets.to(device=device, dtype=dtype).detach()
+reliability = pseudo_reliability.to(device=device, dtype=dtype).detach()
+```
+
+The observed-loss formula, pseudo mask, reliability weighting, explicit `pseudo_scale`, and all cache semantics remain unchanged.
+
+Changed files:
+
+- `src/fusion/loss/ramps_observed_pseudo_loss.py`;
+- `docs/PROGRESS_EN.md`.
+
+Branch/history:
+
+- Reused manager-authorized branch `codex/task-005b`;
+- manager commits and the original TASK-005B implementation were preserved;
+- corrective commit and push result are recorded in the final handoff;
+- `main`/`master` was untouched by Codex.
+
+Exact verification commands/results:
+
+- `python3 -m py_compile src/fusion/loss/ramps_observed_pseudo_loss.py src/fusion/data/wsm_ramps_semantic_datamodule.py src/chimera_plugin.py` — passed.
+- Required structural stop-gradient smoke with `requires_grad=True` logits, pseudo targets, and pseudo reliability — passed. Logits had finite non-zero supervised gradients; pseudo target and reliability gradients were `None` or exactly zero.
+- `.venv/bin/chimera-ml validate-config -c configs/wsm_mm_pd_dep_v1/fusion/03_ramps_r2_pseudo_contract.yaml` — valid.
+- Registry regression passed for `wsm_ramps_semantic_datamodule`, `wsm_ramps_observed_pseudo_loss`, and `wsm_av_f2_task_aware_directed_model`; no project-module warnings were emitted.
+- Actual-cache F2 forward/loss/backward regression passed with selected TRAIN indices `[3678, 1, 3660, 0]`. Cache SHA256 remained `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`; accepted depression/Parkinson counts remained `376/1801`.
+- With `pseudo_scale=1.0`, accepted missing depression/Parkinson direct logit gradients were non-zero, unaccepted missing gradients were exactly zero, and both task heads had finite non-zero parameter gradients. With `pseudo_scale=0.0`, observed gradients remained non-zero and all missing gradients were zero.
+- No optimizer step, training loop, Test rows/metrics, pseudo regeneration/reselection, or cache mutation occurred. No missing-label correctness or comorbidity claim is made.
+- `git diff --check` passed; `src/audio`, `src/video`, existing fusion models/data, plugin, and YAML remained unchanged by C1.
+
+Plan status: Stage 5 remains active. TASK-005B-C1 is complete and only corrects the stop-gradient contract; TASK-005C/R3/R4, training, Stage 6/7, and general Text/Description work were not started. General Text/Description remains deferred.
+
+Recommended next atomic step: manager acceptance/merge of TASK-005B, followed by a separate warm-up-schedule task.

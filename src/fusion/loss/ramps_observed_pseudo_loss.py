@@ -47,8 +47,8 @@ class WSMRampsObservedPseudoLoss(BaseLoss):
         observed = observed_mask.to(device=device, dtype=torch.bool)
         accept = pseudo_accept_mask.to(device=device, dtype=torch.bool)
         target = targets.to(device=device, dtype=dtype)
-        pseudo = pseudo_targets.to(device=device, dtype=dtype)
-        reliability = pseudo_reliability.to(device=device, dtype=dtype)
+        pseudo = pseudo_targets.to(device=device, dtype=dtype).detach()
+        reliability = pseudo_reliability.to(device=device, dtype=dtype).detach()
         if bool((accept & observed).any()):
             raise ValueError("pseudo acceptance overlaps observed truth")
         if bool(observed.any()) and (not bool(torch.isfinite(target[observed]).all()) or not bool(torch.logical_or(target[observed] == 0, target[observed] == 1).all())):
