@@ -3039,3 +3039,35 @@ Exact verification commands/results:
 Plan status: Stage 5 remains active. TASK-005B closes only the direct pseudo-gradient/data-loss contract; warm-up scheduling and student training remain manager-gated. No missing-label correctness or comorbidity claim is made.
 
 Recommended next atomic task: manager review, followed by a separate authorized task for the predeclared pseudo-supervision warm-up schedule.
+
+### MANAGER-REVIEW-037 — TASK-005B requires one stop-gradient correction before acceptance
+
+Status: corrective task required; TASK-005B is not accepted for merge yet. Stage 5 remains active.
+
+Evidence accepted:
+
+- Branch `codex/task-005b`, implementation commit `109b1e9902a193bd277be864c81614c9d9634378`, exactly one implementation commit ahead of the manager-assigned `main`.
+- Tracked scope is exactly the five authorized paths.
+- Frozen cache identity/canonical TRAIN validation and frozen accepted/missing/class counts are recorded as passing.
+- Registered DataModule/loss keys, config validation, actual-cache F2 forward/loss/backward smoke, pseudo_scale on/off direct-gradient behavior, finite task-head gradients, no optimizer step, no training, no Test use, and unchanged audio/video/fusion models are accepted as evidence.
+- The config keeps `pseudo_scale: 0.0` and DEV-only checkpoint/early-stopping selection.
+
+Blocking finding:
+
+- `WSMRampsObservedPseudoLoss.compute_components()` does not explicitly detach `pseudo_reliability` before the pseudo BCE numerator. It converts reliability with `.to(...)`, then multiplies the live tensor directly:
+  `weighted = reliability[pseudo_mask] * BCE(...)`.
+- Only the denominator calls `.detach()`.
+- TASK-005B and PROJECT_REQUIREMENTS require the reliability weight itself to be detached/stop-gradient. The current frozen cache happens to provide non-grad tensors, so the reported runtime smoke does not prove the loss contract is safe for any caller-provided tensor.
+- The pseudo target is detached in the BCE call, but the corrective smoke should prove both pseudo target and reliability are structurally stop-gradient even when supplied with `requires_grad=True`.
+
+Decision:
+
+- Do not merge TASK-005B yet.
+- Preserve the DataModule, config, registry wiring, cache identity, frozen counts, and successful actual-cache gradient evidence.
+- Execute exactly one narrow corrective task, TASK-005B-C1, on the existing `codex/task-005b` branch under explicit manager authorization.
+- The correction must make pseudo target and pseudo reliability explicitly detached before pseudo-loss use and add a synthetic regression proving no gradient can flow into either teacher-side tensor.
+- Rerun the existing actual-cache TASK-005B smoke after the correction.
+- Do not implement warm-up scheduling or start student training in this corrective cycle.
+
+Recommended next atomic task: TASK-005B-C1 — enforce structural stop-gradient on pseudo targets/reliability and reproduce the accepted actual-cache direct-gradient smoke.
+
