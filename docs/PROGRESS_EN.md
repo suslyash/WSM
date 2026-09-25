@@ -18,7 +18,7 @@ Final Test authorized: **no**.
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | complete | Bounded strong-temporal-audio search complete; no safe A+V winner under the predeclared task-balance gate | TASK-004A through TASK-004K |
-| 5. RAMPS | active | Fixed semantic cache, direct-gradient contract, frozen pseudo-scale warm-up contract, and one bounded seed-42 R2 student run completed; R2 continuation screen failed | TASK-005A2/TASK-005C/TASK-005D |
+| 5. RAMPS | active | R3 C1 corrective firewall complete; prior R3 bundle invalidated for gate decisions and true-seed rerun remains pending | TASK-005A2/TASK-005C/TASK-005D/TASK-005E-BUNDLE-C1 |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
 
@@ -3465,3 +3465,30 @@ Post-hoc DEV-only diagnostics on the selected seed-42 checkpoints (933 DEV rows;
 Test metrics were produced every epoch by the required evaluation streams and were inspected only as same-epoch monitoring after DEV selection. They did not affect checkpoint selection, early stopping, or continuation. No Final Test was run. No missing-label correctness, comorbidity, significance, or final-model claim is made.
 
 Recommended next atomic step: manager review of the completed R3 bundle and the seed-repeatability risk; stop before R4 or Stage 6.
+
+
+### TASK-005E-BUNDLE-C1 — Correct frozen R3 architecture and true-seed firewall
+
+Status: corrective contract complete; no new production training has started at this checkpoint. The prior four TASK-005E runs remain preserved as invalid exploratory/debug evidence and are not combined with C1 statistics. C1 reuses branch codex/task-005e.
+
+Corrections:
+- Replaced the R3 model with the exact frozen architecture: constructor dimensions audio/video/hidden/gate_hidden 768/512/192/192, dropout 0.2, two task queries initialized N(0,0.02), exactly two shared task candidate norms, one shared LayerNorm-gated query network, exact availability masking, F2 masked video mean, two main heads, and four LayerNorm-plus-linear auxiliary heads.
+- Corrected model auxiliary/output keys to include features_audio, features_video, task_audio_features, task_video_features, task_modality_weights, task_features, audio/video auxiliary logits and validity masks, and task_logits.
+- Exact trainable parameter count: 403079; frozen F2 count: 736004; delta: -332925.
+- Corrected configs 09/10/11/12 to true seeds 43/44/43/44, added gate_hidden_dim: 192 to all seven configs, and suffixed all corrected run names with _c1.
+- Frozen auxiliary loss, plugin, data module, src/audio, and src/video were not modified.
+
+Corrected firewall evidence before any C1 production run:
+- python3 -m py_compile on corrected model, frozen auxiliary loss, and plugin passed.
+- Chimera validation passed for all seven corrected configs.
+- Seed identity audit used chimera_ml.utils.seed.define_seed. Initial-state hashes:
+  - seed 42: 9667c69e8a41696b929d180f66322841285e8e16681090f621d434d1a9792ebb
+  - seed 43: 3ba95fe555535a5790c60e0aed2b562052efc35c638db560eeee9669aec19e78
+  - seed 44: 344d80b994715d4ed6c4732a465551ef2be39c304b68b4be6010098588788516
+  The repeated seed-42 hash matched. Deterministic randperm(6325) prefixes were seed42 [292,168,969,5099,1618,540,4888,5565], seed43 [2313,829,952,266,6014,3055,3772,2968], and seed44 [2532,1596,5750,5036,1762,5064,1051,3577]; all were pairwise distinct.
+- Corrected synthetic availability/query smoke passed: both/audio-only/video-only exact weights, unavailable-input invariance <=1e-7, all-unavailable guard, required keys/shapes, and finite outputs.
+- Corrected TRAIN-only ordinary sparse smoke passed on four fixed TRAIN rows containing both observed diseases: both main heads, projections, task queries, and shared gate had non-zero finite gradients; auxiliary heads had no sparse-main gradients.
+- Corrected synthetic R3-B auxiliary smoke passed: main/auxiliary gradients, masked unknown labels, finite agreement, zero-valid finite loss, and no optimizer step.
+- No DEV/Test rows were iterated in the corrected firewall.
+
+Corrected bundle screen and run policy remain frozen exactly: F2 D/P/Mean 0.697035/0.852104/0.774569; seed-42 pass requires Mean >0.774569, D >=0.687035, P >=0.842104; A then B seed42, followed only by the DEV-selected continuation at true seeds43/44; maximum four new production invocations; Test monitoring cannot affect any decision. The C1 firewall must be committed and pushed before production training.

@@ -3,7 +3,7 @@ seed: 42
 experiment_info:
   params:
     experiment_name: wsm_mm_pd_dep_v1
-    run_name: r3_a_sparse_seed42
+    run_name: r3_a_sparse_seed42_c1
 
 data:
   name: wsm_av_fusion_datamodule
@@ -24,6 +24,7 @@ model:
     audio_feature_dim: 768
     video_feature_dim: 512
     hidden_dim: 192
+    gate_hidden_dim: 192
     dropout: 0.2
     num_tasks: 2
 
