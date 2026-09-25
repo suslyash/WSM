@@ -3900,3 +3900,93 @@ Status: complete; exactly two new corrected seed-42 production invocations ran a
 Original frozen RA continuation gate using retained Equal Mean 0.777920, retained Static-STCH Mean 0.787281, corrected Progress Mean 0.787299, corrected RA Mean 0.782645, R3-B Mean 0.794816, depression floor 0.685808, and Parkinson floor 0.883824: failed. RA was below R3-B Mean, below the Parkinson floor, below retained Static-STCH, and below corrected Progress. Therefore corrected RA seeds43/44 were not run.
 
 Test metrics were inspected only as same-epoch monitoring after DEV selection and did not affect checkpointing, early stopping, controller state, or branching. No Equal/Static rerun, post-hoc tuning, Final Test, Stage 6/7, Text/Description, significance, missing-label correctness, comorbidity, or final-model claim occurred. The corrected C1 implementation closes the R4 validity defects but does not promote R4 or close Stage 5.
+
+### MANAGER-DECISION-046 — Accept corrected R4 bundle and require three-seed fallback confirmation
+
+Status: TASK-005F-BUNDLE-C1 accepted and integrated; Stage 5 remains active.
+
+Integration:
+
+- PR #43 was manager-reviewed and merged to `main` as `d44ccdbb3fad6e4f934bb87aee006560843e5dd5`.
+- Original R4 firewall: `c2f7c19d4dc182072304225c33ab2fa74505bb87`.
+- C1 corrective firewall: `b1ebf74d7d1794127c38eca9c7647b9fb86715c5`.
+- C1 final evidence: `f17574b0f90c227645c080a87111672ab7b1ab40`.
+
+Accepted R4 seed42 evidence:
+
+- Equal:
+  - D `0.712498`;
+  - P `0.843342`;
+  - Mean `0.777920`.
+- Static STCH:
+  - D `0.725077`;
+  - P `0.849485`;
+  - Mean `0.787281`.
+- Corrected Progress:
+  - D `0.701245`;
+  - P `0.873354`;
+  - Mean `0.787299`.
+- Corrected RA-STCH:
+  - D `0.700992`;
+  - P `0.864298`;
+  - Mean `0.782645`.
+
+RA-STCH conclusion:
+
+- corrected RA-STCH fails the predeclared continuation gate;
+- it does not beat corrected R3-B seed42 Mean `0.794816`;
+- it does not beat Static-STCH or corrected Progress;
+- Parkinson `0.864298` is below the frozen RA floor `0.883824`;
+- RA seeds43/44 therefore remain correctly unrun;
+- RA-STCH is retained as a negative R4 result and is not promoted.
+
+Why Stage 5 cannot close yet:
+
+- PLAN Section 7 requires any promoted component effect to repeat across at least three seeds.
+- Equal, Static-STCH, and corrected Progress currently have only one valid seed each.
+- Static-STCH and Progress are effectively tied at seed42: Mean difference is only `+0.000018` in favor of Progress.
+- Both balancing methods improve over Equal at seed42, but this cannot establish a repeatable balancing effect.
+- The same exact R3 model/full pseudo-aware composition is used, so this is an experiment-selection question, not an architecture/code question.
+
+Frozen three-seed confirmation policy:
+
+- no more R4 source changes;
+- retain seed42 results above;
+- run Equal, Static-STCH, and Progress at true seeds43 and 44 only;
+- maximum six new production invocations;
+- all six configs must be frozen before the first run;
+- Test remains monitoring-only;
+- no RA rerun, no tuning, no new controller, no R2/R3 changes.
+
+Balancing repeat criterion for each candidate (Static or Progress):
+
+- compare to Equal on the SAME seed;
+- candidate DEV Mean must be strictly greater than Equal DEV Mean on seeds42,43,44;
+- candidate three-seed Mean must be strictly greater than Equal three-seed Mean;
+- candidate three-seed task means must each be no more than `0.010000` below Equal corresponding task means.
+
+R-full viability diagnostic against corrected R3-B:
+
+- corrected R3-B three-seed means are:
+  - D `0.696178`;
+  - P `0.857996`;
+  - Mean `0.777087`.
+- record whether each R4 candidate three-seed Mean exceeds `0.777087`;
+- record whether neither task mean is more than `0.010000` below the corresponding R3-B task mean;
+- this diagnostic does not replace the same-seed Equal balancing-repeat criterion.
+
+Candidate selection after all six new runs:
+
+1. exclude any candidate that fails the balancing repeat criterion;
+2. if exactly one remains, nominate it for manager Stage-5 composition review;
+3. if both remain, select higher three-seed DEV Mean;
+4. if their three-seed Means differ by <= `0.001000`, treat DEV as practically tied and compare:
+   - worst task-mean delta versus corrected R3-B;
+   - DEV-only calibration (Brier/ECE-15) versus Equal and R3-B;
+   - controller complexity/stability;
+5. if still tied after those diagnostics, prefer Static-STCH as the simpler fixed scalarizer.
+
+No candidate may self-promote or close Stage 5. The manager will make the Stage-5 decision after the confirmation bundle.
+
+Recommended next atomic task: TASK-005G-BUNDLE — run true seeds43/44 for Equal, Static-STCH, and corrected Progress, compute three-seed promotion/calibration evidence, and stop.
+
