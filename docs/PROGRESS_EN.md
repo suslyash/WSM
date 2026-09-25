@@ -3740,3 +3740,22 @@ Frozen R4 experiment bundle:
 
 Recommended next atomic task: TASK-005F-BUNDLE — implement the frozen R4 task-balancing loss/controller, freeze all six configs before training, run the four seed42 controls, conditionally run RA-STCH seeds43/44, and stop.
 
+
+
+### TASK-005F-BUNDLE — R4 task-balancing interaction bundle
+
+Status: firewall implementation complete; production training has not started. Branch codex/task-005f is based on manager-updated origin/main commit 1b5ac59.
+
+Implemented the registered wsm_r4_ramps_balance_loss and wsm_r4_balance_callback. The loss preserves frozen R3 auxiliary/agreement coefficients (0.25/0.10), detached observed/pseudo contracts, active-task handling, equal weighting, fixed STCH, DEV-progress weighting, and detached EMA-based RA-STCH diagnostics. The callback reads only dev/depression/score and dev/parkinson/score, runs after segment metrics and before the summary callback, and never reads Test metrics. Plugin registration was extended only for the new loss and callback.
+
+Created and froze six configs before production: 13_r4_equal_seed42.yaml, 14_r4_static_stch_seed42.yaml, 15_r4_progress_seed42.yaml, 16_r4_ra_stch_seed42.yaml, 17_r4_ra_stch_seed43.yaml, and 18_r4_ra_stch_seed44.yaml. They use the exact R3 model, frozen R2 semantic DataModule/cache, pseudo warm-up 3/5/1.0, R3 auxiliary/agreement coefficients, identical optimizer/instrumentation, and modes/seeds equal/42, stch/42, progress/42, ra_stch/42, ra_stch/43, ra_stch/44.
+
+Pre-production verification:
+- python3 -m py_compile src/fusion/loss/r4_ramps_balance_loss.py src/common/callbacks/wsm_r4_balance_callback.py src/chimera_plugin.py — passed.
+- All six chimera-ml validate-config checks — passed; direct YAML assertions confirmed composition, modes/seeds, and callback order.
+- Registry assertions passed for wsm_r4_ramps_balance_loss, wsm_r4_balance_callback, wsm_av_r3_disease_query_model, and wsm_ramps_semantic_datamodule; no project-module warning was emitted.
+- Synthetic task-objective smoke passed for all four modes: finite loss, observed/pseudo/main gradients, structural pseudo stop-gradient, equal 0.5/0.5 composition, and stable STCH reference.
+- Progress/RA lifecycle smoke passed: epoch-1 weights [0.5,0.5], DEV-only updates finite/bounded/normalized, no Test key required, and no second-order path.
+- Actual TRAIN-only semantic-cache smoke passed for all four modes with no optimizer step and no DEV/Test loader access. Frozen cache SHA was 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945; accepted counts remained D/P 376/1801.
+
+The firewall commit must be pushed before any production invocation. The frozen production tree is equal42 -> static42 -> progress42 -> RA-STCH42, with RA seeds43/44 conditional only on all predeclared DEV criteria. No production run or Test evaluation has occurred yet.
