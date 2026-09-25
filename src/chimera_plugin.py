@@ -7,6 +7,7 @@ import warnings
 _MODULES_TO_REGISTER: tuple[str, ...] = (
     "common.callbacks.wsm_segment_callback",
     "common.callbacks.wsm_summary_callback",
+    "common.callbacks.wsm_pseudo_scale_warmup_callback",
     "common.loss.wsm_masked_sparse_loss",
     "common.optimizers",
     "audio.data.wsm_audio_segment_datamodule",
