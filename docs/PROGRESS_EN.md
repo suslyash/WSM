@@ -3385,3 +3385,83 @@ Pre-training verification:
 - Synthetic R3 contract smoke — passed: availability invariance, all-unavailable guard, sparse and auxiliary losses, finite main/auxiliary/projection gradients, finite agreement, and zero-valid cases; no optimizer step.
 - Registered real TRAIN-only smoke — passed on 6325 TRAIN rows; finite R3-B forward/loss/backward; parameter count 381671. No DEV or Test rows were iterated.
 - No production training has started at this firewall checkpoint.
+
+
+### TASK-005E-BUNDLE — R3 contract and bounded experiment bundle
+
+Outcome: complete. The frozen R3 contract was committed and pushed before training. Exactly four authorized production runs executed: R3-A seed 42, R3-B seed 42, then the frozen-rule continuation R3-B seeds 43 and 44. No R2 pseudo cache/loss/warm-up, R4, text/description, Stage 6/7, Final Test, or additional variant was used.
+
+Firewall and contract commit: dec745e. Final evidence is recorded on the follow-up commit for this task. Branch: codex/task-005e.
+
+R3 contract:
+- Model registry key: wsm_av_r3_disease_query_model.
+- Loss registry key: wsm_r3_aux_agreement_loss.
+- Model parameter count: 381671, below frozen F2 count 736004.
+- R3-B weights: aux_weight=0.25, agreement_weight=0.10, eps=1e-8.
+- Seven configs were predeclared and validated before the first production invocation.
+- The frozen screen and continuation/tie-break rule were committed before training.
+- Synthetic availability/invariance, all-unavailable guard, sparse loss, auxiliary loss, finite gradients, zero-valid cases, and no-optimizer-step checks passed.
+- Registered real TRAIN-only forward/loss/backward smoke passed on 6325 TRAIN rows; no DEV/Test rows were used in that smoke.
+- src/audio and src/video remained unchanged.
+
+Production run evidence (selection was DEV/mean_score only; Test values below were inspected only after selection):
+
+1. R3-A seed 42
+   - Config/command: configs/wsm_mm_pd_dep_v1/fusion/07_r3_a_sparse_seed42.yaml; PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/07_r3_a_sparse_seed42.yaml
+   - Run directory: logs/wsm_mm_pd_dep_v1/r3_a_sparse_seed42_2026-09-25_13-10_wsm_av_r3_disease_query_model_ddb3290f
+   - MLflow run: f4ab9487871a4018b676a12e2a7b9a5a9; status FINISHED; artifact URI /media/maxim/Programs/Projects/WSM/mlruns/5/f4ab9487871a4018b676a12e2a7b9a5a9/artifacts.
+   - 11 epochs completed; early stopped at epoch 11 after patience 6.
+   - DEV-selected epoch/checkpoint: epoch 5, epoch=5_dev_mean_score=0.7721.pt.
+   - DEV D UAR/MF1/Score: 0.699253/0.697755/0.698504; P: 0.840028/0.851230/0.845629; Mean: 0.772066.
+   - Delta versus F2 D/P/Mean: +0.001469/-0.006475/-0.002503.
+   - Frozen screen: FAIL because Mean was not above 0.774569; D and P floors passed.
+   - Same-epoch Test monitoring NONE/SOFT/HARD Mean: 0.756425/0.745412/0.749769.
+   - Trainable parameters: 381671.
+
+2. R3-B seed 42
+   - Config/command: configs/wsm_mm_pd_dep_v1/fusion/08_r3_b_agreement_seed42.yaml; PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/08_r3_b_agreement_seed42.yaml
+   - Run directory: logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed42_2026-09-25_13-15_wsm_av_r3_disease_query_model_2499d661
+   - MLflow run: 10c1304d06c6415cb627833f30bac93c; status FINISHED; artifact URI /media/maxim/Programs/WSM/mlruns/5/10c1304d06c6415cb627833f30bac93c/artifacts.
+   - 11 epochs completed; early stopped at epoch 11 after patience 6.
+   - DEV-selected epoch/checkpoint: epoch 5, epoch=5_dev_mean_score=0.7843.pt.
+   - DEV D UAR/MF1/Score: 0.702754/0.701997/0.702376; P: 0.861491/0.870884/0.866187; Mean: 0.784281.
+   - Delta versus F2 D/P/Mean: +0.005341/+0.014083/+0.009712.
+   - Frozen screen: PASS.
+   - Same-epoch Test monitoring NONE/SOFT/HARD Mean: 0.765083/0.758328/0.755107.
+   - Trainable parameters: 381671.
+
+3. R3-B seed 43
+   - Config/command: configs/wsm_mm_pd_dep_v1/fusion/11_r3_b_agreement_seed43.yaml; PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/11_r3_b_agreement_seed43.yaml
+   - Run directory: logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed43_2026-09-25_13-19_wsm_av_r3_disease_query_model_328220e4
+   - MLflow run: 5633433f5b8a42a5a1e4a7b2e8737393; status FINISHED; artifact URI /media/maxim/Programs/WSM/mlruns/5/5633433f5b8a42a5a1e4a7b2e8737393/artifacts.
+   - 11 epochs completed; early stopped at epoch 11 after patience 6.
+   - DEV-selected epoch/checkpoint: epoch 5, epoch=5_dev_mean_score=0.7843.pt.
+   - DEV D/P/Mean: 0.702376/0.866187/0.784281; same-epoch Test NONE/SOFT/HARD: 0.765083/0.758328/0.755107.
+   - Continuation run; no new screen, architecture, loss, or branching decision was introduced.
+
+4. R3-B seed 44
+   - Config/command: configs/wsm_mm_pd_dep_v1/fusion/12_r3_b_agreement_seed44.yaml; PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/12_r3_b_agreement_seed44.yaml
+   - Run directory: logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed44_2026-09-25_13-24_wsm_av_r3_disease_query_model_cd19ff12
+   - MLflow run: e29453eecbed400b8cd01b2185024303; status FINISHED; artifact URI /media/maxim/Programs/WSM/mlruns/5/e29453eecbed400b8cd01b2185024303/artifacts.
+   - 11 epochs completed; early stopped at epoch 11 after patience 6.
+   - DEV-selected epoch/checkpoint: epoch 5, epoch=5_dev_mean_score=0.7843.pt.
+   - DEV D/P/Mean: 0.702376/0.866187/0.784281; same-epoch Test NONE/SOFT/HARD: 0.765083/0.758328/0.755107.
+   - Continuation run; no new screen, architecture, loss, or branching decision was introduced.
+
+Continuation result for R3-B seeds 42/43/44:
+- DEV D mean/std: 0.702376/0.000000.
+- DEV P mean/std: 0.866187/0.000000.
+- DEV Mean mean/std: 0.784281/0.000000.
+- These are arithmetic means and sample standard deviations across three seeds; no final significance or final-model claim is made.
+- The exact repetition across configured seeds is a reproducibility risk and should be audited before relying on multi-seed variance.
+
+Post-hoc DEV-only diagnostics on the selected seed-42 checkpoints (933 DEV rows; no Test rows iterated):
+- R3-A modality-weight mean D/P audio,video: [0.355263/0.644737]/[0.355474/0.644526]; population std [0.088469/0.088469]/[0.086571/0.086571].
+- R3-B modality-weight mean D/P audio,video: [0.400620/0.599379]/[0.398191/0.601809]; population std [0.079556/0.079556]/[0.077637/0.077637].
+- R3-B audio auxiliary observed+valid DEV scores: depression 0.715202, Parkinson 0.744108, Mean 0.729655.
+- R3-B video auxiliary observed+valid DEV scores: depression 0.649096, Parkinson 0.841815, Mean 0.745456.
+- Auxiliary diagnostics did not affect selection or branching.
+
+Test metrics were produced every epoch by the required evaluation streams and were inspected only as same-epoch monitoring after DEV selection. They did not affect checkpoint selection, early stopping, or continuation. No Final Test was run. No missing-label correctness, comorbidity, significance, or final-model claim is made.
+
+Recommended next atomic step: manager review of the completed R3 bundle and the seed-repeatability risk; stop before R4 or Stage 6.
