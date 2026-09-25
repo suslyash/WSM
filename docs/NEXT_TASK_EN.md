@@ -1,30 +1,28 @@
-# TASK-005E-BUNDLE: Complete R3 Contract and Run a Bounded Predeclared Experiment Bundle
+# TASK-005E-BUNDLE-C1: Restore the Frozen R3 Architecture and Run True Seeds
 
 ## Authority and branch
 
-This task is an explicit owner/manager override for the current R3 cycle only. It supersedes the earlier "stop after TASK-005E" restriction and allows several predeclared experiments in one Codex cycle. All PROJECT_REQUIREMENTS invariants remain mandatory.
+This is one manager-authorized corrective bounded bundle.
 
 Required branch:
 
     codex/task-005e
 
-If the branch does not exist, create it from current origin/main containing manager override commit:
+Reuse of this existing branch is explicitly authorized. Preserve all prior manager/Codex commits and exploratory run evidence. Do not reset, rebase away, force-push, or modify main/master.
 
-    64eac820be7ddfcc726b88e2e6a6fe11bb074050
+The prior four runs remain preserved as exploratory/debug evidence only because:
+- the implemented model deviated from the frozen R3 architecture;
+- every nominal seed-43/44 YAML actually contained `seed: 42`.
 
-If the branch already exists from the earlier TASK-005E assignment, reuse is explicitly authorized. Preserve all work and history; fetch origin and merge current origin/main into the task branch if needed. Do not reset, rebase away work, force-push, or touch main/master.
+Do not delete or rewrite that history.
 
-## High-level objective
+## Goal
 
-Finish the frozen R3 disease-query A+V model contract, then execute a maximum of four production training runs from a predeclared experiment tree:
+Correct the R3 implementation to the exact frozen TASK-005E architecture, correct the continuation configs to true seeds 43/44, freeze the corrected bundle before training, then rerun the same bounded DEV-only experiment tree.
 
-1. R3-A — R3 model + ordinary observed sparse loss, seed 42.
-2. R3-B — same R3 model + one fixed auxiliary unimodal agreement loss, seed 42.
-3. If neither A nor B passes the frozen DEV screen, stop.
-4. If at least one passes, choose exactly one continuation variant by the frozen DEV-only rule and run that same variant at seeds 43 and 44.
-5. Stop after the bundle. Do not invent another variant.
+Maximum NEW production training invocations in C1: 4.
 
-No R2 pseudo cache/loss/warm-up may appear in any R3 run.
+No post-hoc tuning.
 
 ## Required reading
 
@@ -33,39 +31,27 @@ Read in this order:
 1. AGENTS.md
 2. docs/README.md
 3. docs/PROJECT_REQUIREMENTS.md
-4. docs/PLAN.md, especially Stage 5 R3
-5. docs/PROGRESS_EN.md through OWNER/MANAGER-OVERRIDE-041
+4. docs/PLAN.md, Stage 5
+5. docs/PROGRESS_EN.md through MANAGER-REVIEW-042
 6. docs/NEXT_TASK_EN.md
-7. docs/SOTA_REVIEW_EN.md Sections 9–11
-8. src/fusion/models/av_f2_task_aware_directed.py
+7. src/fusion/models/av_r3_disease_query.py
+8. src/fusion/loss/r3_aux_agreement_loss.py
 9. src/fusion/data/wsm_av_fusion_datamodule.py
 10. src/common/loss/wsm_masked_sparse_loss.py
 11. src/chimera_plugin.py
-12. configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml
-
-## Non-negotiable experiment firewall
-
-Before the first production training invocation, commit all of the following:
-
-- final R3 model implementation;
-- final R3-B auxiliary loss implementation;
-- plugin registrations;
-- all seed-42 and conditional seed-43/44 YAMLs for both A and B;
-- exact loss weights;
-- frozen DEV screen;
-- continuation/tie-break rule.
-
-After the first production run begins, do not change architecture, loss formula, loss weights, optimizer, schedule, data, early stopping, screen, seed policy, or branching logic based on observed metrics.
-
-TEST_NONE/SOFT/HARD are monitoring only and MUST NOT influence any branch decision.
-
-Maximum production training invocations: 4.
+12. configs/wsm_mm_pd_dep_v1/fusion/06_ramps_r3_disease_query_contract.yaml
+13. configs/wsm_mm_pd_dep_v1/fusion/07_r3_a_sparse_seed42.yaml
+14. configs/wsm_mm_pd_dep_v1/fusion/08_r3_b_agreement_seed42.yaml
+15. configs/wsm_mm_pd_dep_v1/fusion/09_r3_a_sparse_seed43.yaml
+16. configs/wsm_mm_pd_dep_v1/fusion/10_r3_a_sparse_seed44.yaml
+17. configs/wsm_mm_pd_dep_v1/fusion/11_r3_b_agreement_seed43.yaml
+18. configs/wsm_mm_pd_dep_v1/fusion/12_r3_b_agreement_seed44.yaml
 
 ## Allowed tracked files
 
+Codex may modify only:
+
 - src/fusion/models/av_r3_disease_query.py
-- src/fusion/loss/r3_aux_agreement_loss.py
-- src/chimera_plugin.py
 - configs/wsm_mm_pd_dep_v1/fusion/06_ramps_r3_disease_query_contract.yaml
 - configs/wsm_mm_pd_dep_v1/fusion/07_r3_a_sparse_seed42.yaml
 - configs/wsm_mm_pd_dep_v1/fusion/08_r3_b_agreement_seed42.yaml
@@ -75,230 +61,391 @@ Maximum production training invocations: 4.
 - configs/wsm_mm_pd_dep_v1/fusion/12_r3_b_agreement_seed44.yaml
 - docs/PROGRESS_EN.md
 
-No other tracked file may change.
+Do not modify:
+- src/fusion/loss/r3_aux_agreement_loss.py;
+- src/chimera_plugin.py;
+- any data module;
+- any existing model;
+- src/audio;
+- src/video;
+- src/common;
+- PROJECT_REQUIREMENTS/PLAN.
 
-## Phase 1 — R3 model contract
+If the already-frozen auxiliary loss itself creates a new exact runtime blocker after the architecture correction, STOP and report it rather than broadening scope.
 
-Implement the previously assigned R3 model contract unchanged:
+## 1. Exact frozen R3 architecture
 
-Registry key:
+Implement exactly this constructor:
 
-    wsm_av_r3_disease_query_model
+    audio_feature_dim: int = 768
+    video_feature_dim: int = 512
+    hidden_dim: int = 192
+    gate_hidden_dim: int = 192
+    dropout: float = 0.2
+    num_tasks: int = 2
 
-Required architecture:
+Validate:
+- all dimensions > 0;
+- num_tasks == 2;
+- 0 <= dropout < 1.
 
-- audio_cls 768 and pooled video 512 projected to hidden 192;
-- learned disease queries shape [2,192], normal init std 0.02;
-- task-specific candidate LayerNorms;
-- one shared query-conditioned audio/video gate;
-- exact modality availability masking;
-- task-specific fused features;
-- two independent main disease heads;
-- auxiliary audio-only and video-only logits with validity masks;
-- no corpus identity, observed mask, disease label, or sample task_id as an input feature;
-- trainable parameter count <= frozen F2 count 736004.
+### Inputs
 
-Required synthetic availability/invariance, all-unavailable guard, registry/config, and real TRAIN-only forward/loss/backward smokes remain exactly as in the previous TASK-005E contract.
+Consume only:
+- batch.inputs["audio_cls"] [B,768];
+- batch.inputs["video"] [B,T,512];
+- video_mask [B,T];
+- modality_available [B,2].
 
-Do not train until all Phase-1 contract checks pass.
+Require finite floating audio/video inputs, correct shapes, at least one available modality, and at least one valid video position whenever video is available.
 
-## Phase 2 — fixed R3-B auxiliary loss
+Do not consume corpus identity, observed labels/masks, task IDs, pseudo fields, teacher scores, text, or description as model input.
 
-Implement:
+### Projections
 
-    src/fusion/loss/r3_aux_agreement_loss.py
+Audio:
 
-Registry key:
+    LayerNorm(audio_feature_dim)
+    Linear(audio_feature_dim, hidden_dim)
+    GELU
+    Dropout(dropout)
 
-    wsm_r3_aux_agreement_loss
+Video:
 
-Constructor defaults, frozen for this bundle:
+    LayerNorm(video_feature_dim)
+    Linear(video_feature_dim, hidden_dim)
+    GELU
+    Dropout(dropout)
 
-    aux_weight = 0.25
-    agreement_weight = 0.10
-    eps = 1e-8
+Pool video by the F2 masked mean before projection.
 
-Require non-negative finite weights and eps.
+Zero unavailable raw input before projection AND zero unavailable projected contribution after projection so projection bias cannot leak unavailable modality information.
 
-The loss consumes:
+### Task queries
 
-- main logits output.preds [B,2];
-- observed targets and observed_mask;
-- output.aux["audio_aux_logits"] [B,2];
-- output.aux["video_aux_logits"] [B,2];
-- output.aux["audio_aux_valid"] [B,2];
-- output.aux["video_aux_valid"] [B,2].
+Use exactly:
 
-Unknown labels remain masked everywhere.
+    task_queries: nn.Parameter shape [2, hidden_dim]
 
-Define:
+Initialize normal mean 0, std 0.02.
 
-    L_main = ordinary observed masked BCE on main logits
+### Task-conditioned candidates
 
-For auxiliary supervised BCE, use only observed AND modality-valid entries. Pool all eligible audio/video task elements together:
+Keep exactly two candidate norms total:
 
-    L_aux =
-        sum(BCE(audio_aux, target) over observed & audio_valid
-          + BCE(video_aux, target) over observed & video_valid)
-        / (eligible_aux_count + eps)
+    task_candidate_norms: ModuleList[LayerNorm(hidden_dim), LayerNorm(hidden_dim)]
 
-If no eligible auxiliary entry exists, use an exact differentiable zero.
+For task t, the SAME norm is used for audio and video:
 
-For agreement, use only observed entries where both modalities are valid:
+    q = task_queries[t]
+    a_t = task_candidate_norms[t](effective_audio_features + q)
+    v_t = task_candidate_norms[t](effective_video_features + q)
 
-    p_a = sigmoid(audio_aux_logits)
-    p_v = sigmoid(video_aux_logits)
+No separate audio/video candidate norms.
 
-    L_agree =
-        mean((p_a - p_v)^2 over observed & audio_valid & video_valid)
+### Shared query-conditioned gate
 
-If no eligible agreement entry exists, use an exact differentiable zero.
+Use exactly one shared network:
 
-Total:
+    LayerNorm(2 * hidden_dim)
+    Linear(2 * hidden_dim, gate_hidden_dim)
+    GELU
+    Dropout(dropout)
+    Linear(gate_hidden_dim, 1)
 
-    L = L_main + 0.25 * L_aux + 0.10 * L_agree
+Score exactly:
 
-Do not detach the auxiliary logits from this loss.
+    [q || a_t]
+    [q || v_t]
 
-Do not introduce pseudo targets, teacher logits, semantic scores, Test information, or additional loss terms.
+Mask unavailable modality logits before softmax.
 
-Add a synthetic smoke proving:
+Require:
+- finite weights;
+- [0,1];
+- sum to 1 within tolerance;
+- unavailable weight exactly 0;
+- audio-only = [1,0];
+- video-only = [0,1].
 
-- unknown targets never enter any term;
-- main and auxiliary heads get finite gradients;
-- both modality projections get finite gradients;
-- agreement term is finite;
-- zero-valid auxiliary/agreement cases remain finite;
+### Task fusion
+
+For each task:
+
+    fused_t = task_fusion_norms[t](
+        q + w_audio * a_t + w_video * v_t
+    )
+
+Use exactly two task_fusion_norms.
+
+### Main heads
+
+Exactly two independent heads:
+
+    LayerNorm(hidden_dim)
+    Linear(hidden_dim, hidden_dim)
+    GELU
+    Dropout(dropout)
+    Linear(hidden_dim, 1)
+
+Return preds [B,2].
+
+### Auxiliary heads
+
+For each task and modality use exactly:
+
+    LayerNorm(hidden_dim)
+    Linear(hidden_dim, 1)
+
+Compute audio aux from a_t and video aux from v_t.
+
+Keep logits finite even when modality invalid; validity masks control downstream use.
+
+### Required aux keys
+
+Expose exactly/at least:
+
+- features_audio [B,H]
+- features_video [B,H]
+- task_audio_features [B,2,H]
+- task_video_features [B,2,H]
+- task_modality_weights [B,2,2]
+- task_features [B,2,H]
+- audio_aux_logits [B,2]
+- video_aux_logits [B,2]
+- audio_aux_valid bool [B,2]
+- video_aux_valid bool [B,2]
+- task_logits mapping with depression and parkinson
+
+All floating outputs finite.
+
+### Exact parameter count
+
+For the exact frozen dimensions above, require:
+
+    R3 trainable parameters = 403079
+
+Frozen F2:
+
+    736004
+
+Delta:
+
+    -332925
+
+If the implementation does not produce exactly 403079 trainable parameters, STOP before training and report the mismatch.
+
+## 2. Correct all config seeds and exact model params
+
+Every R3 config must include:
+
+    gate_hidden_dim: 192
+
+Required top-level seeds:
+
+- 06 contract: 42
+- 07 R3-A seed42: 42
+- 08 R3-B seed42: 42
+- 09 R3-A seed43: 43
+- 10 R3-A seed44: 44
+- 11 R3-B seed43: 43
+- 12 R3-B seed44: 44
+
+Use unique corrected run names ending in `_c1` so the new runs cannot be confused with the invalid exploratory runs.
+
+Examples:
+
+    r3_a_sparse_seed42_c1
+    r3_b_agreement_seed42_c1
+    r3_b_agreement_seed43_c1
+
+Preserve all other frozen optimizer/data/instrumentation/loss settings.
+
+R3-B remains exactly:
+
+    aux_weight: 0.25
+    agreement_weight: 0.10
+
+No pseudo path.
+
+## 3. Mandatory corrected firewall commit before training
+
+Before ANY new production training invocation:
+
+1. finish the exact model correction;
+2. correct all seven YAMLs;
+3. validate all seven YAMLs;
+4. run every contract smoke below;
+5. update PROGRESS_EN.md with the corrected frozen contract;
+6. commit and push one corrective firewall commit.
+
+No production training may begin before that corrective firewall commit exists on origin.
+
+## 4. Seed identity firewall
+
+Run a deterministic inline audit BEFORE training.
+
+It must parse the YAMLs and assert exact seeds above.
+
+Then for seeds 42/43/44:
+
+- call Chimera `define_seed(seed)`;
+- instantiate the exact R3 model;
+- hash the complete initial trainable state deterministically;
+- assert hashes for 42/43/44 are pairwise distinct;
+- instantiate seed 42 twice after resetting with `define_seed(42)` and assert the two seed-42 hashes are identical.
+
+Also demonstrate that the first TRAIN shuffle order differs for at least one of 42/43/44 OR, if direct DataLoader-order capture is awkward, generate and record a deterministic `torch.randperm(6325)` prefix immediately after `define_seed(seed)` for each seed and assert pairwise distinct prefixes.
+
+Record all hashes/prefixes in PROGRESS_EN.md.
+
+This is a seed firewall only; do not use DEV/Test rows.
+
+## 5. Contract smokes
+
+Repeat the exact synthetic availability/query smoke:
+
+- both / audio-only / video-only samples;
+- exact modality weights;
+- unavailable-input invariance <= 1e-7;
+- all-unavailable raises;
+- required aux shapes/keys and finite values.
+
+Repeat real TRAIN-only forward/loss/backward with ordinary sparse loss:
+
+- both main heads non-zero finite gradients;
+- both projections non-zero finite gradients;
+- task_queries non-zero finite gradient;
+- shared gate non-zero finite gradients;
+- auxiliary head gradients absent under sparse main-only loss.
+
+Repeat R3-B synthetic auxiliary-loss smoke:
+
+- main and aux heads receive gradients;
+- unknown labels masked;
+- agreement finite;
+- zero-valid cases finite;
 - no optimizer step.
 
-## Phase 3 — predeclare all configs before training
+Do not iterate DEV/Test in firewall smokes.
 
-Create all six production configs before the first run.
+## 6. Corrected bounded production rerun
 
-Common semantics for every config:
+The previous four runs are INVALID for gate decisions after this architecture correction. Do not combine them statistically with C1.
 
-- experiment_name: wsm_mm_pd_dep_v1
-- canonical wsm_av_fusion_datamodule
-- R3 model and exact frozen dimensions
-- AdamW lr 1e-4, weight_decay 0.01
-- batch_size 32
-- max epochs 30
-- mixed precision true
-- grad clip 0.5
-- checkpoint and early stopping monitor only dev/mean_score, mode=max
-- patience 6, min_delta 0.0005
-- required four-stream instrumentation/loggers
-- no pseudo cache/loss/warm-up
+Use the same frozen comparator and screen:
 
-Variant A configs:
+F2:
+- D 0.697035
+- P 0.852104
+- Mean 0.774569
 
-- seed 42: 07_r3_a_sparse_seed42.yaml
-- seed 43: 09_r3_a_sparse_seed43.yaml
-- seed 44: 10_r3_a_sparse_seed44.yaml
-- loss: wsm_masked_sparse_loss
+Seed-42 corrected variant passes only if:
+- Mean > 0.774569;
+- D >= 0.687035;
+- P >= 0.842104.
 
-Variant B configs:
+Run after firewall:
 
-- seed 42: 08_r3_b_agreement_seed42.yaml
-- seed 43: 11_r3_b_agreement_seed43.yaml
-- seed 44: 12_r3_b_agreement_seed44.yaml
-- loss: wsm_r3_aux_agreement_loss
-- aux_weight: 0.25
-- agreement_weight: 0.10
+1. corrected R3-A seed 42;
+2. corrected R3-B seed 42;
+3. if neither passes: stop;
+4. if exactly one passes: run that corrected variant at true seeds 43 and 44;
+5. if both pass: choose by higher DEV Mean; tie <=1e-6 by higher minimum task delta vs F2; final tie choose A; then run chosen variant at true seeds 43 and 44.
 
-Run names must encode variant and seed.
+Maximum new production invocations: 4.
 
-Validate all six configs before any production run.
+All selection/branching is DEV-only.
 
-## Frozen comparator and seed-42 DEV screen
+TEST_NONE/SOFT/HARD remain monitoring-only.
 
-Frozen sparse F2 comparator:
+No post-hoc method change.
 
-- depression Score = 0.697035
-- Parkinson Score = 0.852104
-- Mean_Score = 0.774569
+## 7. Post-run seed audit
 
-A seed-42 R3 variant passes only if:
+For every executed corrected run record:
 
-- selected DEV Mean_Score > 0.774569;
-- depression DEV Score >= 0.687035;
-- Parkinson DEV Score >= 0.842104.
+- config path;
+- top-level seed;
+- run directory;
+- MLflow run ID/status;
+- selected DEV epoch/checkpoint;
+- selected DEV D/P/Mean;
+- F2 deltas;
+- frozen screen status;
+- same-epoch Test monitoring only after DEV freeze.
 
-Selection of each checkpoint uses DEV/Mean_Score only.
+For any continuation variant seeds 42/43/44 additionally record:
 
-A failed variant remains a valid negative result.
+- SHA256 of selected checkpoint file for each seed;
+- assert the three selected checkpoint SHA256 values are pairwise distinct;
+- DEV D/P/Mean mean and sample std across the TRUE three seeds.
 
-## Frozen continuation rule
+If two true seeds happen to yield identical rounded metrics, distinct selected-checkpoint hashes are required before interpreting that as legitimate zero/near-zero metric variance.
 
-After both seed-42 runs finish:
+## 8. Forbidden
 
-- If neither passes: stop the bundle.
-- If exactly one passes: continue that variant.
-- If both pass:
-  1. choose higher selected DEV Mean_Score;
-  2. if absolute Mean difference <= 1e-6, choose the variant with higher minimum of the two task-score deltas versus F2;
-  3. if still tied, choose R3-A as the simpler method.
-
-Only the chosen continuation variant may run seeds 43 and 44.
-
-Do not use any Test metric in this rule.
-
-## Production run authorization
-
-After every contract/firewall/config check passes, run exactly:
-
-1. R3-A seed 42.
-2. R3-B seed 42.
-3. Conditionally, chosen variant seed 43.
-4. Conditionally, chosen variant seed 44.
-
-Do not rerun a failed/crashed completed production run with modified settings. If an infrastructure failure occurs before meaningful training begins, record it and only retry the identical command/settings; do not change the method.
-
-## Required reporting
-
-For every executed run record in docs/PROGRESS_EN.md:
-
-- exact config and command;
-- run directory and MLflow metadata;
-- epochs completed and early-stop status;
-- selected epoch/checkpoint by DEV only;
-- selected DEV depression/Parkinson UAR, MF1, Score, Mean;
-- delta versus F2;
-- pass/fail of the frozen screen;
-- same-epoch TEST_NONE/SOFT/HARD monitoring values only after DEV selection is frozen;
-- confirmation Test did not affect selection or branching.
-
-For seed-42 A and B also report:
-
-- trainable parameter count;
-- post-hoc DEV task modality-weight means/stds for each disease;
-- auxiliary audio/video DEV Score on observed+valid rows for R3-B as diagnostics only.
-
-If seeds 43/44 execute, report for the chosen variant:
-
-- DEV D/P/Mean for seeds 42/43/44;
-- arithmetic mean and sample standard deviation across the three seeds;
-- do not declare final significance or final-model status from only three seeds.
-
-## Scope and integrity
-
-Always preserve:
-
-- two independent disease outputs;
-- masked unknown labels;
-- observed truth authority;
-- src/audio unchanged;
-- src/video unchanged;
+- no modification of auxiliary loss weights/formula;
+- no new architecture variant;
 - no R2 pseudo path;
 - no text/description;
 - no R4;
 - no Stage 6/7;
 - no Final Test;
-- no missing-label correctness/comorbidity claims.
+- no second attempt with altered settings after seeing DEV;
+- no Test-driven branching;
+- no missing-label/comorbidity/significance/final-model claim.
 
-Run git diff --check and explicit source-scope diffs before handoff.
+## Verification
 
-## Final handoff
+Run at minimum:
+
+    python3 -m py_compile       src/fusion/models/av_r3_disease_query.py       src/fusion/loss/r3_aux_agreement_loss.py       src/chimera_plugin.py
+
+Validate all seven YAMLs.
+
+Run the parameter count assertion:
+
+    R3 == 403079
+    F2 == 736004
+
+Run seed identity firewall, synthetic model smoke, real TRAIN-only sparse smoke, and auxiliary-loss smoke.
+
+After all runs:
+
+    git diff --check
+    git diff origin/main -- src/audio
+    git diff origin/main -- src/video
+    git diff origin/main -- src/fusion/data
+    git diff origin/main -- src/common
+    git status --short
+    git diff --stat origin/main...HEAD
+    git log -8 --oneline --decorate
+
+## Acceptance
+
+C1 passes only if:
+
+- exact frozen R3 architecture is implemented;
+- exact R3 count is 403079;
+- all seven configs include gate_hidden_dim 192;
+- seed43/44 YAMLs contain true 43/44 values;
+- seed initialization hashes prove distinct initial states;
+- corrected firewall commit exists before training;
+- all contract smokes pass;
+- corrected A42/B42 rerun under frozen rules;
+- continuation, if any, uses true seeds 43/44;
+- continuation selected checkpoints have distinct SHA256 values;
+- Test never affects selection/branching;
+- no post-hoc tuning occurs;
+- scope remains exact;
+- PROGRESS preserves both invalid exploratory evidence and corrected evidence;
+- branch is pushed;
+- main/master untouched.
+
+Passing C1 allows manager acceptance of the R3 bundle and consideration of the next PLAN step. Do not start it.
+
+## Required handoff
 
 Respond in English using exactly:
 
@@ -309,25 +456,27 @@ Respond in English using exactly:
 5. Blockers and risks
 6. Next atomic step
 
+Explicitly distinguish:
+- old exploratory invalid bundle;
+- corrected C1 bundle.
+
 Include:
-
-- branch and all implementation/evidence commit SHAs;
-- pushed-to-origin status;
-- main/master untouched;
+- corrective firewall commit SHA;
+- final evidence commit SHA;
 - exact R3 parameter count;
-- model/loss registry keys;
-- contract smoke results;
-- confirmation all configs/loss weights/screens were frozen before first run;
-- number of production invocations actually executed;
-- seed-42 A and B DEV results and screen status;
-- continuation decision and exact DEV-only reason;
-- seed 43/44 results if executed;
-- three-seed mean/std if available;
-- Test monitoring-only confirmation;
+- exact config seeds;
+- initial-state hashes;
+- number of NEW production invocations;
+- corrected A42/B42 results;
+- continuation rule;
+- true seed43/44 results if executed;
+- selected checkpoint SHA256 values;
+- true three-seed mean/std if available;
+- no Test-driven decisions;
 - no post-hoc tuning;
-- R2 remains negative and unused;
-- no R4/text/Stage6/7/Final Test;
 - src/audio/src/video unchanged;
-- Stage 5 status.
+- R2 remains negative/unpromoted;
+- no R4/text/Stage6/7/Final Test;
+- Stage 5 remains active.
 
-Stop after this bounded bundle. Do not invent or execute another experiment.
+Stop after C1.
