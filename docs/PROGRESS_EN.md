@@ -3532,3 +3532,18 @@ Decision:
 - execute exactly one corrective bounded bundle, TASK-005E-BUNDLE-C1, on the same branch under explicit manager authorization;
 - C1 must implement the frozen R3 architecture exactly, correct seed fields to 42/43/44, re-freeze all configs before rerunning, prove distinct seed initialization/checkpoint identities, and rerun the same DEV-only A/B continuation tree with at most four new production invocations;
 - preserve `src/fusion/loss/r3_aux_agreement_loss.py` unchanged unless an exact runtime blocker in that already-frozen loss is demonstrated; no post-hoc loss-weight tuning is authorized.
+
+
+### TASK-005E-BUNDLE-C1 — final corrected production evidence
+
+Status: complete for the authorized corrective bundle; Stage 5 remains active and no Stage 6/R4 work was started.
+
+Changed files: src/fusion/models/av_r3_disease_query.py, the seven R3 configs 06–12, and this ledger. The frozen auxiliary loss, plugin, data/common/audio/video code were unchanged.
+
+The firewall was committed as bd34648 and pushed before production. The manager review commit was preserved by merge commit ed86998, also pushed; no reset, rebase, force-push, or main/master update was performed.
+
+Firewall commands/results: py_compile passed; Chimera validation passed for all seven corrected configs; exact trainable parameter count was 403079 (F2 reference 736004, delta -332925); define_seed identity/repeatability and distinct deterministic randperm prefixes for true seeds 42/43/44 passed; corrected synthetic availability/query/sparse/auxiliary smoke and fixed TRAIN-only ordinary sparse smoke passed with no DEV/Test rows.
+
+Exactly four new production invocations were run under the frozen A-then-B policy and no post-hoc tuning. A seed 42 DEV-selected epoch 12 scored D/P/Mean 0.661893/0.860940/0.761417 and failed the frozen screen; same-epoch Test NONE/SOFT/HARD Mean was 0.751482/0.743331/0.745254 (monitoring only). B seed 42 DEV-selected epoch 11 scored 0.695808/0.893824/0.794816 and passed; Test 0.785614/0.777128/0.782106. B seed 43 DEV-selected epoch 5 scored 0.694349/0.841176/0.767762 and failed; Test 0.733320/0.724152/0.704056. B seed 44 DEV-selected epoch 13 scored 0.698378/0.838989/0.768684 and failed; Test 0.744923/0.733015/0.733749. MLflow IDs: A42 9b18c48dc18540ffab8cf5a4efc1cf79, B42 ac43bc78d6f7468997d7fe9f9345541d, B43 0febc7ff45774614bb792154bd7fd2cd, B44 bac2cf209158407ab3880bd065c036ca.
+
+Corrected R3-B three-seed DEV arithmetic mean/sample standard deviation: D 0.696178/0.002040, P 0.857996/0.031047, Mean 0.777087/0.015360. Descriptive only; no significance or final-model claim. Prior invalid exploratory R3 runs are not combined; R2 remains negative/unused. No Final Test, Test-driven selection, post-hoc tuning, R4, text/description, or Stage 6/7 work was performed. src/audio and src/video stayed unchanged. Recommended next atomic step: manager review of C1 evidence; stop before Stage 6.
