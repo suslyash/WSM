@@ -3547,3 +3547,50 @@ Firewall commands/results: py_compile passed; Chimera validation passed for all 
 Exactly four new production invocations were run under the frozen A-then-B policy and no post-hoc tuning. A seed 42 DEV-selected epoch 12 scored D/P/Mean 0.661893/0.860940/0.761417 and failed the frozen screen; same-epoch Test NONE/SOFT/HARD Mean was 0.751482/0.743331/0.745254 (monitoring only). B seed 42 DEV-selected epoch 11 scored 0.695808/0.893824/0.794816 and passed; Test 0.785614/0.777128/0.782106. B seed 43 DEV-selected epoch 5 scored 0.694349/0.841176/0.767762 and failed; Test 0.733320/0.724152/0.704056. B seed 44 DEV-selected epoch 13 scored 0.698378/0.838989/0.768684 and failed; Test 0.744923/0.733015/0.733749. MLflow IDs: A42 9b18c48dc18540ffab8cf5a4efc1cf79, B42 ac43bc78d6f7468997d7fe9f9345541d, B43 0febc7ff45774614bb792154bd7fd2cd, B44 bac2cf209158407ab3880bd065c036ca.
 
 Corrected R3-B three-seed DEV arithmetic mean/sample standard deviation: D 0.696178/0.002040, P 0.857996/0.031047, Mean 0.777087/0.015360. Descriptive only; no significance or final-model claim. Prior invalid exploratory R3 runs are not combined; R2 remains negative/unused. No Final Test, Test-driven selection, post-hoc tuning, R4, text/description, or Stage 6/7 work was performed. src/audio and src/video stayed unchanged. Recommended next atomic step: manager review of C1 evidence; stop before Stage 6.
+
+### MANAGER-REVIEW-043 — C1 implementation accepted; checkpoint identity evidence still missing
+
+Status: one narrow evidence-only correction required before PR #42 can merge. Stage 5 remains active.
+
+Accepted C1 evidence:
+
+- exact frozen R3 architecture is now implemented and independently code-reviewed;
+- exact trainable parameter count is `403079` versus F2 `736004`;
+- all seven corrected configs carry `gate_hidden_dim: 192`;
+- continuation configs now use true top-level seeds 43/44;
+- Chimera seed firewall produced pairwise-distinct initial-state hashes and deterministic shuffle proxies for seeds 42/43/44;
+- corrected synthetic availability/invariance, real TRAIN-only sparse backward, and R3-B auxiliary-loss smokes passed;
+- four new production invocations followed the frozen A42/B42 -> B43/B44 branch with no post-hoc tuning and DEV-only selection;
+- Test protocols remained monitoring-only;
+- src/audio/src/video and frozen auxiliary loss/plugin/data/common code remained unchanged.
+
+Corrected C1 DEV results:
+
+- R3-A seed42: D/P/Mean `0.661893/0.860940/0.761417` — frozen screen FAIL.
+- R3-B seed42: `0.695808/0.893824/0.794816` — frozen screen PASS.
+- R3-B seed43: `0.694349/0.841176/0.767762` — frozen screen FAIL.
+- R3-B seed44: `0.698378/0.838989/0.768684` — frozen screen FAIL.
+- R3-B three-seed mean/std: D `0.696178/0.002040`, P `0.857996/0.031047`, Mean `0.777087/0.015360`.
+
+Research interpretation under the pre-existing PLAN promotion rule:
+
+- mean DEV/Mean_Score is above F2 by `+0.002518`, but the improvement does not repeat across at least three seeds: only seed42 is above F2; seeds43/44 are below it.
+- Parkinson also falls below the predeclared single-seed floor on seeds43/44.
+- Therefore R3-B is a valid positive single-seed screen plus informative three-seed ablation, but it is NOT promoted as an R-full component under PLAN Section 7.
+- This is a research decision, not an implementation failure.
+
+Remaining C1 acceptance gap:
+
+- TASK-005E-BUNDLE-C1 explicitly required SHA256 of the selected R3-B checkpoints for true seeds 42/43/44 and a pairwise-distinct assertion.
+- The final C1 PROGRESS evidence records initial-state hashes but does not record selected-checkpoint SHA256 values.
+- Because the runtime artifacts are not mounted in the manager environment, this identity evidence must be produced by Codex from the existing run artifacts.
+- No retraining is required or authorized.
+
+Decision:
+
+- keep PR #42 draft and do not merge yet;
+- run exactly one evidence-only TASK-005E-BUNDLE-C2 on the same branch;
+- C2 may not train, tune, alter source/model/loss/configs, recompute model selection, or start R4;
+- C2 must hash the existing selected corrected checkpoints, verify pairwise distinction, verify their resolved configs/seeds, and append the promotion-rule conclusion above;
+- after C2 passes, manager may accept/merge the complete R3 bundle as an ablation result and then separately decide the R4 task required by Stage 5.
+
