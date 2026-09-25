@@ -2992,3 +2992,50 @@ Gate decision:
 
 Recommended next atomic task: TASK-005B — wire the accepted `ramps-r2-semantic-v1` TRAIN cache into a registered A+V DataModule/loss contract and prove direct accepted-missing-head gradients with a bounded forward/loss/backward smoke only; do not run training.
 
+
+
+### TASK-005B — Wire the accepted semantic R2 cache into the registered TRAIN data/loss contract
+
+Outcome: complete. The frozen `ramps-r2-semantic-v1` TRAIN cache is now validated against canonical TRAIN identity and exposed only through a registered TRAIN pseudo-field overlay. A registered observed-plus-detached-reliability pseudo loss and an actual-cache F2 forward/loss/backward smoke close the direct-gradient contract without training.
+
+Changed files:
+
+- `src/fusion/data/wsm_ramps_semantic_datamodule.py`;
+- `src/fusion/loss/ramps_observed_pseudo_loss.py`;
+- `src/chimera_plugin.py`;
+- `configs/wsm_mm_pd_dep_v1/fusion/03_ramps_r2_pseudo_contract.yaml`;
+- `docs/PROGRESS_EN.md`.
+
+Branch/evidence:
+
+- Required branch: `codex/task-005b`, created from `origin/main` at manager assignment `0515aef`;
+- implementation commit and push result are recorded in the final handoff;
+- `main`/`master` was untouched by Codex.
+
+Frozen cache validation:
+
+- Cache: `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt`;
+- computed cache SHA256: `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`;
+- identity passed: version `ramps-r2-semantic-v1`, tasks `depression/parkinson`, CLIP `openai/clip-vit-base-patch32` revision `main`, required audio/video teacher SHAs, and prompt-bank SHA `19428db58f91f73ca26ce9c4354b5731431e14ec524fc1a47e7070e1b32f447e`;
+- canonical identity passed: 6325 TRAIN rows, ordered unique segment IDs, unchanged observed masks/targets with identical NaN positions;
+- frozen counts passed: missing `2665/3660`, accepted `376/1801`, accepted positive `376/212`, accepted negative `0/1589`;
+- observed/pseudo overlap was zero; accepted targets matched calibrated strong-audio probabilities exactly; rejected/observed pseudo targets were NaN, reliability zero, and class `-1`.
+
+Implementation contract:
+
+- DataModule registry key: `wsm_ramps_semantic_datamodule`; it reuses the existing A+V DataModule and overlays pseudo fields on TRAIN only. DEV/Test datasets receive inactive false/NaN/zero/-1 pseudo fields.
+- Loss registry key: `wsm_ramps_observed_pseudo_loss`; it implements observed masked BCE plus `pseudo_scale *` reliability-weighted BCE over `pseudo_accept_mask & ~observed_mask`, with detached pseudo targets/reliability and no hidden schedule. Invalid overlap or pseudo fields raise.
+- Config `/configs/wsm_mm_pd_dep_v1/fusion/03_ramps_r2_pseudo_contract.yaml` selects the existing F2 model, preserves its dimensions, sets `pseudo_scale: 0.0`, seed 42, required instrumentation, and `dev/mean_score` max-only checkpoint/early stopping.
+
+Exact verification commands/results:
+
+- `python3 -m py_compile src/fusion/data/wsm_ramps_semantic_datamodule.py src/fusion/loss/ramps_observed_pseudo_loss.py src/chimera_plugin.py` — passed.
+- `.venv/bin/chimera-ml validate-config -c configs/wsm_mm_pd_dep_v1/fusion/03_ramps_r2_pseudo_contract.yaml` — valid.
+- Registered key check passed for `wsm_ramps_semantic_datamodule`, `wsm_ramps_observed_pseudo_loss`, and `wsm_av_f2_task_aware_directed_model`; plugin imported without project-module warnings.
+- Required actual-cache smoke passed with the registered components, seed 42, CPU DataModule/model, and a four-row TRAIN selection containing accepted/unaccepted depression/Parkinson missing entries. With `pseudo_scale=1.0`, observed entries and both accepted missing heads had non-zero direct logit gradients; unaccepted missing entries had exactly zero direct logit gradients; both task heads had finite non-zero parameter gradients. With `pseudo_scale=0.0`, observed gradients remained non-zero and all missing-entry gradients were zero.
+- No optimizer step, epoch loop, training command, DEV/Test metric calculation, Test-row iteration, pseudo regeneration/reselection, or cache mutation occurred.
+- `git diff --check` passed; `src/audio`, `src/video`, and existing fusion model implementations remained unchanged.
+
+Plan status: Stage 5 remains active. TASK-005B closes only the direct pseudo-gradient/data-loss contract; warm-up scheduling and student training remain manager-gated. No missing-label correctness or comorbidity claim is made.
+
+Recommended next atomic task: manager review, followed by a separate authorized task for the predeclared pseudo-supervision warm-up schedule.
