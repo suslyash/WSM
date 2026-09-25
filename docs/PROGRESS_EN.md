@@ -3200,3 +3200,41 @@ Exact verification commands/results:
 Plan status: Stage 5 remains active. TASK-005C only establishes the frozen warm-up contract; it does not authorize student training. TASK-005C/R3/R4, Stage 6/7, and general Text/Description work were not started. General Text/Description remains deferred.
 
 Recommended next atomic step: manager review of the warm-up contract, followed by a separately authorized bounded student experiment.
+
+### MANAGER-DECISION-039 — Accept TASK-005C and authorize one bounded seed-42 R2 student run
+
+Status: TASK-005C accepted and integrated; Stage 5 remains active.
+
+Integration:
+
+- PR #40 was manager-reviewed and merged to `main` as `62f2bf84d50d02f0b13ffa15b52dc8b35bd19a51`.
+- TASK-005C implementation commit: `b5c50da37d9c4b562ac0b7b887d4cd21f3d5cc73`.
+- The registered warm-up callback, exact `3/5/1.0` schedule, config validation, lifecycle regression, gradient-scale regression, teacher stop-gradient regression, and actual-cache compatibility smoke are accepted.
+- No training, optimizer step, DEV/Test metric calculation, Test-row iteration, pseudo regeneration/reselection, or cache mutation occurred in TASK-005C.
+
+Frozen first student experiment:
+
+- exactly one seed-42 run;
+- existing F2 architecture and parameterization unchanged;
+- frozen semantic pseudo cache unchanged;
+- frozen warm-up `mu(e)=clamp((e-3)/5,0,1)`;
+- AdamW/lr/weight decay, batch size, 30-epoch ceiling, patience, callbacks, and logger stack inherited unchanged from the accepted warm-up contract;
+- checkpoint/early stopping selection uses only `dev/mean_score`;
+- TEST_NONE/SOFT/HARD remain mandatory epoch-level monitoring streams and MUST NOT influence epoch choice, tuning, stopping, thresholding, or any follow-up decision;
+- no separate Final Test is authorized.
+
+Predeclared comparator for the direct-pseudo-supervision ablation:
+
+- sparse F2 seed-42 baseline selected solely by DEV: Mean `0.774569`, depression Score `0.697035`, Parkinson Score `0.852104`;
+- frozen historical audio reference remains contextual only: DEV Mean `0.7878268765`.
+- The student uses the same F2 model dimensions, so a DEV change cannot be explained by increased model parameter count.
+
+Predeclared continuation screen for this single seed:
+
+- evidence is positive for direct pseudo-supervision only if selected DEV Mean_Score is strictly above `0.774569`;
+- neither disease DEV Score may fall by more than `0.010000` absolute versus F2, so depression must be at least `0.687035` and Parkinson at least `0.842104`;
+- DEV-only Brier/ECE are diagnostic and must be reported against the exact F2 checkpoint on the same observed DEV rows; they MUST NOT be used to retune this run;
+- failure of the screen is a valid negative result and MUST NOT trigger schedule/cache/threshold changes in the same task.
+
+Recommended next atomic task: TASK-005D — run exactly one bounded seed-42 R2 student experiment with the frozen cache/warm-up, select only by DEV/Mean_Score, preserve four-stream monitoring without Test-driven decisions, and perform a same-row DEV comparison to the sparse F2 baseline.
+
