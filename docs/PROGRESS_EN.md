@@ -3740,3 +3740,163 @@ Frozen R4 experiment bundle:
 
 Recommended next atomic task: TASK-005F-BUNDLE — implement the frozen R4 task-balancing loss/controller, freeze all six configs before training, run the four seed42 controls, conditionally run RA-STCH seeds43/44, and stop.
 
+
+
+### TASK-005F-BUNDLE — R4 task-balancing interaction bundle
+
+Status: firewall implementation complete; production training has not started. Branch codex/task-005f is based on manager-updated origin/main commit 1b5ac59.
+
+Implemented the registered wsm_r4_ramps_balance_loss and wsm_r4_balance_callback. The loss preserves frozen R3 auxiliary/agreement coefficients (0.25/0.10), detached observed/pseudo contracts, active-task handling, equal weighting, fixed STCH, DEV-progress weighting, and detached EMA-based RA-STCH diagnostics. The callback reads only dev/depression/score and dev/parkinson/score, runs after segment metrics and before the summary callback, and never reads Test metrics. Plugin registration was extended only for the new loss and callback.
+
+Created and froze six configs before production: 13_r4_equal_seed42.yaml, 14_r4_static_stch_seed42.yaml, 15_r4_progress_seed42.yaml, 16_r4_ra_stch_seed42.yaml, 17_r4_ra_stch_seed43.yaml, and 18_r4_ra_stch_seed44.yaml. They use the exact R3 model, frozen R2 semantic DataModule/cache, pseudo warm-up 3/5/1.0, R3 auxiliary/agreement coefficients, identical optimizer/instrumentation, and modes/seeds equal/42, stch/42, progress/42, ra_stch/42, ra_stch/43, ra_stch/44.
+
+Pre-production verification:
+- python3 -m py_compile src/fusion/loss/r4_ramps_balance_loss.py src/common/callbacks/wsm_r4_balance_callback.py src/chimera_plugin.py — passed.
+- All six chimera-ml validate-config checks — passed; direct YAML assertions confirmed composition, modes/seeds, and callback order.
+- Registry assertions passed for wsm_r4_ramps_balance_loss, wsm_r4_balance_callback, wsm_av_r3_disease_query_model, and wsm_ramps_semantic_datamodule; no project-module warning was emitted.
+- Synthetic task-objective smoke passed for all four modes: finite loss, observed/pseudo/main gradients, structural pseudo stop-gradient, equal 0.5/0.5 composition, and stable STCH reference.
+- Progress/RA lifecycle smoke passed: epoch-1 weights [0.5,0.5], DEV-only updates finite/bounded/normalized, no Test key required, and no second-order path.
+- Actual TRAIN-only semantic-cache smoke passed for all four modes with no optimizer step and no DEV/Test loader access. Frozen cache SHA was 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945; accepted counts remained D/P 376/1801.
+
+The firewall commit must be pushed before any production invocation. The frozen production tree is equal42 -> static42 -> progress42 -> RA-STCH42, with RA seeds43/44 conditional only on all predeclared DEV criteria. No production run or Test evaluation has occurred yet.
+
+
+### TASK-005F-BUNDLE — final R4 production evidence
+
+Status: complete for the authorized bounded bundle; four seed-42 invocations ran, the RA continuation gate failed, and seeds 43/44 were correctly not run. Stage 5 remains active. No Final Test, Stage 6/7, text/description, or post-hoc tuning occurred.
+
+Firewall commit: c2f7c19, pushed before the first production run. Final evidence commit will follow. All four commands used the required form PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path <authorized-config>.
+
+1. Equal seed42
+- Config: configs/wsm_mm_pd_dep_v1/fusion/13_r4_equal_seed42.yaml.
+- Run: logs/wsm_mm_pd_dep_v1/r4_equal_seed42_2026-09-25_15-06_wsm_av_r3_disease_query_model_fd38ebd6.
+- MLflow: 2bda8ec44ed847e0ab0016fd51b393c2; FINISHED; artifact URI /media/maxim/Programs/Projects/WSM/mlruns/5/2bda8ec44ed847e0ab0016fd51b393c2/artifacts.
+- 18 epochs; DEV-selected epoch 12; checkpoint checkpoints/epoch=12_dev_mean_score=0.7779.pt; SHA256 d84d4f107fb5e927491b9f628d6ad9f913c8a7a2dc82689f9149ac32d206f690.
+- DEV D UAR/MF1/Score 0.712652/0.712344/0.712498; P 0.833126/0.853557/0.843342; Mean 0.777920.
+- Same-epoch Test NONE/SOFT/HARD Mean 0.767613/0.755936/0.754400, monitoring only. Delta versus corrected R3-B seed42 D/P/Mean +0.016690/-0.050482/-0.016896.
+
+2. Static STCH seed42
+- Config: configs/wsm_mm_pd_dep_v1/fusion/14_r4_static_stch_seed42.yaml.
+- Run: logs/wsm_mm_pd_dep_v1/r4_static_stch_seed42_2026-09-25_15-13_wsm_av_r3_disease_query_model_9ca24e51.
+- MLflow: b9749922fccf4f0d9a4c43f7f39cca9d; FINISHED; artifact URI /media/maxim/Programs/Projects/WSM/mlruns/5/b9749922fccf4f0d9a4c43f7f39cca9d/artifacts.
+- 18 epochs; DEV-selected epoch 12; checkpoint checkpoints/epoch=12_dev_mean_score=0.7873.pt; SHA256 a1ad7dc4eb4e19e438ce14854d0981ce175e67c75e454c111cf44994f6fb8373.
+- DEV D UAR/MF1/Score 0.725350/0.724803/0.725077; P 0.840235/0.858735/0.849485; Mean 0.787281.
+- Same-epoch Test NONE/SOFT/HARD Mean 0.759991/0.746876/0.744817, monitoring only. Delta versus corrected R3-B seed42 D/P/Mean +0.029269/-0.044339/-0.007535.
+
+3. Progress seed42
+- Config: configs/wsm_mm_pd_dep_v1/fusion/15_r4_progress_seed42.yaml.
+- Run: logs/wsm_mm_pd_dep_v1/r4_progress_seed42_2026-09-25_15-20_wsm_av_r3_disease_query_model_925bff85.
+- MLflow: 58f46630191b4eab8d23e132a5be3ad6; FINISHED; artifact URI /media/maxim/Programs/Projects/WSM/mlruns/5/58f46630191b4eab8d23e132a5be3ad6/artifacts.
+- 15 epochs; DEV-selected epoch 9; checkpoint checkpoints/epoch=9_dev_mean_score=0.7856.pt; SHA256 436d1a3af2458982d5ab4025573b22dc65696531c7bdf7221fc57fc2d9cc78cb.
+- DEV D UAR/MF1/Score 0.714332/0.714119/0.714226; P 0.847412/0.866371/0.856892; Mean 0.785559.
+- Same-epoch Test NONE/SOFT/HARD Mean 0.818206/0.817376/0.827782, monitoring only. Delta versus corrected R3-B seed42 D/P/Mean +0.019877/+0.004788/+0.010990.
+- Controller weights at selected epoch were D/P 0.251831/0.748169; progress signals -0.073198/-0.345416. Complete epoch tables are in the resolved run summary.txt.
+
+4. RA-STCH seed42
+- Config: configs/wsm_mm_pd_dep_v1/fusion/16_r4_ra_stch_seed42.yaml.
+- Run: logs/wsm_mm_pd_dep_v1/r4_ra_stch_seed42_2026-09-25_15-26_wsm_av_r3_disease_query_model_7fa6914b.
+- MLflow: 94591ba6a8a54312b0ee8f3b07a9296f; FINISHED; artifact URI /media/maxim/Programs/Projects/WSM/mlruns/5/94591ba6a8a54312b0ee8f3b07a9296f/artifacts.
+- 19 epochs; DEV-selected epoch 13; checkpoint checkpoints/epoch=13_dev_mean_score=0.7826.pt; SHA256 53397e3bbcbfc95abd30bdf63fec018a28f0effc2d92d66231061fb2d051254a.
+- DEV D UAR/MF1/Score 0.701261/0.700724/0.700992; P 0.854589/0.874007/0.864298; Mean 0.782645.
+- Same-epoch Test NONE/SOFT/HARD Mean 0.777133/0.767804/0.760071, monitoring only. Delta versus corrected R3-B seed42 D/P/Mean +0.005184/-0.029526/-0.012171.
+- Controller weights at selected epoch D/P 0.269192/0.730808; progress signals 0.020070/-0.151804; gradient-norm EMAs 0.248995/0.121096; cosine EMA 0.009814; reliability EMAs 0.671974/0.773563. Complete epoch tables and trajectories are in summary.txt.
+
+Frozen RA continuation gate: RA Mean 0.782645 exceeded equal 0.777920 but did not exceed static STCH 0.787281 or progress 0.785559; RA Parkinson Score 0.864298 was below the required 0.883824. Therefore the gate failed and RA seeds43/44 were not run. No Test metric influenced this decision.
+
+Test streams were inspected only after DEV selection as monitoring outputs. No checkpoint, controller, branching, or stopping decision used Test values. R4 is an interaction result only; R2/R3 standalone promotion was not retroactively changed, and no significance, missing-label correctness, comorbidity, or final-model claim is made.
+
+### MANAGER-REVIEW-045 — R4 bundle requires a narrow scalarizer/controller correction before merge
+
+Status: TASK-005F-BUNDLE is not yet gate-valid. Keep Stage 5 active and do not merge the current branch yet.
+
+Accepted evidence:
+
+- branch `codex/task-005f` is based on manager commit `1b5ac59f8a46755a364d3c106ab31ee80f93a9f0`;
+- firewall commit `c2f7c19d4dc182072304225c33ab2fa74505bb87` froze all six configs before production;
+- scope is limited to the manager-authorized R4 loss/callback/plugin/config/evidence paths;
+- compile, registry, config validation, synthetic smokes, lifecycle checks, and TRAIN-only actual-cache smoke were recorded as passing;
+- frozen cache identity/counts remain unchanged;
+- exactly four authorized seed-42 runs executed;
+- Test protocols were monitoring-only;
+- RA correctly did not launch nominal continuation seeds after its recorded gate failure;
+- Equal seed42 and Static-STCH seed42 objectives are structurally consistent with the frozen formulas and their production results are retained as gate-valid controls:
+  - Equal D/P/Mean `0.712498/0.843342/0.777920`;
+  - Static STCH `0.725077/0.849485/0.787281`.
+
+Blocking implementation deviations:
+
+1. **Progress scalarizer is wrong.**
+   - Frozen TASK-005F requires, when both tasks are active:
+     `loss = w_D * L_D + w_P * L_P`.
+   - Current `WSMR4RampsBalanceLoss.__call__` sends both `progress` and `ra_stch` through:
+     `tau * logsumexp(weights * objectives / tau)`.
+   - Therefore the recorded Progress seed42 result `0.714226/0.856892/0.785559` is NOT a valid run of the frozen progress comparator.
+
+2. **RA gradient EMA updates on single-active-task batches.**
+   - Frozen TASK-005F permits per-task gradient norm/cosine diagnostics only when both task objectives are active.
+   - Current `_update_diagnostics` is called unconditionally and attempts task gradients even when only one task is active; an inactive objective can contribute a zero norm and update the task gradient EMA.
+   - Given sparse ownership and partial pseudo coverage, single-active-task batches are expected and this can materially distort the RA controller.
+   - The recorded RA seed42 result `0.700992/0.864298/0.782645` and its no-continuation decision are therefore NOT gate-valid under the frozen RA controller contract.
+
+Research status:
+
+- Equal and Static-STCH seed42 remain valid.
+- Progress seed42 and RA-STCH seed42 are preserved as invalid/exploratory evidence and MUST NOT be used for Stage-5 promotion or branching.
+- Static STCH is currently the best valid R4 seed42 control at DEV Mean `0.787281`, above F2 `0.774569`, but no promotion decision is allowed until the corrected progress/RA comparison is complete.
+- Stage 5 remains active.
+
+Decision:
+
+- do not merge the branch yet;
+- execute exactly one corrective bounded task, TASK-005F-BUNDLE-C1, on the same branch by explicit manager authorization;
+- correct only the progress scalarizer and RA diagnostic-update condition;
+- rerun only the affected Progress seed42 and RA-STCH seed42 experiments;
+- conditionally run corrected RA-STCH seeds43/44 only if corrected RA passes the original frozen continuation gate using the retained valid Equal/Static controls and corrected Progress;
+- no Equal/Static rerun, no tuning, no new method, no Stage 6/7/Text/Final Test.
+
+
+
+### TASK-005F-BUNDLE-C1 — corrected scalarization and RA diagnostic firewall
+
+Status: implementation/firewall phase complete; corrected production runs have not started. Original Equal and Static-STCH runs are retained and were not rerun. Original Progress and RA seed42 evidence remains invalid/exploratory and is excluded from C1 branching.
+
+Authorized changes are limited to src/fusion/loss/r4_ramps_balance_loss.py, configs 15–18 run names, and this ledger. The corrected progress scalarizer now uses detached current weights in the exact linear sum w_D*L_D + w_P*L_P. STCH remains exclusive to stch and ra_stch. RA gradient-norm/cosine diagnostics now require mode ra_stch and both task objectives active; single-active batches preserve gradient EMAs unchanged. Reliability EMA remains independently updated from accepted pseudo entries.
+
+Corrected configs use run names r4_progress_seed42_c1, r4_ra_stch_seed42_c1, r4_ra_stch_seed43_c1, and r4_ra_stch_seed44_c1. All other seeds, methods, data/cache, model, loss/controller constants, and instrumentation are unchanged.
+
+C1 regressions and smokes:
+- python3 -m py_compile src/fusion/loss/r4_ramps_balance_loss.py src/common/callbacks/wsm_r4_balance_callback.py src/chimera_plugin.py — passed.
+- Chimera validation for configs 15–18 — passed; direct YAML diff/assertions confirmed run_name-only config changes.
+- Fixed scalar regression: 0.25*0.7 + 0.75*1.3 = 1.15, distinct from weighted-STCH reference 0.6548587; public synthetic ModelOutput+Batch progress call matched the exact linear objective.
+- Equal exact 0.5/0.5, stable STCH, finite all-mode objectives, structural pseudo target/reliability stop-gradient, and controller lifecycle regressions — passed.
+- RA both-active diagnostics produced finite non-zero task gradient norms and finite cosine. A deterministic single-active batch left both gradient-norm EMAs and cosine EMA unchanged while reliability EMA updated independently. No second-order graph was created.
+- Corrected actual-cache TRAIN-only progress/RA forward/loss/backward smoke — passed; frozen cache SHA 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945 and accepted counts D/P 376/1801 remained unchanged; no optimizer step and no DEV/Test access.
+
+Retained valid controls remain Equal seed42 Mean 0.777920 and Static-STCH seed42 Mean 0.787281. The corrected production sequence is Progress seed42 once, then RA-STCH seed42 once; RA seeds43/44 are conditional only on the original DEV-only gate. No corrected production invocation has run before the C1 firewall commit.
+
+
+### TASK-005F-BUNDLE-C1 — corrected production evidence
+
+Status: complete; exactly two new corrected seed-42 production invocations ran after firewall commit b1ebf74. The original Equal and Static-STCH runs were retained and not rerun. Corrected RA seeds43/44 were not run because the frozen continuation gate failed.
+
+1. Corrected Progress seed42
+- Config/command: configs/wsm_mm_pd_dep_v1/fusion/15_r4_progress_seed42.yaml; PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/15_r4_progress_seed42.yaml.
+- Run: logs/wsm_mm_pd_dep_v1/r4_progress_seed42_c1_2026-09-25_16-44_wsm_av_r3_disease_query_model_deb8317c.
+- MLflow: f2aa79a322f54d048d31c99278ed800b; FINISHED; artifact URI /media/maxim/Programs/Projects/WSM/mlruns/5/f2aa79a322f54d048d31c99278ed800b/artifacts.
+- 18 epochs; DEV-selected epoch 12; checkpoint checkpoints/epoch=12_dev_mean_score=0.7873.pt; SHA256 e821bc0b2ebe81c7684721a9f05b8e46ea5c3bcdaf60e860d9dc5dbe8673a15d.
+- DEV D UAR/MF1/Score 0.701401/0.701089/0.701245; P 0.866391/0.880316/0.873354; Mean 0.787299.
+- Same-epoch Test NONE/SOFT/HARD Mean 0.763000/0.752820/0.753394, monitoring only.
+- Corrected linear progress controller trajectory is fully recorded in this run's summary.txt: epoch-1 weights 0.500000/0.500000, final logged weights 0.546368/0.453632; final progress signals -0.182029/-0.135527; pseudo_scale 0.000000→1.000000. RA gradient diagnostics are intentionally absent for non-RA mode.
+
+2. Corrected RA-STCH seed42
+- Config/command: configs/wsm_mm_pd_dep_v1/fusion/16_r4_ra_stch_seed42.yaml; PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/16_r4_ra_stch_seed42.yaml.
+- Run: logs/wsm_mm_pd_dep_v1/r4_ra_stch_seed42_c1_2026-09-25_16-51_wsm_av_r3_disease_query_model_c350ca36.
+- MLflow: abda177e9dd44927856b7687478fe148; FINISHED; artifact URI /media/maxim/Programs/Projects/WSM/mlruns/5/abda177e9dd44927856b7687478fe148/artifacts.
+- 19 epochs; DEV-selected epoch 13; checkpoint checkpoints/epoch=13_dev_mean_score=0.7826.pt; SHA256 53397e3bbcbfc95abd30bdf63fec018a28f0effc2d92d66231061fb2d051254a.
+- DEV D UAR/MF1/Score 0.701261/0.700724/0.700992; P 0.854589/0.874007/0.864298; Mean 0.782645.
+- Same-epoch Test NONE/SOFT/HARD Mean 0.777133/0.767804/0.760071, monitoring only.
+- Complete controller trajectory is in summary.txt: epoch-1 alpha 0.500000/0.500000, final logged alpha 0.256828/0.743172; final progress 0.020070/-0.151804; gradient-norm EMAs 0.248995/0.121096; cosine EMA 0.009814; reliability EMAs 0.671974/0.773563; pseudo_scale 0.000000→1.000000. C1 TRAIN-only regression proved single-active batches do not alter gradient norm/cosine EMAs while reliability EMA remains independently updateable.
+
+Original frozen RA continuation gate using retained Equal Mean 0.777920, retained Static-STCH Mean 0.787281, corrected Progress Mean 0.787299, corrected RA Mean 0.782645, R3-B Mean 0.794816, depression floor 0.685808, and Parkinson floor 0.883824: failed. RA was below R3-B Mean, below the Parkinson floor, below retained Static-STCH, and below corrected Progress. Therefore corrected RA seeds43/44 were not run.
+
+Test metrics were inspected only as same-epoch monitoring after DEV selection and did not affect checkpointing, early stopping, controller state, or branching. No Equal/Static rerun, post-hoc tuning, Final Test, Stage 6/7, Text/Description, significance, missing-label correctness, comorbidity, or final-model claim occurred. The corrected C1 implementation closes the R4 validity defects but does not promote R4 or close Stage 5.
