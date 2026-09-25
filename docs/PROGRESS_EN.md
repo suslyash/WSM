@@ -3594,3 +3594,29 @@ Decision:
 - C2 must hash the existing selected corrected checkpoints, verify pairwise distinction, verify their resolved configs/seeds, and append the promotion-rule conclusion above;
 - after C2 passes, manager may accept/merge the complete R3 bundle as an ablation result and then separately decide the R4 task required by Stage 5.
 
+
+
+### TASK-005E-BUNDLE-C2 — corrected R3 checkpoint identity audit and promotion freeze
+
+Status: complete; evidence-only C2 passed. No training, optimizer step, new run, Test-driven decision, source/config change, or R4 work occurred.
+
+Exact read-only audit command used: PYTHONDONTWRITEBYTECODE=1 ./.venv/bin/python - <<'PY' ... torch.load(..., map_location='cpu', weights_only=False), SHA256, sorted model_state_dict tensor digest, YAML assertions ... PY.
+
+Selected corrected R3-B checkpoints:
+
+- Seed 42, epoch 11: /media/maxim/Programs/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed42_c1_2026-09-25_14-04_wsm_av_r3_disease_query_model_77cbf674/checkpoints/epoch=11_dev_mean_score=0.7948.pt; 4,903,109 bytes; full-file SHA256 49778f0b8fe90b1f591e2c218770e36735335d8fd74e777b27426c9d58d4dfee; payload keys epoch, global_step, model_state_dict, optimizer_state_dict; stored epoch 11; 51 model-state keys; tensor-content digest 44189bc032f0647cc1209dd0a47b219c172ff94a1fa37853c81288f8904405a9.
+- Seed 43, epoch 5: /media/maxim/Programs/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed43_c1_2026-09-25_14-11_wsm_av_r3_disease_query_model_e5de54dc/checkpoints/epoch=5_dev_mean_score=0.7678.pt; 4,902,899 bytes; full-file SHA256 be76dfcce0079ece125b75ac71991b2c5ad122675bdc97cba2f4fbef6aa924dc; payload keys epoch, global_step, model_state_dict, optimizer_state_dict; stored epoch 5; 51 model-state keys; tensor-content digest 21a385ea0ed612e706df122d8e6c80197951d44fec31a6223e18f98d66ba2540.
+- Seed 44, epoch 13: /media/maxim/Programs/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed44_c1_2026-09-25_14-16_wsm_av_r3_disease_query_model_842defc9/checkpoints/epoch=13_dev_mean_score=0.7687.pt; 4,903,109 bytes; full-file SHA256 d056ece0a78bc1e8fe05709738e0f198064dec3e015c1b1d260a40deca980744; payload keys epoch, global_step, model_state_dict, optimizer_state_dict; stored epoch 13; 51 model-state keys; tensor-content digest 134f26f9230c76680ed85a346298d3c31d7c5bd6e955ce6b1d0825fa9b4764ce.
+
+All three full-file SHA256 values and all three deterministic model-state tensor digests are pairwise distinct.
+
+Resolved config audit passed for:
+- /media/maxim/Programs/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed42_c1_2026-09-25_14-04_wsm_av_r3_disease_query_model_77cbf674/08_r3_b_agreement_seed42.yaml: seed 42.
+- /media/maxim/Projects/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed43_c1_2026-09-25_14-11_wsm_av_r3_disease_query_model_e5de54dc/11_r3_b_agreement_seed43.yaml: seed 43.
+- /media/maxim/Programs/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed44_c1_2026-09-25_14-16_wsm_av_r3_disease_query_model_842defc9/12_r3_b_agreement_seed44.yaml: seed 44.
+
+Each resolved config uses model wsm_av_r3_disease_query_model, dimensions 768/512/192/192, dropout 0.2, two tasks, loss wsm_r3_aux_agreement_loss, aux_weight=0.25, agreement_weight=0.10, and checkpoint/early-stopping monitor dev/mean_score with mode max. No pseudo cache/loss/warm-up settings are present.
+
+Frozen promotion conclusion: R3-B is a valid three-seed ablation result but is NOT promoted as an R-full component because PLAN Section 7 requires the DEV effect to repeat across at least three seeds and only seed42 improves over F2. Seed43/44 are below the predeclared Parkinson floor 0.842104. The positive three-seed average is retained descriptively, not as proof of a stable gain; no significance, final-model, missing-label correctness, or comorbidity claim is made. Stage 5 remains active because R4 has not been evaluated; R4 was not started in C2.
+
+C2 changed only this progress ledger after the manager assignment. src/audio, src/video, src/fusion, src/common, and src/chimera_plugin.py were unchanged.
