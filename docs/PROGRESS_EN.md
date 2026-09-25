@@ -18,7 +18,7 @@ Final Test authorized: **no**.
 | 2. Video | complete | Deterministic V1/V2 video families compared; V2 leads by DEV/Mean_Score under the fixed seed-42 comparison | TASK-002A through TASK-002O |
 | 3. Text/description | not started | At most two families; prompt audit | None |
 | 4. Fusion baselines | complete | Bounded strong-temporal-audio search complete; no safe A+V winner under the predeclared task-balance gate | TASK-004A through TASK-004K |
-| 5. RAMPS | active | Fixed CLIP semantic bridge passed and published the audited two-head cache; further RAMPS work remains manager-gated | TASK-005A2/TASK-005A4-C2 |
+| 5. RAMPS | active | Fixed semantic cache, direct-gradient contract, and frozen pseudo-scale warm-up contract passed; student training remains manager-gated | TASK-005A2/TASK-005C |
 | 6. Ablations | not started | Claims backed by multi-seed evidence | None |
 | 7. Final evaluation | locked | Config freeze and manager authorization | None |
 
@@ -3159,3 +3159,44 @@ The PLAN requires `mu(e)` warm-up but does not numerically specify it. To avoid 
 
 Recommended next atomic task: TASK-005C — implement a registered pseudo-scale warm-up callback plus a config-selectable warm-up contract and verify exact epoch-to-scale behavior without optimizer steps or training.
 
+
+
+### TASK-005C — Implement the frozen pseudo-supervision warm-up contract
+
+Outcome: complete. Added the registered, modality-independent pseudo-scale warm-up callback and frozen warm-up contract configuration. No student training, optimizer step, epoch loop, DEV/Test metrics, or Test-row iteration was run.
+
+Changed files:
+
+- `src/common/callbacks/wsm_pseudo_scale_warmup_callback.py`;
+- `src/chimera_plugin.py`;
+- `configs/wsm_mm_pd_dep_v1/fusion/04_ramps_r2_warmup_contract.yaml`;
+- `docs/PROGRESS_EN.md`.
+
+Branch/history:
+
+- Required branch: `codex/task-005c`, created from manager-updated `origin/main` at `3cd2033`;
+- manager commits were preserved;
+- implementation commit and push result are recorded in the final handoff;
+- `main`/`master` was untouched by Codex.
+
+Implementation contract:
+
+- Registry key: `wsm_pseudo_scale_warmup_callback`.
+- One-based schedule: `mu(e)=0` for epochs 1–3, then `0.2/0.4/0.6/0.8/1.0` at epochs 4–8, capped at `1.0` thereafter.
+- Constructor validation rejects invalid epoch/ramp/final-scale values. `on_fit_start` requires a writable finite `[0,1]` `trainer.loss_fn.pseudo_scale` and initializes epoch 1 to `0.0`. `on_epoch_start` updates only the loss scale. `on_epoch_end` records/logs exactly `train/pseudo_scale`.
+- The new YAML preserves the accepted DataModule, F2 dimensions, loss, cache path, optimizer, seed 42, 30-epoch ceiling, required instrumentation, and DEV/Mean_Score max-only checkpoint/early stopping. It uses exactly `observed_only_epochs=3`, `ramp_epochs=5`, `final_scale=1.0`, and loss `pseudo_scale: 0.0`; the warm-up callback precedes `wsm_summary_callback`.
+- The callback imports only Chimera/base Python modules and no modality package.
+
+Exact verification commands/results:
+
+- `python3 -m py_compile src/common/callbacks/wsm_pseudo_scale_warmup_callback.py src/chimera_plugin.py src/fusion/loss/ramps_observed_pseudo_loss.py src/fusion/data/wsm_ramps_semantic_datamodule.py` — passed.
+- `.venv/bin/chimera-ml validate-config -c configs/wsm_mm_pd_dep_v1/fusion/04_ramps_r2_warmup_contract.yaml` — valid.
+- Registered schedule regression command using `CALLBACKS.create("wsm_pseudo_scale_warmup_callback", observed_only_epochs=3, ramp_epochs=5, final_scale=1.0)` produced `[0.0, 0.0, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.0, 1.0]`; epoch 0, `ramp_epochs=0`, and `final_scale=1.1` were rejected.
+- Lifecycle/synthetic direct-gradient command used registered loss/callback, a minimal trainer stub, manually invoked epochs `1,4,8,30`, and identical synthetic tensors. It passed: scales/logs `0.0/0.2/1.0/1.0`; observed gradients non-zero; missing gradients zero at epoch 1; accepted missing gradients non-zero and rejected missing gradients zero at epochs 4/8; epoch-4 accepted gradient `-0.07488850229249605` equaled `0.2 *` epoch-8 gradient `-0.3744425114624803`; teacher tensors received no gradients.
+- Actual-cache compatibility command instantiated the registered DataModule and F2 model using TRAIN indices `[3678, 1, 3660, 0]`, manually applied callback epochs 1 and 8, and ran one epoch-8 forward/loss/backward. It passed with cache SHA256 `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`, accepted depression/Parkinson counts `376/1801`, epoch scales `0.0/1.0`, finite loss/gradients, non-zero accepted missing gradients, and zero rejected missing gradients.
+- No optimizer step, training loop, DEV/Test metric calculation, Test-row iteration, pseudo regeneration/reselection, or cache mutation occurred. No missing-label correctness or comorbidity claim is made.
+- `git diff --check` passed; `src/audio`, `src/video`, fusion model/data/loss files, and the existing pseudo contract remained unchanged by TASK-005C.
+
+Plan status: Stage 5 remains active. TASK-005C only establishes the frozen warm-up contract; it does not authorize student training. TASK-005C/R3/R4, Stage 6/7, and general Text/Description work were not started. General Text/Description remains deferred.
+
+Recommended next atomic step: manager review of the warm-up contract, followed by a separately authorized bounded student experiment.
