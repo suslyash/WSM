@@ -3804,3 +3804,53 @@ Firewall commit: c2f7c19, pushed before the first production run. Final evidence
 Frozen RA continuation gate: RA Mean 0.782645 exceeded equal 0.777920 but did not exceed static STCH 0.787281 or progress 0.785559; RA Parkinson Score 0.864298 was below the required 0.883824. Therefore the gate failed and RA seeds43/44 were not run. No Test metric influenced this decision.
 
 Test streams were inspected only after DEV selection as monitoring outputs. No checkpoint, controller, branching, or stopping decision used Test values. R4 is an interaction result only; R2/R3 standalone promotion was not retroactively changed, and no significance, missing-label correctness, comorbidity, or final-model claim is made.
+
+### MANAGER-REVIEW-045 — R4 bundle requires a narrow scalarizer/controller correction before merge
+
+Status: TASK-005F-BUNDLE is not yet gate-valid. Keep Stage 5 active and do not merge the current branch yet.
+
+Accepted evidence:
+
+- branch `codex/task-005f` is based on manager commit `1b5ac59f8a46755a364d3c106ab31ee80f93a9f0`;
+- firewall commit `c2f7c19d4dc182072304225c33ab2fa74505bb87` froze all six configs before production;
+- scope is limited to the manager-authorized R4 loss/callback/plugin/config/evidence paths;
+- compile, registry, config validation, synthetic smokes, lifecycle checks, and TRAIN-only actual-cache smoke were recorded as passing;
+- frozen cache identity/counts remain unchanged;
+- exactly four authorized seed-42 runs executed;
+- Test protocols were monitoring-only;
+- RA correctly did not launch nominal continuation seeds after its recorded gate failure;
+- Equal seed42 and Static-STCH seed42 objectives are structurally consistent with the frozen formulas and their production results are retained as gate-valid controls:
+  - Equal D/P/Mean `0.712498/0.843342/0.777920`;
+  - Static STCH `0.725077/0.849485/0.787281`.
+
+Blocking implementation deviations:
+
+1. **Progress scalarizer is wrong.**
+   - Frozen TASK-005F requires, when both tasks are active:
+     `loss = w_D * L_D + w_P * L_P`.
+   - Current `WSMR4RampsBalanceLoss.__call__` sends both `progress` and `ra_stch` through:
+     `tau * logsumexp(weights * objectives / tau)`.
+   - Therefore the recorded Progress seed42 result `0.714226/0.856892/0.785559` is NOT a valid run of the frozen progress comparator.
+
+2. **RA gradient EMA updates on single-active-task batches.**
+   - Frozen TASK-005F permits per-task gradient norm/cosine diagnostics only when both task objectives are active.
+   - Current `_update_diagnostics` is called unconditionally and attempts task gradients even when only one task is active; an inactive objective can contribute a zero norm and update the task gradient EMA.
+   - Given sparse ownership and partial pseudo coverage, single-active-task batches are expected and this can materially distort the RA controller.
+   - The recorded RA seed42 result `0.700992/0.864298/0.782645` and its no-continuation decision are therefore NOT gate-valid under the frozen RA controller contract.
+
+Research status:
+
+- Equal and Static-STCH seed42 remain valid.
+- Progress seed42 and RA-STCH seed42 are preserved as invalid/exploratory evidence and MUST NOT be used for Stage-5 promotion or branching.
+- Static STCH is currently the best valid R4 seed42 control at DEV Mean `0.787281`, above F2 `0.774569`, but no promotion decision is allowed until the corrected progress/RA comparison is complete.
+- Stage 5 remains active.
+
+Decision:
+
+- do not merge the branch yet;
+- execute exactly one corrective bounded task, TASK-005F-BUNDLE-C1, on the same branch by explicit manager authorization;
+- correct only the progress scalarizer and RA diagnostic-update condition;
+- rerun only the affected Progress seed42 and RA-STCH seed42 experiments;
+- conditionally run corrected RA-STCH seeds43/44 only if corrected RA passes the original frozen continuation gate using the retained valid Equal/Static controls and corrected Progress;
+- no Equal/Static rerun, no tuning, no new method, no Stage 6/7/Text/Final Test.
+
