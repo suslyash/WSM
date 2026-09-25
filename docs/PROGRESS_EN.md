@@ -3873,3 +3873,30 @@ C1 regressions and smokes:
 - Corrected actual-cache TRAIN-only progress/RA forward/loss/backward smoke — passed; frozen cache SHA 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945 and accepted counts D/P 376/1801 remained unchanged; no optimizer step and no DEV/Test access.
 
 Retained valid controls remain Equal seed42 Mean 0.777920 and Static-STCH seed42 Mean 0.787281. The corrected production sequence is Progress seed42 once, then RA-STCH seed42 once; RA seeds43/44 are conditional only on the original DEV-only gate. No corrected production invocation has run before the C1 firewall commit.
+
+
+### TASK-005F-BUNDLE-C1 — corrected production evidence
+
+Status: complete; exactly two new corrected seed-42 production invocations ran after firewall commit b1ebf74. The original Equal and Static-STCH runs were retained and not rerun. Corrected RA seeds43/44 were not run because the frozen continuation gate failed.
+
+1. Corrected Progress seed42
+- Config/command: configs/wsm_mm_pd_dep_v1/fusion/15_r4_progress_seed42.yaml; PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/15_r4_progress_seed42.yaml.
+- Run: logs/wsm_mm_pd_dep_v1/r4_progress_seed42_c1_2026-09-25_16-44_wsm_av_r3_disease_query_model_deb8317c.
+- MLflow: f2aa79a322f54d048d31c99278ed800b; FINISHED; artifact URI /media/maxim/Programs/Projects/WSM/mlruns/5/f2aa79a322f54d048d31c99278ed800b/artifacts.
+- 18 epochs; DEV-selected epoch 12; checkpoint checkpoints/epoch=12_dev_mean_score=0.7873.pt; SHA256 e821bc0b2ebe81c7684721a9f05b8e46ea5c3bcdaf60e860d9dc5dbe8673a15d.
+- DEV D UAR/MF1/Score 0.701401/0.701089/0.701245; P 0.866391/0.880316/0.873354; Mean 0.787299.
+- Same-epoch Test NONE/SOFT/HARD Mean 0.763000/0.752820/0.753394, monitoring only.
+- Corrected linear progress controller trajectory is fully recorded in this run's summary.txt: epoch-1 weights 0.500000/0.500000, final logged weights 0.546368/0.453632; final progress signals -0.182029/-0.135527; pseudo_scale 0.000000→1.000000. RA gradient diagnostics are intentionally absent for non-RA mode.
+
+2. Corrected RA-STCH seed42
+- Config/command: configs/wsm_mm_pd_dep_v1/fusion/16_r4_ra_stch_seed42.yaml; PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/16_r4_ra_stch_seed42.yaml.
+- Run: logs/wsm_mm_pd_dep_v1/r4_ra_stch_seed42_c1_2026-09-25_16-51_wsm_av_r3_disease_query_model_c350ca36.
+- MLflow: abda177e9dd44927856b7687478fe148; FINISHED; artifact URI /media/maxim/Programs/Projects/WSM/mlruns/5/abda177e9dd44927856b7687478fe148/artifacts.
+- 19 epochs; DEV-selected epoch 13; checkpoint checkpoints/epoch=13_dev_mean_score=0.7826.pt; SHA256 53397e3bbcbfc95abd30bdf63fec018a28f0effc2d92d66231061fb2d051254a.
+- DEV D UAR/MF1/Score 0.701261/0.700724/0.700992; P 0.854589/0.874007/0.864298; Mean 0.782645.
+- Same-epoch Test NONE/SOFT/HARD Mean 0.777133/0.767804/0.760071, monitoring only.
+- Complete controller trajectory is in summary.txt: epoch-1 alpha 0.500000/0.500000, final logged alpha 0.256828/0.743172; final progress 0.020070/-0.151804; gradient-norm EMAs 0.248995/0.121096; cosine EMA 0.009814; reliability EMAs 0.671974/0.773563; pseudo_scale 0.000000→1.000000. C1 TRAIN-only regression proved single-active batches do not alter gradient norm/cosine EMAs while reliability EMA remains independently updateable.
+
+Original frozen RA continuation gate using retained Equal Mean 0.777920, retained Static-STCH Mean 0.787281, corrected Progress Mean 0.787299, corrected RA Mean 0.782645, R3-B Mean 0.794816, depression floor 0.685808, and Parkinson floor 0.883824: failed. RA was below R3-B Mean, below the Parkinson floor, below retained Static-STCH, and below corrected Progress. Therefore corrected RA seeds43/44 were not run.
+
+Test metrics were inspected only as same-epoch monitoring after DEV selection and did not affect checkpointing, early stopping, controller state, or branching. No Equal/Static rerun, post-hoc tuning, Final Test, Stage 6/7, Text/Description, significance, missing-label correctness, comorbidity, or final-model claim occurred. The corrected C1 implementation closes the R4 validity defects but does not promote R4 or close Stage 5.
