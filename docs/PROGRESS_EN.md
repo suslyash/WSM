@@ -3612,7 +3612,7 @@ All three full-file SHA256 values and all three deterministic model-state tensor
 
 Resolved config audit passed for:
 - /media/maxim/Programs/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed42_c1_2026-09-25_14-04_wsm_av_r3_disease_query_model_77cbf674/08_r3_b_agreement_seed42.yaml: seed 42.
-- /media/maxim/Projects/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed43_c1_2026-09-25_14-11_wsm_av_r3_disease_query_model_e5de54dc/11_r3_b_agreement_seed43.yaml: seed 43.
+- /media/maxim/Programs/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed43_c1_2026-09-25_14-11_wsm_av_r3_disease_query_model_e5de54dc/11_r3_b_agreement_seed43.yaml: seed 43.
 - /media/maxim/Programs/Projects/WSM/logs/wsm_mm_pd_dep_v1/r3_b_agreement_seed44_c1_2026-09-25_14-16_wsm_av_r3_disease_query_model_842defc9/12_r3_b_agreement_seed44.yaml: seed 44.
 
 Each resolved config uses model wsm_av_r3_disease_query_model, dimensions 768/512/192/192, dropout 0.2, two tasks, loss wsm_r3_aux_agreement_loss, aux_weight=0.25, agreement_weight=0.10, and checkpoint/early-stopping monitor dev/mean_score with mode max. No pseudo cache/loss/warm-up settings are present.
