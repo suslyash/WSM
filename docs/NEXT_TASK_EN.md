@@ -1,35 +1,35 @@
-# TASK-005B: Wire the Accepted Semantic R2 Cache into the Registered TRAIN Data/Loss Contract
+# TASK-005B-C1: Enforce Structural Stop-Gradient on Pseudo Targets and Reliability
 
 ## Task Identifier and Title
 
-TASK-005B — Wire the accepted `ramps-r2-semantic-v1` TRAIN cache into a registered A+V DataModule/loss contract and prove direct accepted-missing-head gradients without running training.
+TASK-005B-C1 — Enforce structural stop-gradient on pseudo targets/reliability and reproduce the accepted TASK-005B actual-cache direct-gradient smoke.
+
+This is one narrow corrective task only.
 
 Required branch:
 
     codex/task-005b
 
-Start from the current `origin/main`, which includes manager acceptance commit `bd6a09a729e2a7a7bd843b35474674b1e8c2af54` after PR #38 merge.
-
-Execute only this contract/smoke task, update `docs/PROGRESS_EN.md`, commit, push, and stop.
+The manager explicitly authorizes reuse of this existing branch for exactly one additional corrective implementation commit. Preserve all existing manager and Codex commits. Do not reset, rebase away, overwrite, or force-push branch history.
 
 ## Goal
 
-Use the frozen accepted artifact:
+Fix one remaining loss-contract defect in TASK-005B.
 
-    /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt
+The current implementation detaches the pseudo target inside the BCE call, but the pseudo reliability tensor is still used live in the pseudo-loss numerator:
 
-as the only pseudo-target source for TRAIN.
+    weighted = reliability[pseudo_mask] * BCE(...)
 
-Implement:
+The TASK-005B contract requires both teacher-side tensors to be stop-gradient:
 
-1. one registered A+V DataModule that overlays the frozen pseudo-target cache on canonical TRAIN rows while preserving the existing DEV/TEST datasets and observed labels;
-2. one registered observed+pseudo sparse loss with a detached reliability weight and an explicit external `pseudo_scale`;
-3. one config-selectable smoke contract using the existing F2 A+V model;
-4. a bounded actual-cache forward/loss/backward smoke proving that an accepted missing head gets a non-zero direct gradient, while an unaccepted missing head gets zero direct supervision and observed truth always wins.
+- pseudo targets detached;
+- pseudo reliability detached.
 
-This task does NOT train a student, choose a checkpoint, compare DEV scores, tune `pseudo_scale`, implement epoch warm-up scheduling, or start R3/R4.
+Make this structural, not accidental. The loss must remain safe even if a caller supplies pseudo targets/reliability with `requires_grad=True`.
 
-The purpose is to close the direct-gradient/data-loss portion of the Stage-5 gate before any training authorization.
+Then rerun the already accepted actual-cache TASK-005B smoke unchanged in semantics.
+
+Do not add warm-up scheduling and do not start training.
 
 ## Required Reading
 
@@ -37,527 +37,255 @@ Read in this order:
 
 1. AGENTS.md
 2. docs/README.md
-3. docs/PROJECT_REQUIREMENTS.md, especially Sections 2, 3, 5, 6, 8, 9, 10, 11, 12, 13, 14
-4. docs/PLAN.md, especially Stage 5 and the R1/R2 rows
-5. docs/PROGRESS_EN.md through MANAGER-DECISION-036
+3. docs/PROJECT_REQUIREMENTS.md, especially Sections 2, 11, 13
+4. docs/PLAN.md, especially Stage 5
+5. docs/PROGRESS_EN.md through MANAGER-REVIEW-037
 6. docs/NEXT_TASK_EN.md
-7. src/fusion/data/wsm_av_fusion_datamodule.py
-8. src/common/loss/wsm_masked_sparse_loss.py
-9. src/fusion/models/av_f2_task_aware_directed.py
-10. src/chimera_plugin.py
-11. configs/wsm_mm_pd_dep_v1/fusion/02_f2_task_aware_directed.yaml
+7. src/fusion/loss/ramps_observed_pseudo_loss.py
+8. src/fusion/data/wsm_ramps_semantic_datamodule.py
+9. configs/wsm_mm_pd_dep_v1/fusion/03_ramps_r2_pseudo_contract.yaml
 
-Use only active English documents listed in docs/README.md. Do not load archived Russian variants.
+Use only active English documentation listed in docs/README.md.
 
 ## Allowed Files
 
 Codex may modify only:
 
-- src/fusion/data/wsm_ramps_semantic_datamodule.py
 - src/fusion/loss/ramps_observed_pseudo_loss.py
-- src/chimera_plugin.py
-- configs/wsm_mm_pd_dep_v1/fusion/03_ramps_r2_pseudo_contract.yaml
 - docs/PROGRESS_EN.md
 
 No other tracked file may change.
 
+The manager has already modified docs/PROGRESS_EN.md and docs/NEXT_TASK_EN.md on this branch. Preserve those manager commits.
+
 ## Forbidden Actions
 
-- Do not modify any file under src/audio.
-- Do not modify any file under src/video.
-- Do not modify existing fusion model implementations.
-- Do not modify `src/fusion/data/wsm_av_fusion_datamodule.py`.
-- Do not modify the frozen pseudo-target artifact or any Stage-5 semantic audit artifact.
-- Do not regenerate or reselect pseudo-targets.
-- Do not change semantic prompts, rules, thresholds, calibrators, or acceptance.
-- Do not change the accepted depression/Parkinson pseudo counts.
-- Do not use Test metrics or Test rows for any selection.
-- Do not iterate TEST_NONE, TEST_SOFT, or TEST_HARD in this task.
-- Do not call `val_dataloader()`.
-- Do not run `chimera-ml train`.
-- Do not run any epoch loop or optimizer step.
-- Do not tune `pseudo_scale`.
-- Do not implement the final warm-up scheduler in this task.
-- Do not start TASK-005C, R3, R4, Stage 6, Stage 7, or general Text/Description Stage 3.
-- Do not claim missing-label correctness or comorbidity recovery.
-- Do not convert the task to three-class softmax.
-- Do not silently treat unknown labels as negatives.
+- Do not modify src/audio.
+- Do not modify src/video.
+- Do not modify src/fusion/models.
+- Do not modify src/fusion/data.
+- Do not modify src/chimera_plugin.py.
+- Do not modify the TASK-005B YAML.
+- Do not modify or regenerate the pseudo cache.
+- Do not change pseudo acceptance, thresholds, rules, calibrators, counts, or class balance.
+- Do not change the observed-loss formula.
+- Do not change the pseudo-loss formula except for explicit stop-gradient handling.
+- Do not change pseudo_scale behavior.
+- Do not add hidden epoch state or warm-up scheduling.
+- Do not run an optimizer step.
+- Do not run a training loop.
+- Do not use DEV/Test metrics.
+- Do not iterate Test rows.
+- Do not start TASK-005C, R3, R4, Stage 6, Stage 7, or general Text/Description work.
+- Do not make missing-label correctness or comorbidity claims.
 
-## Frozen Cache Contract
+## Implementation Requirements
 
-Required path:
+### 1. Explicit teacher-side detach
 
-    /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt
+Inside `WSMRampsObservedPseudoLoss.compute_components()`, make both teacher-side tensors explicitly detached before any validation or loss use that could participate in autograd.
 
-Required identity:
+Required semantics:
 
-    version = ramps-r2-semantic-v1
-    task_names = ["depression", "parkinson"]
-    rows = 6325
-    clip_model_name = openai/clip-vit-base-patch32
-    clip_model_revision = main
+    pseudo = pseudo_targets.to(device=device, dtype=dtype).detach()
+    reliability = pseudo_reliability.to(device=device, dtype=dtype).detach()
 
-Required teacher SHA256:
+Equivalent code is acceptable if it guarantees the same autograd contract.
 
-Audio:
+Do not rely on the frozen cache tensors having `requires_grad=False`.
 
-    0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2
+Do not detach model logits.
 
-Video:
+Do not detach observed targets/masks beyond ordinary device/dtype conversion.
 
-    3e39778126db401a2fe17bb472a172191616e8a7b5265e982233c53dcd4af2f6
+### 2. Preserve the exact loss
 
-Required prompt-bank canonical JSON SHA256:
+Keep:
 
-    19428db58f91f73ca26ce9c4354b5731431e14ec524fc1a47e7070e1b32f447e
+    L_obs =
+        sum(BCEWithLogits(logit, observed_target))
+        / (observed_count + eps)
 
-Required accepted TRAIN counts:
-
-Depression missing head:
-- missing = 2665
-- accepted = 376
-- accepted positive = 376
-- accepted negative = 0
-
-Parkinson missing head:
-- missing = 3660
-- accepted = 1801
-- accepted positive = 212
-- accepted negative = 1589
-
-Total accepted missing entries:
-
-    2177
-
-These values are frozen inputs to this task. Do not reselect them.
-
-## 1. Registered Pseudo-Aware DataModule
-
-Implement:
-
-    src/fusion/data/wsm_ramps_semantic_datamodule.py
-
-Registry key:
-
-    wsm_ramps_semantic_datamodule
-
-The implementation SHOULD reuse/subclass `WSMAVFusionDataModule`; do not duplicate the base A+V manifest/cache joining logic.
-
-Required init parameter:
-
-    pseudo_cache_path: str
-
-The DataModule must load the frozen `train_missing_targets.pt` on CPU and validate it before exposing a TRAIN loader.
-
-### Cache-to-canonical identity validation
-
-Require:
-
-- cache version and task_names match exactly;
-- cache has 6325 rows and unique segment IDs;
-- canonical TRAIN has 6325 rows;
-- cache segment IDs match canonical TRAIN segment IDs exactly in order;
-- cache `observed_mask` exactly matches canonical TRAIN observed masks;
-- cache `observed_targets` exactly matches canonical TRAIN targets, including identical NaN positions;
-- CLIP name/revision match the frozen identity;
-- audio/video checkpoint SHA fields match the frozen SHA values;
-- semantic prompt-bank SHA matches the frozen SHA;
-- all pseudo tensor shapes are [6325,2] where task-shaped;
-- accepted counts/class counts match the frozen counts above;
-- no pseudo acceptance overlaps observed truth;
-- accepted targets are finite and in [0,1];
-- accepted targets equal `calibrated_audio_probs` exactly;
-- pseudo reliability is finite/in [0,1] on accepted entries;
-- pseudo reliability is zero on rejected/observed entries;
-- pseudo target is NaN on rejected/observed entries;
-- pseudo class is -1 on rejected/observed entries and only {-1,0,1} globally.
-
-Compute and record the actual cache-file SHA256 in `self.audit["pseudo_cache_sha256"]` for provenance; do not require a predeclared file hash.
-
-Expose read-only/audit-friendly CPU tensors or properties sufficient for the required smoke, including at least:
-
-    pseudo_accept_mask
-    pseudo_targets
-    pseudo_reliability
-    pseudo_class
-    train_segment_ids
-
-Do not mutate the loaded artifact tensors.
-
-### TRAIN sample/batch contract
-
-Only TRAIN rows may receive pseudo fields.
-
-For TRAIN samples/batches expose:
-
-- original observed `batch.targets` unchanged;
-- original `observed_mask` unchanged;
-- `pseudo_accept_mask` [B,2] bool;
-- `pseudo_targets` [B,2];
-- `pseudo_reliability` [B,2];
-- `pseudo_class` [B,2].
-
-Use a custom collate local to the new module if needed.
-
-Recommended Batch placement:
-
-- `batch.masks["pseudo_accept_mask"]`
-- `batch.inputs["pseudo_targets"]`
-- `batch.inputs["pseudo_reliability"]`
-- `batch.inputs["pseudo_class"]`
-
-Evaluation rows must never receive active pseudo supervision. If the shared collate is used for DEV/Test samples, it must emit:
-
-- pseudo_accept_mask = false;
-- pseudo_targets = NaN;
-- pseudo_reliability = 0;
-- pseudo_class = -1.
-
-Preserve the base DataModule's separate DEV and TEST protocol structure. Do not iterate Test in this task.
-
-The DataModule audit must include frozen accepted/missing/class counts and cache identity/provenance.
-
-## 2. Registered Observed + Pseudo Loss
-
-Implement:
-
-    src/fusion/loss/ramps_observed_pseudo_loss.py
-
-Registry key:
-
-    wsm_ramps_observed_pseudo_loss
-
-It must implement Chimera `BaseLoss` and consume two independent logits [B,2].
-
-Constructor parameters:
-
-    pseudo_scale: float = 0.0
-    eps: float = 1e-8
-
-Require:
-
-    0.0 <= pseudo_scale <= 1.0
-    eps >= 0
-
-The explicit `pseudo_scale` is a hook for the later warm-up task. Do NOT add hidden epoch state or scheduling here.
-
-### Observed term
-
-Use exactly the existing sparse observed BCE semantics:
-
-    L_obs = sum(BCEWithLogits(logit, target) over observed entries)
-            / (observed_count + eps)
-
-Unknown observed targets remain masked and must never enter BCE.
-
-### Pseudo term
-
-Only accepted missing entries are eligible:
+and:
 
     pseudo_mask = pseudo_accept_mask & ~observed_mask
 
-Any overlap between `pseudo_accept_mask` and `observed_mask` is a contract violation: raise instead of silently using pseudo truth.
-
-Detach pseudo targets and reliability before using them.
-
-For accepted entries:
-
-    element = BCEWithLogits(logit, soft_pseudo_target)
-    weighted = reliability * element
-
-Define:
-
     L_pseudo =
-        sum(weighted)
-        / (sum(reliability over pseudo_mask) + eps)
-
-If no accepted pseudo entry exists in a batch, `L_pseudo` must be an exact differentiable zero and must not create missing-head gradients.
-
-Total:
+        sum(detached_reliability * BCEWithLogits(logit, detached_soft_pseudo_target))
+        / (sum(detached_reliability) + eps)
 
     L = L_obs + pseudo_scale * L_pseudo
 
-Do not harden soft pseudo targets.
+All prior validation behavior remains.
 
-Do not average semantic/video probabilities into the target.
+No hardening of pseudo targets.
 
-The calibrated strong-audio probability remains the target.
+No semantic/video probability becomes a target.
 
-### Loss validation
+### 3. Synthetic stop-gradient regression
 
-Require:
+Add no test file. Run an inline smoke using direct `compute_components()` or `__call__`.
 
-- logits/targets/observed/pseudo tensors have [B,2] shape;
-- observed targets selected by observed mask are finite binary 0/1;
-- accepted pseudo targets are finite in [0,1];
-- accepted reliability is finite in [0,1];
-- rejected/observed reliability is zero;
-- rejected/observed pseudo targets are NaN;
-- overlap observed & pseudo_accept is forbidden.
+The smoke must construct:
 
-Provide a deterministic helper such as `compute_components(...)` if useful for smoke evidence, but `__call__` must return one scalar Tensor.
+- logits with `requires_grad=True`;
+- pseudo_targets with `requires_grad=True`;
+- pseudo_reliability with `requires_grad=True`;
+- valid observed and accepted masks.
 
-## 3. Chimera Plugin Registration
+After backward with `pseudo_scale=1.0`:
 
-Update:
+- logits must receive finite non-zero gradients on supervised entries;
+- `pseudo_targets.grad` must be `None` or exactly zero;
+- `pseudo_reliability.grad` must be `None` or exactly zero.
 
-    src/chimera_plugin.py
+This must prove structural stop-gradient independent of the actual cache.
 
-Explicitly import/register:
+### 4. Reproduce the actual-cache gradient smoke
 
-    fusion.data.wsm_ramps_semantic_datamodule
-    fusion.loss.ramps_observed_pseudo_loss
+Rerun the TASK-005B actual-cache DataModule/F2/loss smoke after the change.
 
-Required registry keys after plugin registration:
+Required unchanged outcomes:
 
-    DATAMODULES: wsm_ramps_semantic_datamodule
-    LOSSES: wsm_ramps_observed_pseudo_loss
+- cache SHA256 remains:
+  `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`;
+- accepted counts remain depression 376 and Parkinson 1801;
+- `pseudo_scale=1.0`: accepted missing depression/Parkinson direct logit gradients non-zero;
+- unaccepted missing direct logit gradients exactly zero;
+- `pseudo_scale=0.0`: all missing direct logit gradients zero, observed gradients non-zero;
+- both task heads have finite non-zero parameter gradients in the pseudo-on smoke;
+- no optimizer step;
+- no training;
+- no Test use.
 
-Existing registrations must remain intact.
+## Exact Verification Commands
 
-## 4. Config-Selectable Contract
+Run from repository root on `codex/task-005b`.
 
-Add:
+### 1. Compile
 
-    configs/wsm_mm_pd_dep_v1/fusion/03_ramps_r2_pseudo_contract.yaml
+    python3 -m py_compile       src/fusion/loss/ramps_observed_pseudo_loss.py       src/fusion/data/wsm_ramps_semantic_datamodule.py       src/chimera_plugin.py
 
-Requirements:
-
-- experiment_name = `wsm_mm_pd_dep_v1`;
-- run_name = `ramps_r2_pseudo_contract_smoke`;
-- data = `wsm_ramps_semantic_datamodule`;
-- exact canonical A+V roots;
-- pseudo_cache_path = frozen semantic cache path;
-- model = existing `wsm_av_f2_task_aware_directed_model`;
-- preserve the F2 architecture params from `02_f2_task_aware_directed.yaml`;
-- loss = `wsm_ramps_observed_pseudo_loss`;
-- set `pseudo_scale: 0.0` in the YAML so this contract config cannot accidentally train with full pseudo supervision before a manager-authorized warm-up task;
-- optimizer may remain the same AdamW declaration for structural config compatibility;
-- seed = 42;
-- include all required callbacks/loggers;
-- checkpoint and early stopping monitor only `dev/mean_score` in max mode.
-
-This YAML is a contract/smoke scaffold, not authorization to train it.
-
-## 5. Required Actual-Cache Forward/Loss/Backward Smoke
-
-Use the registered components and actual frozen cache.
-
-The smoke must:
-
-1. register plugins;
-2. assert the new registry keys exist;
-3. instantiate `wsm_ramps_semantic_datamodule` with `num_workers=0`, `persistent_workers=false`, `shuffle_train=false`;
-4. deterministically select a tiny TRAIN sample set containing:
-   - at least one accepted missing depression entry;
-   - at least one accepted missing Parkinson entry;
-   - at least one unaccepted missing depression entry;
-   - at least one unaccepted missing Parkinson entry;
-5. collate those samples with the new DataModule collate;
-6. assert observed targets/masks and pseudo fields satisfy the contract;
-7. instantiate the existing registered F2 model on CPU with the fixed F2 dimensions and seed 42;
-8. run a real model forward;
-9. retain gradients on `output.preds`;
-10. instantiate the registered pseudo loss with `pseudo_scale=1.0`;
-11. compute finite loss and backward;
-12. prove:
-    - observed entries receive non-zero direct logit gradients;
-    - accepted missing depression receives non-zero direct depression-logit gradient;
-    - accepted missing Parkinson receives non-zero direct Parkinson-logit gradient;
-    - unaccepted missing entries receive exactly zero direct logit gradient;
-    - all model parameter gradients that are present are finite;
-    - both task heads have at least one non-zero finite parameter gradient;
-13. repeat the loss-gradient check with `pseudo_scale=0.0` and prove accepted missing entries now receive zero direct logit gradient while observed entries remain supervised.
-
-No optimizer step.
-
-No training loop.
-
-No DEV/Test metric calculation.
-
-## 6. Exact Verification Commands
-
-Run from repository root.
-
-### Compile
-
-    python3 -m py_compile \
-      src/fusion/data/wsm_ramps_semantic_datamodule.py \
-      src/fusion/loss/ramps_observed_pseudo_loss.py \
-      src/chimera_plugin.py
-
-### Config validation
-
-    .venv/bin/chimera-ml validate-config -c configs/wsm_mm_pd_dep_v1/fusion/03_ramps_r2_pseudo_contract.yaml
-
-### Registry validation
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
-    import chimera_plugin
-    from chimera_ml.core.registry import DATAMODULES, LOSSES, MODELS
-
-    chimera_plugin.register()
-
-    assert "wsm_ramps_semantic_datamodule" in DATAMODULES.keys()
-    assert "wsm_ramps_observed_pseudo_loss" in LOSSES.keys()
-    assert "wsm_av_f2_task_aware_directed_model" in MODELS.keys()
-    print("TASK-005B registry validation: ok")
-    PY
-
-### Cache/DataModule and forward/loss/backward smoke
-
-Use exactly this invocation shell; implement the assertions inside the heredoc according to the public attributes/helpers created by this task:
+### 2. Structural stop-gradient smoke
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
     import torch
-    import chimera_plugin
-    from chimera_ml.core.registry import DATAMODULES, LOSSES, MODELS
+    from fusion.loss.ramps_observed_pseudo_loss import WSMRampsObservedPseudoLoss
 
-    torch.manual_seed(42)
-    chimera_plugin.register()
-
-    dm = DATAMODULES.create(
-        "wsm_ramps_semantic_datamodule",
-        data_root="/media/maxim/Databases/WSM_NEW",
-        audio_feature_cache_root="/media/maxim/Databases/WSM_NEW/features",
-        video_cache_root="/media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache",
-        pseudo_cache_path="/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt",
-        batch_size=8,
-        num_workers=0,
-        pin_memory=False,
-        persistent_workers=False,
-        shuffle_train=False,
-        drop_last_train=False,
+    logits = torch.tensor(
+        [[0.2, -0.3], [0.4, 0.1]],
+        dtype=torch.float64,
+        requires_grad=True,
+    )
+    targets = torch.tensor(
+        [[1.0, float("nan")], [float("nan"), 0.0]],
+        dtype=torch.float64,
+    )
+    observed = torch.tensor(
+        [[True, False], [False, True]],
+        dtype=torch.bool,
+    )
+    accept = torch.tensor(
+        [[False, True], [True, False]],
+        dtype=torch.bool,
     )
 
-    assert len(dm.train_dataset) == 6325
-    assert tuple(dm.pseudo_accept_mask.shape) == (6325, 2)
-    assert int(dm.pseudo_accept_mask[:, 0].sum()) == 376
-    assert int(dm.pseudo_accept_mask[:, 1].sum()) == 1801
-
-    observed = dm.train_observed_mask
-    accept = dm.pseudo_accept_mask
-
-    dep_acc = torch.where((~observed[:, 0]) & accept[:, 0])[0][0].item()
-    park_acc = torch.where((~observed[:, 1]) & accept[:, 1])[0][0].item()
-    dep_rej = torch.where((~observed[:, 0]) & (~accept[:, 0]))[0][0].item()
-    park_rej = torch.where((~observed[:, 1]) & (~accept[:, 1]))[0][0].item()
-
-    indices = []
-    for idx in (dep_acc, park_acc, dep_rej, park_rej):
-        if idx not in indices:
-            indices.append(idx)
-
-    samples = [dm.train_dataset[i] for i in indices]
-    batch = dm.collate_fn(samples)
-
-    model = MODELS.create(
-        "wsm_av_f2_task_aware_directed_model",
-        audio_feature_dim=dm.audio_feature_dim,
-        video_feature_dim=dm.video_feature_dim,
-        hidden_dim=192,
-        fusion_hidden_dim=192,
-        relation_hidden_dim=192,
-        dropout=0.0,
-        num_tasks=2,
+    pseudo_targets = torch.tensor(
+        [[float("nan"), 0.8], [0.3, float("nan")]],
+        dtype=torch.float64,
+        requires_grad=True,
     )
-    model.train()
-
-    loss_on = LOSSES.create("wsm_ramps_observed_pseudo_loss", pseudo_scale=1.0, eps=1e-8)
-    output = model(batch)
-    assert tuple(output.preds.shape) == (len(indices), 2)
-    assert torch.isfinite(output.preds).all()
-    output.preds.retain_grad()
-
-    value = loss_on(output, batch)
-    assert value.ndim == 0 and torch.isfinite(value)
-    value.backward()
-
-    grad = output.preds.grad
-    assert grad is not None and torch.isfinite(grad).all()
-
-    obs_b = batch.get_masks("observed_mask").bool()
-    acc_b = batch.get_masks("pseudo_accept_mask").bool()
-    supervised = obs_b | acc_b
-    assert bool((grad[supervised].abs() > 0).all())
-    assert bool((grad[~supervised] == 0).all())
-
-    head0 = [p.grad for p in model.task_heads[0].parameters() if p.grad is not None]
-    head1 = [p.grad for p in model.task_heads[1].parameters() if p.grad is not None]
-    assert head0 and head1
-    assert all(torch.isfinite(g).all() for g in head0 + head1)
-    assert any(bool((g.abs() > 0).any()) for g in head0)
-    assert any(bool((g.abs() > 0).any()) for g in head1)
-
-    model.zero_grad(set_to_none=True)
-
-    loss_off = LOSSES.create("wsm_ramps_observed_pseudo_loss", pseudo_scale=0.0, eps=1e-8)
-    output_off = model(batch)
-    output_off.preds.retain_grad()
-    value_off = loss_off(output_off, batch)
-    value_off.backward()
-    grad_off = output_off.preds.grad
-
-    assert grad_off is not None and torch.isfinite(grad_off).all()
-    assert bool((grad_off[obs_b].abs() > 0).all())
-    missing = ~obs_b
-    assert bool((grad_off[missing] == 0).all())
-
-    assert all(
-        torch.isfinite(g).all()
-        for p in model.parameters()
-        if (g := p.grad) is not None
+    pseudo_reliability = torch.tensor(
+        [[0.0, 0.7], [0.6, 0.0]],
+        dtype=torch.float64,
+        requires_grad=True,
     )
 
-    print("TASK-005B actual-cache forward/loss/backward smoke: ok")
-    print(dm.audit)
+    loss_fn = WSMRampsObservedPseudoLoss(pseudo_scale=1.0, eps=1e-8)
+    observed_loss, pseudo_loss = loss_fn.compute_components(
+        logits,
+        targets,
+        observed,
+        accept,
+        pseudo_targets,
+        pseudo_reliability,
+    )
+    total = observed_loss + pseudo_loss
+    assert torch.isfinite(total)
+    total.backward()
+
+    assert logits.grad is not None
+    assert torch.isfinite(logits.grad).all()
+    assert bool((logits.grad[(observed | accept)].abs() > 0).all())
+
+    assert pseudo_targets.grad is None or bool((pseudo_targets.grad == 0).all())
+    assert pseudo_reliability.grad is None or bool((pseudo_reliability.grad == 0).all())
+
+    print("TASK-005B-C1 structural stop-gradient smoke: ok")
     PY
 
-If the exact public attribute names above need a tiny naming adjustment during implementation, keep their semantics identical and record the final exact smoke command in PROGRESS_EN.md.
+### 3. Config and registry regression
 
-### Scope checks
+    .venv/bin/chimera-ml validate-config -c configs/wsm_mm_pd_dep_v1/fusion/03_ramps_r2_pseudo_contract.yaml
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python - <<'PY'
+    import chimera_plugin
+    from chimera_ml.core.registry import DATAMODULES, LOSSES, MODELS
+    chimera_plugin.register()
+    assert "wsm_ramps_semantic_datamodule" in DATAMODULES.keys()
+    assert "wsm_ramps_observed_pseudo_loss" in LOSSES.keys()
+    assert "wsm_av_f2_task_aware_directed_model" in MODELS.keys()
+    print("TASK-005B-C1 registry regression: ok")
+    PY
+
+### 4. Actual-cache forward/loss/backward regression
+
+Rerun the exact TASK-005B actual-cache smoke recorded in `docs/PROGRESS_EN.md`.
+
+At minimum record and assert:
+
+- cache SHA256 `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`;
+- accepted depression/Parkinson = `376/1801`;
+- pseudo_scale=1 accepted missing direct gradients non-zero;
+- pseudo_scale=1 unaccepted missing gradients zero;
+- pseudo_scale=0 all missing gradients zero;
+- observed gradients non-zero;
+- finite task-head gradients;
+- no optimizer step/training/Test use.
+
+### 5. Scope checks
 
     git diff --check
-    git diff -- src/audio
-    git diff -- src/video
-    git diff -- src/fusion/models
+    git diff origin/main -- src/audio
+    git diff origin/main -- src/video
+    git diff origin/main -- src/fusion/models
+    git diff origin/main -- src/fusion/data
     git status --short
     git diff --stat origin/main...HEAD
-
-No training command is authorized.
+    git log -4 --oneline --decorate
 
 ## Acceptance Criteria
 
-TASK-005B passes only if:
+TASK-005B-C1 passes only if:
 
-- the frozen semantic cache validates exactly against canonical TRAIN identity/observed truth;
-- accepted counts/classes remain exactly frozen;
-- no observed truth is overwritten;
-- unknown labels remain unknown unless an accepted pseudo target exists;
-- new DataModule is registered as `wsm_ramps_semantic_datamodule`;
-- new loss is registered as `wsm_ramps_observed_pseudo_loss`;
-- plugin imports both without project-module warnings;
-- contract YAML validates and has experiment_name `wsm_mm_pd_dep_v1`;
-- YAML monitors only DEV/Mean_Score for checkpoint/early stopping;
-- YAML pseudo_scale is 0.0 and no training is run;
-- actual-cache F2 forward succeeds with two independent logits;
-- observed entries receive non-zero direct gradient;
-- accepted missing depression and Parkinson entries receive non-zero direct gradients when pseudo_scale=1.0;
-- unaccepted missing entries receive zero direct gradients;
-- all missing-entry gradients become zero when pseudo_scale=0.0;
-- gradients are finite and both task heads receive finite non-zero parameter gradients in the pseudo-on smoke;
-- no optimizer step or epoch training occurs;
-- no Test rows or metrics are iterated/inspected;
-- no pseudo re-selection/re-generation occurs;
-- no missing-label correctness/comorbidity claim is made;
-- src/audio and src/video remain unchanged;
-- existing fusion models remain unchanged;
+- only `src/fusion/loss/ramps_observed_pseudo_loss.py` and `docs/PROGRESS_EN.md` change after the manager task commit;
+- pseudo targets are explicitly detached before pseudo-loss use;
+- pseudo reliability is explicitly detached before pseudo-loss use;
+- synthetic `requires_grad=True` regression proves zero/None teacher-side gradients;
+- model logits still receive expected finite gradients;
+- original TASK-005B actual-cache gradient behavior reproduces unchanged;
+- cache SHA/counts remain unchanged;
+- config still validates;
+- registry keys remain present;
+- no optimizer step or training occurs;
+- no Test rows/metrics are used;
+- src/audio/src/video/existing fusion models/data remain unchanged;
 - `git diff --check` passes;
-- docs/PROGRESS_EN.md is updated with exact commands/results;
-- branch `codex/task-005b` is committed and pushed;
+- docs/PROGRESS_EN.md records exact commands/results;
+- one corrective commit is pushed to origin;
 - main/master remains untouched by Codex.
 
-Passing TASK-005B closes only the direct pseudo-gradient/data-loss contract portion of the Stage-5 gate. It does not authorize full training. Warm-up scheduling and the next bounded student experiment remain manager-gated.
+Passing C1 allows manager acceptance/merge of TASK-005B and only then consideration of a separate warm-up-schedule task.
 
 ## Required Handoff
 
@@ -573,31 +301,27 @@ Respond in English using exactly:
 Explicitly include:
 
 - branch `codex/task-005b`;
-- implementation commit SHA;
+- corrective commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
-- cache path and computed cache-file SHA256;
-- cache identity validation;
-- exact accepted missing/class counts;
-- registry keys;
-- config validation result;
-- observed+pseudo loss formula actually implemented;
-- pseudo_scale=1 and pseudo_scale=0 gradient smoke results;
-- proof of non-zero accepted missing-head gradients for both diseases;
-- proof of zero unaccepted missing-head gradients;
-- finite model/task-head gradients;
-- no optimizer step;
-- no training;
-- no Test use;
+- manager commits preserved;
+- exact detach implementation;
+- synthetic pseudo-target/reliability stop-gradient result;
+- actual-cache SHA and counts;
+- pseudo_scale=1 actual-cache gradient behavior;
+- pseudo_scale=0 actual-cache gradient behavior;
+- finite task-head gradients;
+- config/registry regression results;
+- no optimizer step/training/Test use;
 - no pseudo regeneration/reselection;
 - no missing-label correctness/comorbidity claim;
 - TASK-005C/R3/R4 not started;
 - general Text/Description remains deferred;
 - src/audio unchanged;
 - src/video unchanged;
-- existing fusion models unchanged;
+- existing fusion models/data unchanged;
 - Stage 5 remains active.
 
-Recommended next atomic step after success: manager review of the direct-gradient gate and a separate task to add the predeclared pseudo-supervision warm-up schedule before any bounded student training.
+If all acceptance criteria pass, recommended next atomic step is manager acceptance/merge of TASK-005B followed by a separate warm-up-schedule task.
 
-Stop after TASK-005B.
+Stop after TASK-005B-C1.
