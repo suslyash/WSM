@@ -4049,3 +4049,51 @@ Candidate nomination after all 12 new runs:
 
 No candidate may self-promote or close Stage 5. Manager review remains mandatory.
 
+### OWNER/MANAGER-OVERRIDE-048 — Cancel five-seed expansion; keep TASK-005G at three total seeds per method
+
+Status: active owner override before TASK-005G execution.
+
+Owner intent:
+
+- Do not spend excessive compute on seed replication at this stage.
+- Use the PLAN-recommended three-seed ablation standard for the current R4 confirmation.
+- Preserve additional compute budget for later Stage-6 ablations, negative controls, corpus probe, modality removals, and final-method confirmation rather than expanding this Stage-5 comparison to five seeds.
+
+This override cancels OWNER/MANAGER-OVERRIDE-047 before production.
+
+Revised confirmation budget:
+
+- retain valid seed42 results for Equal, Static-STCH, and corrected Progress;
+- run only true seeds43 and 44 for each method;
+- exactly 6 NEW production invocations;
+- each method therefore has exactly 3 total seeds: 42/43/44.
+
+All prior firewalls remain unchanged:
+
+- experiment-only; no source changes;
+- no seed42 rerun;
+- no RA-STCH rerun;
+- all six configs frozen before first production run;
+- fixed run order;
+- no intermediate-result stopping;
+- no Test-driven selection;
+- no post-hoc tuning;
+- no Stage 6/7, Text/Description, or Final Test inside TASK-005G.
+
+Restore the original three-seed balancing-repeat criterion:
+
+- candidate DEV Mean > Equal DEV Mean on seeds42,43,44;
+- candidate three-seed Mean > Equal three-seed Mean;
+- candidate three-seed depression mean no more than 0.010000 below Equal depression mean;
+- candidate three-seed Parkinson mean no more than 0.010000 below Equal Parkinson mean.
+
+Candidate nomination remains:
+
+1. exclude any candidate that fails the three-seed balancing-repeat criterion;
+2. if one remains, nominate it provisionally for manager Stage-5 composition review;
+3. if both remain, choose higher three-seed DEV Mean;
+4. if absolute difference <= 0.001000, use task regressions, DEV-only calibration, and complexity/stability;
+5. if still tied, prefer Static-STCH as the simpler fixed scalarizer.
+
+No Stage-5 promotion or closure is delegated to Codex.
+
