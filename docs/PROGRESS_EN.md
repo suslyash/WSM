@@ -3795,7 +3795,7 @@ Firewall commit: c2f7c19, pushed before the first production run. Final evidence
 4. RA-STCH seed42
 - Config: configs/wsm_mm_pd_dep_v1/fusion/16_r4_ra_stch_seed42.yaml.
 - Run: logs/wsm_mm_pd_dep_v1/r4_ra_stch_seed42_2026-09-25_15-26_wsm_av_r3_disease_query_model_7fa6914b.
-- MLflow: 94591ba6a8a54312b0ee8f3b07a9296f; FINISHED; artifact URI /media/maxim/Programs/WSM/mlruns/5/94591ba6a8a54312b0ee8f3b07a9296f/artifacts.
+- MLflow: 94591ba6a8a54312b0ee8f3b07a9296f; FINISHED; artifact URI /media/maxim/Programs/Projects/WSM/mlruns/5/94591ba6a8a54312b0ee8f3b07a9296f/artifacts.
 - 19 epochs; DEV-selected epoch 13; checkpoint checkpoints/epoch=13_dev_mean_score=0.7826.pt; SHA256 53397e3bbcbfc95abd30bdf63fec018a28f0effc2d92d66231061fb2d051254a.
 - DEV D UAR/MF1/Score 0.701261/0.700724/0.700992; P 0.854589/0.874007/0.864298; Mean 0.782645.
 - Same-epoch Test NONE/SOFT/HARD Mean 0.777133/0.767804/0.760071, monitoring only. Delta versus corrected R3-B seed42 D/P/Mean +0.005184/-0.029526/-0.012171.
