@@ -4435,3 +4435,62 @@ Fixed scientific firewalls:
 
 Recommended next atomic task: revised TASK-005H-AA-DQTR-OPTUNA — implement AA-DQTR plus its trust-region loss, freeze the 24-trial Chimera Optuna space, execute the sweep, and conditionally confirm the exact best safe trial on seeds43/44.
 
+### OWNER/MANAGER-OVERRIDE-052 — Select V2L as the Stage-6-family model for the optimization sprint
+
+Status: active owner override before AA-DQTR execution. No `codex/task-005h-aadqtr-optuna` branch existed when this override was issued.
+
+Clarification:
+
+- The owner refers to the literature-model family grouped in the sixth research/table stage, not PLAN Stage 6 ablation numbering.
+- The relevant modern incomplete multi-view/multi-label candidates include the ICML-2025 compact-semantics dual-branch method, CVPR-2025 disentangled label-semantic model, URDF, CTRL, DCSI, V2L, TACVI-Net, and CDSA.
+- AA-DQTR is therefore superseded before execution, not failed.
+
+Selected model: **V2L — When Semantically Consistent Encoding Meets View-Label Heterogeneity Modeling** (IEEE TPAMI 2026, DOI 10.1109/TPAMI.2026.3728832).
+
+Why V2L is selected for WSM:
+
+- its active view-label relevance mechanism is explicitly instance-wise and label-wise;
+- this directly matches the observed WSM asymmetry where video can help Parkinson while damaging depression;
+- it combines mid-level shared semantic fusion with late label-aware decision fusion instead of forcing one global modality weight;
+- the paper reports the method remains competitive in complete-view settings, which matters because WSM audio/video availability is effectively complete;
+- compared with URDF, V2L models label-specific modality relevance rather than mainly sample/view-level reliability;
+- compared with CTRL, V2L more directly attacks the already observed fusion/negative-transfer failure mode, while CTRL is stronger as a missing-label evidential/pseudo-label method;
+- compared with TACVI/CDSA/CVPR disentanglement, V2L requires less emphasis on missing-view imputation and more directly preserves label-specific view evidence.
+
+Important limitation:
+
+- V2L is not a teacher/student method. The current optimization objective is safe multimodal fusion performance. Teacher/student missing-label recovery can be revisited only in a later separately authorized task.
+- The public paper advertises a code repository, but the GitHub repository was empty at manager audit time; implementation must therefore be paper/formula-guided and independently verified, not copied from unavailable code.
+
+WSM adaptation policy:
+
+- preserve the exact frozen historical temporal-audio model as the audio anchor;
+- treat audio and video as the two V2L views;
+- keep the paper's core mechanisms:
+  1. source-anchored variational proposal clusters;
+  2. precision-weighted per-view posterior aggregation;
+  3. PoE joint posterior;
+  4. reconstruction/information-bottleneck objective;
+  5. perturbation-aware cross-view posterior consistency;
+  6. intra-cluster posterior coherence;
+  7. cross-view instance discrimination;
+  8. hybrid mid-level + late decision fusion;
+  9. instance-wise, label-wise active view relevance supervised from observed-label view errors;
+  10. observed-label-only classification.
+- add only one WSM-specific anchoring adaptation: express mid/video branches as zero-initialized residual corrections around the exact frozen audio logits so every trial starts at the frozen audio function and can fall back to it.
+- unknown labels remain masked; no pseudo labels are introduced in this task.
+
+Optimization budget:
+
+- exactly 24 native Chimera Optuna trials on seed42;
+- if at least one trial passes the frozen safe-audio gate, select the highest-DEV-Mean safe trial and confirm its exact frozen hyperparameters at seeds43 and 44;
+- maximum production invocations: 26.
+
+Frozen safe-audio gate:
+
+- DEV Mean > `0.7878268765`;
+- depression Score >= `0.7379183895`;
+- Parkinson Score >= `0.8177353635`.
+
+Recommended next atomic task: TASK-005H-V2L-OPTUNA — implement the compact two-view WSM adaptation of V2L, freeze a 24-trial Optuna search space, execute the sweep, and conditionally confirm the best safe trial on seeds43/44.
+
