@@ -4139,3 +4139,70 @@ R-full diagnostic versus corrected R3-B three-seed means `0.696178/0.857996/0.77
 DEV-only calibration/negative-transfer audit used safe tensor-only checkpoint loading (`weights_only=True`) and only the DEV loader; no Test loader was accessed. Observed row counts were D `621` and P `312` for every method. Mean Brier/ECE-15 by task (D/P) across seeds: Equal `0.252064/0.222124` Brier and `0.090589/0.042848` ECE; Static `0.253107/0.225672` Brier and `0.093562/0.045591` ECE; Progress `0.248011/0.207556` Brier and `0.085167/0.052281` ECE; corrected R3-B `0.271491/0.255945` Brier and `0.100973/0.083835` ECE. Static minus Equal was Brier `+0.001043/+0.003548`, ECE `+0.002973/+0.002743`; Progress minus Equal was Brier `-0.004053/-0.014569`, ECE `-0.005421/+0.009433`. Static minus R3-B was Brier `-0.018384/-0.030272`, ECE `-0.007411/-0.038244`; Progress minus R3-B was Brier `-0.023480/-0.048389`, ECE `-0.015806/-0.031554`. No recalibration, thresholding, or rerun followed this audit.
 
 Frozen nomination rule result: `NO R4 BALANCING CANDIDATE NOMINATED`. Stage 5 remains open; do not promote or close it. Test_NONE/SOFT/HARD were emitted by mandated epoch-level monitoring and were visible in run logs, but were not used for epoch selection, checkpoint choice, comparison, calibration, or nomination.
+
+### MANAGER-DECISION-049 — Accept TASK-005G, close Stage 5 with no promoted R-full composition, and enter Stage 6
+
+Status: TASK-005G accepted and integrated; Stage 5 research cycle is closed by a negative promotion decision. Stage 6 is now active.
+
+Integration:
+
+- PR #44 was manager-reviewed and merged to `main` as `de05a2233d318add54b71121193e7e412d0b102a`.
+- TASK-005G firewall commit: `6d81fac290e4c130b92abb3a76c94f247b6b819d`.
+- TASK-005G final evidence: `7399e0dab3ca65a66a5f475d5dfb788b59630264`.
+- The final task diff contains only six seed43/44 confirmation configs plus `docs/PROGRESS_EN.md`; source diff is empty.
+- Exactly six authorized production runs executed; no seed42 rerun, no seed45/46, no RA-STCH rerun, no post-hoc tuning.
+- DEV-only checkpoint selection and Test monitoring firewall remained intact.
+
+Frozen three-seed R4 results:
+
+- Equal:
+  - D `0.707925 ± 0.004600`;
+  - P `0.850421 ± 0.006475`;
+  - Mean `0.779173 ± 0.001092`.
+- Static-STCH:
+  - D `0.708698 ± 0.014271`;
+  - P `0.852097 ± 0.002273`;
+  - Mean `0.780397 ± 0.006028`;
+  - beats same-seed Equal on Mean only 1/3 seeds.
+- Corrected Progress:
+  - D `0.708271 ± 0.011546`;
+  - P `0.861231 ± 0.013176`;
+  - Mean `0.784751 ± 0.009157`;
+  - beats same-seed Equal on Mean only 2/3 seeds.
+- Frozen R4 balancing-repeat criterion therefore fails for both Static and Progress.
+- Final R4 nomination: `NO R4 BALANCING CANDIDATE NOMINATED`.
+
+Calibration context:
+
+- Static slightly worsens Brier/ECE versus Equal on both tasks.
+- Progress improves Brier for both tasks and depression ECE versus Equal, but worsens Parkinson ECE.
+- These calibration diagnostics do not override the failed repeatability criterion.
+
+Stage-5 closure decision:
+
+- R2 direct pseudo-supervision remains a negative standalone result.
+- R3-B remains a valid but non-promoted three-seed ablation.
+- RA-STCH remains a negative balancing result.
+- Static-STCH and Progress remain informative but non-promoted R4 ablations.
+- Equal is retained as the neutral full-composition analysis reference, not promoted as a final RAMPS method.
+- No R-full composition satisfies the frozen promotion rule strongly enough for promotion.
+- The Stage-5 procedural gate evidence is complete:
+  - missing heads receive direct non-zero pseudo-supervision gradients on the opposite corpus;
+  - observed truth overrides pseudo labels;
+  - accepted coverage/class balance and cache identity are logged;
+  - gradients are finite;
+  - R3/R4 comparisons are not explained by larger parameter count;
+  - the final Stage-5 decision (no promoted R-full composition) is frozen before any separate Final Test.
+- Therefore Stage 5 closes as a completed negative/ablation research cycle rather than as a successful method promotion.
+
+Stage-6 reference policy:
+
+- Stage 6 begins as a claims/ablation audit, not a new tuning stage.
+- Use the three-seed Equal full composition as the neutral matched-pseudo reference for pseudo-label validity controls because it avoids a balancing-controller confound and has the lowest three-seed Mean variance among R4 references.
+- The first Stage-6 task will execute the required shuffled/mismatched pseudo-target negative control using the same Equal composition and seeds42/43/44.
+- The negative control must preserve corpus rows, observed truth, pseudo coverage, pseudo class balance, and the multiset of pseudo/reliability values while breaking sample-to-pseudo alignment.
+- The original semantic cache is immutable and must not be overwritten.
+- No claim about truly missing-label correctness or comorbidity is authorized.
+
+Recommended next atomic task: TASK-006A-BUNDLE — build one deterministic shuffled-pseudo negative-control cache, verify invariants, run Equal composition on seeds42/43/44, compare against matched Equal on DEV/calibration, and stop.
+
