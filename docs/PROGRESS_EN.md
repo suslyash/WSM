@@ -4,7 +4,7 @@
 
 Plan initialized: 2026-09-23.
 
-Current stage: **Stage 5 active — fixed CLIP semantic bridge accepted; subsequent RAMPS work remains manager-gated**.
+Current stage: **Stage 5 reopened — owner-authorized Optuna audio-first A+V optimization sprint; Stage 6 is paused before execution**.
 
 Final Test authorized: **no**.
 
@@ -4205,4 +4205,118 @@ Stage-6 reference policy:
 - No claim about truly missing-label correctness or comorbidity is authorized.
 
 Recommended next atomic task: TASK-006A-BUNDLE — build one deterministic shuffled-pseudo negative-control cache, verify invariants, run Equal composition on seeds42/43/44, compare against matched Equal on DEV/calibration, and stop.
+
+### OWNER/MANAGER-OVERRIDE-050 — Reopen optimization before Stage 6 and authorize a bounded Chimera Optuna fusion search
+
+Status: active owner override. TASK-006A is superseded before execution; no `codex/task-006a` branch existed when this override was issued.
+
+Owner intent:
+
+- Do not accept the current negative Stage-5 promotion decision as the last attempt to beat the frozen audio system.
+- Give Codex materially more autonomy to search fusion hyperparameters and bounded architectural depth using Chimera ML's built-in Optuna sweep support.
+- Spend compute on hyperparameter/model search rather than multiplying confirmation seeds.
+- Keep the frozen audio model itself completely untouched.
+
+Explicit project-rule override:
+
+- The normal "no broad grid/search" restriction is relaxed for exactly one bounded Optuna sprint.
+- Stage 6 is paused before execution and TASK-006A is cancelled/superseded, not failed.
+- Stage 5 is reopened only for this optimization sprint.
+- This does NOT authorize tuning `src/audio`, Test-driven search, text/description, Final Test, or an unbounded architecture search.
+
+Verified Chimera capability:
+
+- current Chimera ML supports `chimera-ml sweep` with `method: optuna`;
+- typed search spaces support float, int, and categorical parameters through dotted config paths;
+- `sweep_target_callback` is injected automatically for Optuna trials;
+- target metric/direction are configurable;
+- there is no built-in intra-trial pruning in the current sweep implementation, so every sampled trial is a normal training run subject to ordinary early stopping.
+
+Frozen optimization anchor:
+
+- Use the strong temporal-audio Candidate-B mechanism as the architectural anchor because it already demonstrated a single-seed aggregate DEV Mean `0.809324` while improving Parkinson strongly.
+- Candidate B was not previously promoted because depression dropped by `0.038989` versus frozen audio.
+- New search must therefore preserve the exact frozen temporal-audio base and search only a zero-initialized video correction family designed to reduce this negative transfer.
+- Historical audio checkpoint remains exact SHA256 `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`.
+
+Frozen audio comparator:
+
+- depression Score `0.7479183895`;
+- Parkinson Score `0.8277353635`;
+- DEV Mean `0.7878268765`.
+
+Safe audio-beating screen:
+
+- best seed42 trial DEV Mean must be strictly greater than `0.7878268765`;
+- depression Score must be >= `0.7379183895`;
+- Parkinson Score must be >= `0.8177353635`.
+- Selection/ranking remains DEV/Mean first; if the highest-Mean Optuna trial fails these task floors, no lower-ranked trial may be substituted post-hoc.
+
+Search budget:
+
+- exactly 20 Optuna trials, all on seed42;
+- if and only if the best Optuna trial passes the safe audio-beating screen, run that exact frozen configuration at true seeds43 and 44;
+- maximum production training invocations: 22;
+- no additional seeds inside this task.
+
+Allowed tunable model family:
+
+- frozen audio temporal adapter and audio base logits remain unchanged;
+- video stays an additive zero-initialized correction source;
+- model must initialize with `preds == audio_base_logits` exactly;
+- Codex may implement one configurable superset of Candidate B with bounded:
+  - projected hidden width;
+  - attention head count;
+  - 0–3 temporal video self-attention/Transformer layers before audio-query cross-attention;
+  - temporal FF multiplier;
+  - residual MLP hidden width;
+  - 1–3 residual MLP hidden layers;
+  - dropout;
+  - per-task fixed correction scales, including depression scale 0.0 as a legal value;
+  - optional audio-confidence gating if Codex chooses to include it before the firewall.
+- No task/corpus ID is an input feature.
+- Trainable fusion parameter count excluding frozen audio must be <= `1,000,000` for every possible sampled configuration.
+
+Manager hard bounds for Codex-designed Optuna space:
+
+- `hidden_dim`: choices must be a subset of `[96,128,160,192,224,256]`;
+- `num_heads`: subset of `[2,4,8]`;
+- `temporal_layers`: integer/categorical within `[0,3]`;
+- `temporal_ff_multiplier`: subset of `[2,3,4]`;
+- `residual_hidden_dim`: subset of `[64,96,128,160,192,256,320]`;
+- `residual_layers`: within `[1,3]`;
+- `dropout`: within `[0.05,0.35]`;
+- depression correction scale: within `[0.0,0.40]`;
+- Parkinson correction scale: within `[0.25,1.50]`;
+- AdamW learning rate: log range contained within `[2e-5,4e-4]`;
+- weight decay: log range contained within `[1e-5,5e-2]`.
+- Codex must choose and freeze 7–10 actual search variables from this pool before the first metric-bearing trial.
+- Required search variables: hidden width, temporal depth, residual depth, dropout, learning rate, depression correction scale, Parkinson correction scale.
+- Codex may choose the exact discrete choices/ranges inside the manager bounds based on code/parameter-count inspection before training.
+- Search space and implementation are immutable after the first Optuna trial begins.
+
+Fixed training semantics:
+
+- seed42 during sweep;
+- canonical A+V DataModule, no pseudo labels;
+- `wsm_masked_sparse_loss`;
+- frozen temporal audio checkpoint/eval-only;
+- trainable-only AdamW;
+- batch size 8;
+- epochs <=30;
+- mixed precision;
+- grad clip 0.5;
+- early stopping/checkpoint only on `dev/mean_score`, mode=max, patience=6, min_delta=0.0005;
+- DEV/TEST_NONE/TEST_SOFT/TEST_HARD emitted every epoch;
+- Optuna target EXACTLY `dev/mean_score`, mode=max.
+- Test metrics may never enter Optuna, architecture/search-space edits, trial ranking, acceptance, or continuation.
+
+Confirmation rule:
+
+- if the best seed42 trial fails the safe screen, stop after the 20-trial sweep;
+- if it passes, freeze its exact generated trial config and create seed43/44 confirmation configs differing only in seed/run_name;
+- provisional success requires safe audio-beating screen on all three seeds42/43/44, three-seed Mean > frozen audio Mean, and three-seed task means not below the frozen audio task scores by more than 0.010;
+- no promotion/final-model claim is delegated to Codex.
+
+Recommended next atomic task: TASK-005H-OPTUNA — implement the tunable audio-first temporal-video fusion family, freeze a 20-trial Chimera Optuna search space, execute the sweep, and conditionally confirm the best safe trial on seeds43/44.
 
