@@ -4630,3 +4630,45 @@ Keep fixed: grad_ema=0.9, reliability_ema=0.9, weight_min=0.2, weight_max=0.8, p
 
 This bundle is a family-capacity/search comparison, not a final promotion test. The manager will choose the next family only after auditing all 60 seed42 trials.
 
+
+### TASK-005H-TRIPLE-OPTUNA — pre-metric firewall complete
+
+Status: partial; the six base/sweep configs are frozen, validated, dry-run verified, and the firewall passed. No metric-bearing Optuna trial has started yet.
+
+Changed files:
+
+- `configs/wsm_mm_pd_dep_v1/fusion/31_optuna_candidate_b_base.yaml`
+- `configs/wsm_mm_pd_dep_v1/fusion/32_optuna_candidate_b_sweep.yaml`
+- `configs/wsm_mm_pd_dep_v1/fusion/33_optuna_r3b_base.yaml`
+- `configs/wsm_mm_pd_dep_v1/fusion/34_optuna_r3b_sweep.yaml`
+- `configs/wsm_mm_pd_dep_v1/fusion/35_optuna_r4_ra_stch_base.yaml`
+- `configs/wsm_mm_pd_dep_v1/fusion/36_optuna_r4_ra_stch_sweep.yaml`
+- `scripts/common/audit_triple_optuna.py`
+- this progress entry in `docs/PROGRESS_EN.md`
+
+Frozen search manifest:
+
+- Candidate B study `wsm-candidate-b-optuna-v1`: exactly 6 variables — hidden_dim categorical `[96,128,160,192,224,256]`; num_heads categorical `[2,4,8]`; residual_hidden_dim categorical `[64,96,128,160,192,256]`; dropout float `[0.05,0.35]`; optimizer lr log-float `[2e-5,4e-4]`; optimizer weight_decay log-float `[1e-5,5e-2]`.
+- R3-B study `wsm-r3b-optuna-v1`: exactly 7 variables — hidden_dim categorical `[128,160,192,224,256]`; gate_hidden_dim categorical `[96,128,160,192,256]`; dropout float `[0.05,0.35]`; loss aux_weight float `[0.05,0.50]`; loss agreement_weight log-float `[0.01,0.50]`; optimizer lr log-float `[2e-5,4e-4]`; optimizer weight_decay log-float `[1e-5,5e-2]`.
+- R4 RA-STCH study `wsm-r4-ra-stch-optuna-v1`: exactly 10 variables — R3 hidden_dim, gate_hidden_dim, dropout, aux_weight, agreement_weight plus tau log-float `[0.03,0.30]`, progress_temperature log-float `[0.10,0.75]`, controller_ema float `[0.50,0.95]`, optimizer lr log-float `[2e-5,4e-4]`, and weight_decay log-float `[1e-5,5e-2]`. Fixed mode is `ra_stch`, pseudo_scale `0.0`, references `0.697035/0.852104`, grad/reliability EMA `0.9`, bounds `0.2/0.8`, eps `1e-8`, and warm-up `3 observed-only + 5 ramp epochs to 1.0`.
+- All three use `n_trials: 20`, target monitor `dev/mean_score`, mode `max`, seed `42`, 30 epochs, CUDA, mixed precision, grad clip `0.5`, required four monitoring streams, and required callbacks/loggers.
+
+Exact verification commands and results:
+
+- `chimera-ml validate-config` passed for base configs 31, 33, and 35.
+- Native `chimera-ml sweep ... --dry-run` passed for all three sweep configs. Each printed `Optuna dry run: 20 trial(s), target='dev/mean_score', mode='max'` and printed exactly 6, 7, and 10 parameters respectively.
+- `PYTHONPATH=src .venv/bin/python -u -c "import chimera_plugin; chimera_plugin.register(); print('PLUGIN_REGISTER_PASS')"` returned `PLUGIN_REGISTER_PASS` with no project-module warning.
+- `sha256sum /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt` returned `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`.
+- `PYTHONPATH=src .venv/bin/python scripts/common/audit_triple_optuna.py` returned `TRIPLE_OPTUNA_FIREWALL_PASS`.
+
+Firewall evidence:
+
+- Frozen audio checkpoint SHA matched `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`.
+- Exhaustive formula enumeration proved Candidate B maximum trainable fusion count `710530` across 36 hidden/residual combinations; all 108 hidden/head/residual combinations were checked for divisibility and the cap is `<=1000000`.
+- Exhaustive R3/R4 hidden/gate combinations proved maximum trainable count `602119` across 25 combinations; cap is `<=736004`.
+- Candidate B registered TRAIN-only smoke passed with output `[2,2]`, finite masked sparse loss/gradients, exact zero-initialized residual identity `preds == audio_base_logits`, and `wsm_trainable_adamw_optimizer` contained no frozen audio parameters; frozen audio gradients were `None`.
+- R3-B registered TRAIN-only forward/loss/backward smoke passed with finite `[2,2]` outputs and loss.
+- R4 registered TRAIN-only forward/loss/backward smoke passed with finite `[2,2]` outputs and loss; unknown labels remained NaN under `observed_mask=false`; accepted pseudo fields did not overlap observed truth; pseudo targets/reliability were detached; warm-up epoch 1 scale was `0.0`; controller source required DEV depression/Parkinson scores and contained no Test consumption.
+- The audit emitted only an unrelated PyTorch nested-tensor warning while importing an existing registered module; no project-module warning occurred.
+
+Deviation/blocker: the 60 metric-bearing trials remain pending. After this firewall commit is pushed, execute exactly Candidate B 20, R3-B 20, then R4 RA-STCH 20. Do not run seed43/44, extra seed42 configs, Test-driven selection, or any Stage 6/7/Text/Description/Final Test work.
