@@ -4320,3 +4320,118 @@ Confirmation rule:
 
 Recommended next atomic task: TASK-005H-OPTUNA — implement the tunable audio-first temporal-video fusion family, freeze a 20-trial Chimera Optuna search space, execute the sweep, and conditionally confirm the best safe trial on seeds43/44.
 
+### OWNER/MANAGER-OVERRIDE-051 — Replace Candidate-B tuning with a novel audio-anchored disease-query trust-region fusion search
+
+Status: active owner override before TASK-005H execution. No `codex/task-005h-optuna` branch existed when this override was issued.
+
+Owner intent:
+
+- Do not spend the optimization budget on a lightly generalized baseline whose novelty is too weak for a primary method.
+- Search a materially stronger fusion mechanism that still has a realistic path to beating the frozen audio reference.
+- Preserve the useful empirical lesson from Candidate B: temporal video carries a strong Parkinson signal, but unconstrained video correction causes depression negative transfer.
+
+TASK-005H-OPTUNA as defined by MANAGER-OVERRIDE-050 is superseded before execution, not failed.
+
+New method hypothesis:
+
+**Audio-Anchored Disease-Query Trust-Region Fusion (AA-DQTR)**
+
+Core mechanism:
+
+1. exact frozen historical temporal-audio model produces:
+   - base logits for D/P;
+   - task-specific audio features `a_t in R^192`;
+2. temporal video tokens are projected to a shared hidden space;
+3. each disease owns a learned disease embedding `q_t`;
+4. the initial disease-query state is formed from the projected frozen task-specific audio feature plus the learned disease embedding;
+5. 1–3 shared disease-query cross-attention blocks attend from both disease queries to the temporal video sequence;
+6. each task has its own learned reliability/gating head conditioned on:
+   - final disease-query state;
+   - projected frozen audio task feature;
+   - absolute frozen audio base logit;
+7. each task has its own residual head;
+8. the final correction head is zero-initialized, so the full model exactly equals frozen audio at initialization;
+9. final logit:
+   `z_t = z_audio_t + video_available * scale_t * gate_t * residual_t`;
+10. a new observed-label-only trust-region regularizer penalizes large correction magnitude more strongly when the frozen audio head is confident:
+    `confidence_t = (2*abs(sigmoid(z_audio_t)-0.5)).detach()`;
+    `L_anchor = mean_observed(confidence_t * (z_t-z_audio_t.detach())^2)`;
+    `L = masked_BCE(z,y) + lambda_anchor * L_anchor`.
+
+The trust penalty is not a claim that frozen audio is always correct. It is a regularizer designed to reduce catastrophic negative transfer from video while leaving uncertain-audio examples more free to move.
+
+Novelty boundary:
+
+- AA-DQTR is not just Candidate B tuning.
+- Candidate B uses frozen audio task features as direct queries into one temporal cross-attention and unconstrained task residuals.
+- AA-DQTR adds explicit learned disease-query embeddings, stacked query-to-video refinement, task-specific reliability gating, and confidence-weighted audio-anchor trust regularization.
+- R3 used disease queries over pooled modalities but did not anchor to the exact strong temporal-audio classifier and did not perform temporal query-to-video refinement.
+- The method still remains interpretable and bounded; no giant end-to-end multimodal Transformer is authorized.
+
+Optimization budget:
+
+- 24 Optuna trials on seed42.
+- If and only if the exact best DEV/Mean trial passes the frozen safe-audio screen, confirm the frozen selected config on seeds43 and 44.
+- Maximum production training invocations: 26.
+- No further seeds in this task.
+
+Frozen comparator and safe screen remain:
+
+- audio D `0.7479183895`;
+- audio P `0.8277353635`;
+- audio Mean `0.7878268765`.
+- seed42 best trial must satisfy:
+  - Mean > `0.7878268765`;
+  - D >= `0.7379183895`;
+  - P >= `0.8177353635`.
+
+Mandatory Optuna search variables:
+
+- model hidden_dim;
+- query_layers;
+- residual_layers;
+- dropout;
+- depression correction scale;
+- Parkinson correction scale;
+- anchor trust weight;
+- optimizer learning rate.
+
+Optional variables (Codex may freeze up to two additional variables before trial 1):
+
+- gate_hidden_dim;
+- residual_hidden_dim;
+- weight_decay;
+- temporal FF multiplier.
+
+Manager hard bounds:
+
+- hidden_dim: categorical subset of `[128,160,192,224,256]`;
+- num_heads: fixed at 4 unless Codex proves a bounded categorical `[4,8]` is valid for all hidden choices;
+- query_layers: integer/categorical `1..3`;
+- temporal FF multiplier: `[2,3,4]`;
+- residual_hidden_dim: subset `[96,128,160,192,256,320]`;
+- residual_layers: `1..3`;
+- gate_hidden_dim: subset `[64,96,128,160,192]`;
+- dropout: `0.05..0.35`;
+- depression correction scale: `0.0..0.50`;
+- Parkinson correction scale: `0.25..1.75`;
+- anchor trust weight lambda: log range contained in `[1e-4,1.0]`;
+- AdamW lr: log range contained in `[2e-5,4e-4]`;
+- weight decay: log range contained in `[1e-5,5e-2]`.
+- Every possible sampled architecture must remain <= `1,200,000` trainable fusion/loss-side parameters excluding frozen audio.
+
+Fixed scientific firewalls:
+
+- audio checkpoint and `src/audio` frozen;
+- no pseudo labels;
+- no Test-driven search;
+- no task/corpus/split IDs as model features;
+- observed sparse labels only;
+- unknown labels remain masked;
+- Test remains monitoring-only;
+- exact search space and implementation committed before Optuna trial 1;
+- no model/search-space change after the first metric-bearing trial;
+- no Stage 6/7/Text/Final Test inside this task.
+
+Recommended next atomic task: revised TASK-005H-AA-DQTR-OPTUNA — implement AA-DQTR plus its trust-region loss, freeze the 24-trial Chimera Optuna space, execute the sweep, and conditionally confirm the exact best safe trial on seeds43/44.
+
