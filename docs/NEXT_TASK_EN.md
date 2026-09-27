@@ -1,58 +1,69 @@
-# TASK-005H-OPTUNA: Bounded Chimera Optuna Search for a Safe Audio-Beating Temporal A+V Model
+# TASK-005H-AA-DQTR-OPTUNA: Search a Novel Audio-Anchored Disease-Query Trust-Region Fusion Model
 
 ## Authority and branch
 
-This task is an explicit owner-authorized optimization sprint that supersedes the unexecuted TASK-006A.
+This task supersedes the unexecuted TASK-005H-OPTUNA before any implementation branch was created.
 
 Required branch:
 
-    codex/task-005h-optuna
+    codex/task-005h-aadqtr-optuna
 
 Start from current `origin/main`, which includes:
 
-- PR #44 merge `de05a2233d318add54b71121193e7e412d0b102a`;
-- owner/manager Optuna override `5c2413038bf6a711a72c21256b5b9c946f29b312`.
+- owner/manager optimization override `5c2413038bf6a711a72c21256b5b9c946f29b312`;
+- AA-DQTR method override `c1f4492b7e3b8e2609d981e0b5a2a724b84d3401`.
 
-Create exactly one task branch from that `origin/main`.
+Create exactly one branch from that `origin/main`.
 
-No `codex/task-006a` branch existed when the override was issued. TASK-006A is superseded before execution, not failed.
+Stage 6 remains paused. This task is one bounded Stage-5 optimization sprint.
 
 ## Goal
 
-Use Chimera ML's native Optuna sweep to search one bounded, configurable audio-first temporal-video fusion family for a model that safely beats the frozen historical audio reference.
+Implement and optimize one new primary-method candidate:
 
-The search must keep the exact historical temporal-audio model frozen and use video only as a zero-initialized additive correction.
+**AA-DQTR — Audio-Anchored Disease-Query Trust-Region Fusion**
 
-The search is intentionally broader than prior manager tasks. Codex is allowed to choose the exact Optuna search space within manager hard bounds before the first metric-bearing trial.
+The method must:
 
-Exactly 20 seed42 Optuna trials are authorized.
+- preserve the exact strong historical temporal-audio model as a frozen anchor;
+- use disease-specific learned queries to extract task-conditioned evidence from temporal video;
+- use multiple shared query-to-video refinement blocks;
+- use task-specific reliability gates;
+- use task-specific bounded correction scales;
+- use a confidence-weighted trust-region loss to reduce negative transfer;
+- start exactly at the frozen audio function through zero-initialized correction heads;
+- keep two independent binary disease logits;
+- remain interpretable and <=1.2M trainable non-audio parameters for every Optuna trial.
 
-If and only if the highest-DEV-Mean trial passes the frozen safe-audio screen, run that exact configuration at true seeds43 and 44.
+Then run a native Chimera Optuna sweep with exactly 24 seed42 trials.
+
+If at least one seed42 trial passes the predeclared safe-audio gate, select the highest DEV Mean among those safe trials and confirm that exact frozen configuration at true seeds43 and 44.
 
 Maximum production training invocations:
 
-    22
+    26
 
 ## Required reading
 
-Read in this order:
+Read in this exact order:
 
 1. AGENTS.md
 2. docs/README.md
 3. docs/PROJECT_REQUIREMENTS.md
-4. docs/PLAN.md, especially Stage 4 safe-audio gate and Section 7 Promotion Rule
-5. docs/PROGRESS_EN.md through OWNER/MANAGER-OVERRIDE-050
+4. docs/PLAN.md, especially Stage 4 safe-audio comparison, Stage 5, and Section 7 Promotion Rule
+5. docs/PROGRESS_EN.md through OWNER/MANAGER-OVERRIDE-051
 6. docs/NEXT_TASK_EN.md
 7. docs/SOTA_REVIEW_EN.md relevant fusion/negative-transfer sections
 8. src/fusion/models/frozen_audio_temporal_adapter.py
 9. src/fusion/models/av_audio_query_temporal_video.py
-10. src/fusion/models/av_audio_confidence_gated.py
-11. src/fusion/models/av_audio_first_zero_residual.py
+10. src/fusion/models/av_r3_disease_query.py
+11. src/fusion/models/av_audio_confidence_gated.py
 12. src/common/optimizers/wsm_trainable_adamw.py
-13. src/chimera_plugin.py
-14. configs/wsm_mm_pd_dep_v1/fusion/05_audio_query_temporal_video.yaml
+13. src/fusion/loss/wsm_masked_sparse_loss.py
+14. src/chimera_plugin.py
+15. configs/wsm_mm_pd_dep_v1/fusion/05_audio_query_temporal_video.yaml
 
-Also read the installed Chimera ML Optuna documentation/source:
+Also inspect the installed Chimera ML Optuna implementation:
 
 - docs/en/user-guide/sweeps.md
 - src/chimera_ml/training/sweep.py
@@ -60,19 +71,19 @@ Also read the installed Chimera ML Optuna documentation/source:
 
 Do not modify Chimera ML.
 
-## Owner-authorized rule changes for this task
+## Owner-authorized search exception
 
 For this task only:
 
-- a bounded Optuna hyperparameter/architecture search is authorized despite the normal broad-search restriction;
-- Stage 6 is paused before execution;
-- Stage 5 is reopened for this sprint;
+- a bounded Optuna architecture/hyperparameter search is authorized;
+- the usual no-broad-search restriction is relaxed only for AA-DQTR;
 - architectural depth and fusion hyperparameters may be tuned;
-- the frozen audio architecture/checkpoint itself MUST NOT be tuned or modified.
+- the frozen audio architecture/checkpoint itself may NOT be tuned;
+- no other model family may be introduced after seeing results.
 
 All other project invariants remain active.
 
-## Frozen audio anchor and comparator
+## Frozen audio anchor
 
 Exact checkpoint:
 
@@ -88,407 +99,714 @@ Frozen DEV reference:
 - Parkinson Score: `0.8277353635`
 - Mean: `0.7878268765`
 
-Historical Candidate-B evidence:
+The frozen audio submodel must remain:
 
-- seed42 DEV Mean `0.809324`;
-- depression delta vs audio `-0.038989`;
-- Parkinson delta vs audio `+0.081983`.
-
-This motivates task-specific video-correction control but does not authorize manual cherry-picking after the sweep.
+- `requires_grad=False`;
+- eval-only under parent `train()`;
+- executed under `torch.no_grad()`;
+- absent from optimizer parameter groups.
 
 ## Allowed tracked files
 
 Codex may modify/add only:
 
-- src/fusion/models/av_audio_query_temporal_video_tunable.py
+- src/fusion/models/av_audio_anchored_disease_query_trust.py
 - src/fusion/models/__init__.py
+- src/fusion/loss/audio_anchor_trust_loss.py
+- src/fusion/loss/__init__.py
 - src/chimera_plugin.py
-- configs/wsm_mm_pd_dep_v1/fusion/31_audio_first_optuna_base_seed42.yaml
-- configs/wsm_mm_pd_dep_v1/fusion/32_audio_first_optuna_sweep.yaml
-- configs/wsm_mm_pd_dep_v1/fusion/33_audio_first_optuna_best_seed42.yaml
-- configs/wsm_mm_pd_dep_v1/fusion/34_audio_first_optuna_confirm_seed43.yaml
-- configs/wsm_mm_pd_dep_v1/fusion/35_audio_first_optuna_confirm_seed44.yaml
-- scripts/common/audit_audio_first_optuna_sweep.py
+- configs/wsm_mm_pd_dep_v1/fusion/31_aadqtr_optuna_base_seed42.yaml
+- configs/wsm_mm_pd_dep_v1/fusion/32_aadqtr_optuna_sweep.yaml
+- configs/wsm_mm_pd_dep_v1/fusion/33_aadqtr_optuna_selected_seed42.yaml
+- configs/wsm_mm_pd_dep_v1/fusion/34_aadqtr_confirm_seed43.yaml
+- configs/wsm_mm_pd_dep_v1/fusion/35_aadqtr_confirm_seed44.yaml
+- scripts/common/audit_aadqtr_optuna_sweep.py
 - docs/PROGRESS_EN.md
+
+The audit script is optional.
 
 No other tracked file may change.
 
-The audit script is optional; if unnecessary, do not create it.
-
 ## Forbidden actions
 
-- Do not modify anything under `src/audio`.
-- Do not modify anything under `src/video`.
-- Do not modify existing accepted fusion models.
+- Do not modify `src/audio`.
+- Do not modify `src/video`.
+- Do not modify any existing fusion model.
 - Do not modify any DataModule.
 - Do not modify any existing loss.
 - Do not modify Chimera ML.
-- Do not unfreeze the historical audio model.
-- Do not tune the audio architecture/checkpoint.
-- Do not use pseudo labels in this search.
-- Do not use corpus identity, task_id, observed masks, labels, split identity, or Test protocol identity as model input features.
-- Do not change the canonical split/data/cache.
-- Do not use TEST_NONE/SOFT/HARD as an Optuna objective or for search-space edits, trial ranking, acceptance, or continuation.
-- Do not alter the search space after the first metric-bearing Optuna trial begins.
-- Do not add a second model family after seeing results.
-- Do not manually choose a lower-ranked trial because its task balance looks nicer.
-- Do not run more than 20 Optuna trials.
-- Do not run confirmation seeds unless the exact highest-Mean trial passes the safe screen.
+- Do not unfreeze/retrain/tune the historical audio model.
+- Do not use pseudo labels.
+- Do not use corpus ID, split ID, Test protocol ID, observed labels, targets, or external task IDs as model inputs.
+- Do not change canonical data/splits/caches.
+- Do not use Test metrics as Optuna objectives or for search-space edits, trial selection, safe eligibility, confirmation, stopping, or interpretation.
+- Do not modify model semantics or the search space after the first metric-bearing trial starts.
+- Do not introduce another model family after seeing results.
+- Do not run more than 24 Optuna trials.
+- Do not run confirmation seeds unless a seed42 trial passes the frozen safe-audio gate.
 - Do not start Stage 6, Stage 7, Text/Description, or Final Test.
-- Do not make significance/final-model claims.
+- Do not make significance or final-model claims.
 
-## 1. Tunable model family
+## 1. AA-DQTR model
 
-Implement and register:
+Implement:
 
-    src/fusion/models/av_audio_query_temporal_video_tunable.py
+    src/fusion/models/av_audio_anchored_disease_query_trust.py
 
 Registry key:
 
-    wsm_av_audio_query_temporal_video_tunable_model
+    wsm_av_audio_anchored_disease_query_trust_model
 
-The model is one configurable superset of the accepted Candidate-B mechanism.
+Recommended class:
 
-### Invariants
+    WSMAVAudioAnchoredDiseaseQueryTrustModel
 
-- Use `FrozenAudioTemporalAdapter` with the exact frozen checkpoint.
-- Frozen audio stays eval-only, `requires_grad=False`, under `torch.no_grad()`, and absent from optimizer groups.
-- Consume canonical temporal video features and masks.
-- Require audio availability.
-- Missing video must produce exact frozen-audio fallback.
-- Two independent disease logits.
-- No external task/corpus ID input.
-- All floating outputs finite.
-- Every possible search configuration must have <=1,000,000 trainable fusion parameters excluding frozen audio.
+### Required constructor parameters
 
-### Architecture
+    audio_checkpoint_path: str
+    audio_feature_dim: int = 768
+    audio_hidden_dim: int = 192
+    video_feature_dim: int = 512
+    hidden_dim: int = 192
+    num_heads: int = 4
+    query_layers: int = 2
+    temporal_ff_multiplier: int = 3
+    residual_hidden_dim: int = 192
+    residual_layers: int = 2
+    gate_hidden_dim: int = 128
+    dropout: float = 0.15
+    depression_correction_scale: float = 0.15
+    parkinson_correction_scale: float = 1.0
+    num_tasks: int = 2
 
-The model MUST support these configurable concepts:
+Validate all dimensions/ranges.
 
-1. video projection from 512 to `hidden_dim`;
-2. optional temporal video encoder stack with `temporal_layers` in [0,3];
-3. audio-task-feature query projection from frozen audio hidden 192 to `hidden_dim`;
-4. one audio-query cross-attention block over temporal video;
-5. task-specific residual MLP with configurable depth;
-6. optional audio-confidence gate MAY be supported if Codex chooses to include it before the firewall;
-7. fixed per-task correction scales:
-   - depression scale;
-   - Parkinson scale;
-8. zero-initialized final correction layer for every task.
+### 1.1 Frozen audio outputs
 
-Required final equation:
+Use `FrozenAudioTemporalAdapter` and obtain:
 
-    final_logit_t =
-        audio_base_logit_t
-        + video_available
-        * correction_scale_t
-        * optional_gate_t
+- `audio_base_logits [B,2]`;
+- `audio_task_features [B,2,192]`.
+
+No external task ID may enter the model.
+
+### 1.2 Video token projection
+
+Project temporal video tokens:
+
+    [B,T,512] -> [B,T,H]
+
+Use:
+
+    LayerNorm(512)
+    Linear(512,H)
+    GELU
+    Dropout
+
+Respect the canonical `video_mask`.
+
+Unavailable video must never contribute.
+
+### 1.3 Disease-query initialization
+
+Create exactly two learned disease embeddings:
+
+    disease_queries [2,H]
+
+Initialize:
+
+    Normal(mean=0, std=0.02)
+
+Project each frozen task-specific audio feature:
+
+    a_t = Linear(LayerNorm(audio_task_feature_t)) -> H
+
+Initial query state:
+
+    h_t^0 = LayerNorm(a_t + disease_query_t)
+
+This explicitly anchors every disease query in the frozen task-specific audio representation.
+
+### 1.4 Query-to-video refinement blocks
+
+Implement `query_layers` shared blocks, where `query_layers in {1,2,3}`.
+
+Stack the two query states:
+
+    Hq [B,2,H]
+
+For each block:
+
+1. pre-norm disease queries;
+2. multi-head cross-attention:
+
+       Q = disease queries [B,2,H]
+       K,V = projected temporal video [B,T,H]
+
+3. residual add;
+4. pre-norm position-wise FFN on the disease queries:
+   - Linear(H, temporal_ff_multiplier*H)
+   - GELU
+   - Dropout
+   - Linear(...,H)
+   - Dropout
+5. residual add.
+
+No disease-query self-attention is required or allowed in V1; tasks share block weights but do not directly attend to each other.
+
+All blocks must respect video padding masks.
+
+For unavailable-video rows:
+
+- provide a numerically safe attention mask/input;
+- final correction is explicitly zeroed;
+- final prediction must be exactly the frozen audio base logits.
+
+### 1.5 Task-specific reliability gate
+
+For each task, compute:
+
+    gate_t = sigmoid(
+        MLP_t([
+            LayerNorm(final_query_t),
+            audio_projected_t,
+            abs(audio_base_logit_t)
+        ])
+    )
+
+Gate MLP:
+
+    Linear(2H+1, gate_hidden_dim)
+    GELU
+    Dropout
+    Linear(gate_hidden_dim, 1)
+
+Gate is learned and task-specific.
+
+The frozen audio base logit may be detached before entering the gate.
+
+### 1.6 Task-specific residual head
+
+For each task, input:
+
+    [LayerNorm(final_query_t), audio_projected_t]
+
+Dimension:
+
+    2H
+
+Build exactly `residual_layers` hidden transformations, each:
+
+    Linear(current_dim, residual_hidden_dim)
+    GELU
+    Dropout
+
+After the hidden stack:
+
+    Linear(residual_hidden_dim, 1)
+
+The FINAL scalar Linear weight and bias MUST be zero-initialized.
+
+This guarantees exact audio equality at initialization.
+
+### 1.7 Final logits
+
+Fixed config scales:
+
+    s_D = depression_correction_scale
+    s_P = parkinson_correction_scale
+
+They are non-trainable scalars.
+
+Final correction:
+
+    delta_t =
+        video_available
+        * s_t
+        * gate_t
         * residual_t
 
-where `optional_gate_t = 1` if confidence gating is disabled.
+Final logit:
 
-At construction, before any optimizer step:
+    z_t = audio_base_logit_t + delta_t
 
-    preds == audio_base_logits
+Required exact invariants:
 
-must hold exactly for every sample because the final correction layer is zero-initialized.
+- at initialization: `preds == audio_base_logits` bitwise/exactly where dtype permits;
+- video unavailable: `preds == audio_base_logits` exactly;
+- if `depression_correction_scale == 0`, depression prediction remains exactly frozen audio for the entire run.
 
-### Temporal encoder contract
+### 1.8 Required aux outputs
 
-If `temporal_layers == 0`, bypass the video self-attention encoder.
+Expose at least:
 
-If `temporal_layers > 0`, use a mask-aware Transformer/self-attention stack over projected video features. The exact PyTorch block organization is Codex-chosen before the firewall, but MUST:
+    audio_base_logits
+    audio_task_features
+    projected_audio_task_features
+    disease_query_states
+    video_sequence
+    gate_values
+    raw_residual_logits
+    correction_logits
+    task_logits
 
-- use `hidden_dim`;
-- use `num_heads`;
-- use the frozen `temporal_ff_multiplier`;
-- use GELU;
-- use configured dropout;
-- respect video padding mask;
-- keep unavailable video from affecting outputs.
+All diagnostics must be finite.
 
-### Residual depth contract
+## 2. AA-DQTR trust-region loss
 
-`residual_layers` means 1–3 hidden MLP transformations before the final zero-initialized scalar layer.
+Implement:
 
-Codex may choose the exact repeated block pattern before the firewall, but it MUST be identical across tasks except parameters are task-specific.
+    src/fusion/loss/audio_anchor_trust_loss.py
 
-### Task-specific correction scale
+Registry key:
 
-The scale is a fixed non-trainable config scalar.
+    wsm_audio_anchor_trust_loss
 
-Depression scale `0.0` is explicitly legal.
+Recommended class:
 
-If depression scale is `0.0`, depression output must remain exactly equal to frozen audio throughout training.
+    WSMAudioAnchorTrustLoss
 
-This is an intentionally authorized task-conditioned modality-use hypothesis, not a post-hoc manual head replacement.
+Constructor:
 
-## 2. Manager hard bounds for Codex-designed search space
+    anchor_weight: float = 0.05
+    eps: float = 1e-8
 
-Codex has autonomy to select and freeze 7–10 actual Optuna variables from the pool below.
+Validate:
 
-Required variables:
+    0 <= anchor_weight <= 1.0
+    eps > 0
 
-1. `model.params.hidden_dim`
-2. `model.params.temporal_layers`
-3. `model.params.residual_layers`
-4. `model.params.dropout`
-5. `optimizer.params.lr`
-6. `model.params.depression_correction_scale`
-7. `model.params.parkinson_correction_scale`
+### 2.1 Primary observed sparse BCE
 
-Optional variables:
+Use only observed labels.
 
-- `model.params.num_heads`
-- `model.params.temporal_ff_multiplier`
-- `model.params.residual_hidden_dim`
-- `optimizer.params.weight_decay`
-- optional confidence-gate boolean/hidden width if implemented
+For:
 
-Hard search bounds:
+    observed_mask = batch.masks["observed_mask"]
 
-- hidden_dim choices: subset of `[96,128,160,192,224,256]`
-- num_heads choices: subset of `[2,4,8]`
-- temporal_layers: integer/categorical in `[0,3]`
-- temporal_ff_multiplier: subset of `[2,3,4]`
-- residual_hidden_dim: subset of `[64,96,128,160,192,256,320]`
-- residual_layers: integer/categorical in `[1,3]`
-- dropout: float/categorical entirely inside `[0.05,0.35]`
-- depression_correction_scale: entirely inside `[0.0,0.40]`
-- Parkinson_correction_scale: entirely inside `[0.25,1.50]`
-- AdamW lr: log space entirely inside `[2e-5,4e-4]`
-- weight_decay: log space entirely inside `[1e-5,5e-2]`
+compute standard BCE-with-logits over observed entries only.
 
-All hidden_dim choices used in the sweep MUST be divisible by all sampled num_heads choices.
+Unknown labels MUST remain masked and never become negatives.
 
-Before the first trial, Codex must record:
+Observed targets must be finite binary values.
 
-- exact selected search variables;
-- exact ranges/choices/types;
-- rationale;
-- parameter-count proof that every possible sampled model is <=1,000,000 trainable fusion parameters.
+### 2.2 Confidence-weighted trust penalty
 
-After this freeze, no search-space edit is allowed.
+Read:
 
-## 3. Base training config
+    base = output.aux["audio_base_logits"]
+
+Detach base before computing confidence/anchor target.
+
+Define:
+
+    confidence =
+        2 * abs(sigmoid(base.detach()) - 0.5)
+
+so confidence is in [0,1].
+
+Define correction:
+
+    delta = output.preds - base.detach()
+
+Anchor penalty:
+
+    L_anchor =
+        sum(
+            observed_mask
+            * confidence
+            * delta^2
+        )
+        /
+        (observed_count + eps)
+
+Final loss:
+
+    L =
+        L_observed_BCE
+        + anchor_weight * L_anchor
+
+The regularizer does NOT assert that audio is correct.
+
+It only discourages large video-driven moves where the frozen audio classifier is confident.
+
+No Test quantity enters the loss.
+
+### 2.3 Required diagnostics
+
+Expose or make inspectable:
+
+- observed BCE;
+- anchor penalty;
+- mean confidence per task;
+- mean absolute correction per task.
+
+Do not require a new callback solely for these diagnostics unless necessary.
+
+## 3. Registration
+
+Update:
+
+- `src/fusion/models/__init__.py`
+- `src/fusion/loss/__init__.py`
+- `src/chimera_plugin.py`
+
+Register/import:
+
+- `wsm_av_audio_anchored_disease_query_trust_model`
+- `wsm_audio_anchor_trust_loss`
+
+Preserve all existing registrations.
+
+## 4. Base config
 
 Create:
 
-    configs/wsm_mm_pd_dep_v1/fusion/31_audio_first_optuna_base_seed42.yaml
+    configs/wsm_mm_pd_dep_v1/fusion/31_aadqtr_optuna_base_seed42.yaml
 
-Fixed fields:
+Fixed:
 
-- seed: 42
-- experiment_name: `wsm_mm_pd_dep_v1`
-- run_name: `audio_first_optuna_base_seed42`
-- data: canonical `wsm_av_fusion_datamodule`
-- batch_size: 8
-- model: `wsm_av_audio_query_temporal_video_tunable_model`
+- seed 42
+- experiment `wsm_mm_pd_dep_v1`
+- canonical `wsm_av_fusion_datamodule`
+- batch_size 8
+- model `wsm_av_audio_anchored_disease_query_trust_model`
 - exact frozen audio checkpoint
-- loss: `wsm_masked_sparse_loss`
-- optimizer: `wsm_trainable_adamw_optimizer`
-- epochs: 30
+- num_heads 4
+- temporal_ff_multiplier 3
+- gate_hidden_dim 128
+- loss `wsm_audio_anchor_trust_loss`
+- optimizer `wsm_trainable_adamw_optimizer`
+- epochs 30
 - CUDA
 - mixed precision true
 - grad clip 0.5
-- checkpoint monitor only `dev/mean_score`, mode=max
-- early stopping only `dev/mean_score`, patience 6, min_delta 0.0005
-- required snapshot/summary/segment metrics/console/MLflow instrumentation
-- four DEV/Test monitoring streams
+- checkpoint/early stopping only `dev/mean_score`, max
+- patience 6
+- min_delta 0.0005
+- all required instrumentation
+- DEV/TEST_NONE/TEST_SOFT/TEST_HARD streams
 
-Base model/searchable parameter values may be chosen by Codex inside the hard bounds before firewall.
+Use reasonable in-bounds default values for all swept fields.
 
-No pseudo DataModule/loss/warm-up.
-
-## 4. Optuna sweep config
+## 5. Frozen Optuna search space
 
 Create:
 
-    configs/wsm_mm_pd_dep_v1/fusion/32_audio_first_optuna_sweep.yaml
+    configs/wsm_mm_pd_dep_v1/fusion/32_aadqtr_optuna_sweep.yaml
 
-Required:
+Use exactly:
 
     method: optuna
-    n_trials: 20
-    study_name: wsm-audio-first-safe-v1
+    n_trials: 24
+    study_name: wsm-aadqtr-safe-v1
     target:
       monitor: dev/mean_score
       mode: max
 
-Use Chimera typed parameter specs.
+Search EXACTLY these 10 parameters:
 
-The sweep target MUST be exactly:
+### 5.1 hidden_dim
 
-    dev/mean_score
+    model.params.hidden_dim
+    type: categorical
+    choices: [128, 160, 192, 224, 256]
 
-No task-specific or Test objective is permitted.
+### 5.2 query_layers
 
-If storage is configured, use only a project-local SQLite path under `logs/` and `load_if_exists: false`.
+    model.params.query_layers
+    type: int
+    low: 1
+    high: 3
+    step: 1
 
-## 5. Mandatory firewall before the Optuna sweep
+### 5.3 residual_hidden_dim
 
-Before the first metric-bearing trial:
+    model.params.residual_hidden_dim
+    type: categorical
+    choices: [128, 192, 256, 320]
 
-1. implement/register the tunable model;
-2. create base and sweep configs;
-3. freeze exact model block organization;
-4. freeze exact 7–10 variable search space;
-5. compile new model/plugin;
-6. validate the base config;
-7. run:
-   `chimera-ml sweep ... --dry-run`
-   and verify the typed search space/target;
-8. strict-load the frozen audio checkpoint and verify SHA;
-9. build representative boundary configurations covering:
-   - minimum model size;
-   - maximum model size;
-   - all num_heads/hidden divisibility combinations used;
-10. prove every boundary configuration <=1,000,000 trainable fusion parameters;
-11. prove frozen audio is absent from optimizer groups;
-12. synthetic both/video-missing smokes:
-   - exact zero-init equality to audio;
-   - exact video-missing fallback;
-   - finite forward/loss/backward;
-   - after one optimizer step, correction path can wake up;
-   - frozen audio gradients remain None;
+### 5.4 residual_layers
+
+    model.params.residual_layers
+    type: int
+    low: 1
+    high: 3
+    step: 1
+
+### 5.5 dropout
+
+    model.params.dropout
+    type: float
+    low: 0.05
+    high: 0.30
+
+### 5.6 depression correction scale
+
+    model.params.depression_correction_scale
+    type: float
+    low: 0.0
+    high: 0.50
+
+### 5.7 Parkinson correction scale
+
+    model.params.parkinson_correction_scale
+    type: float
+    low: 0.25
+    high: 1.75
+
+### 5.8 anchor trust weight
+
+    loss.params.anchor_weight
+    type: float
+    low: 0.0001
+    high: 1.0
+    log: true
+
+### 5.9 learning rate
+
+    optimizer.params.lr
+    type: float
+    low: 0.00002
+    high: 0.0004
+    log: true
+
+### 5.10 weight decay
+
+    optimizer.params.weight_decay
+    type: float
+    low: 0.00001
+    high: 0.05
+    log: true
+
+No other parameter may be swept.
+
+Do not edit this search space after the firewall commit.
+
+## 6. Parameter cap
+
+Every possible combination in the search space MUST satisfy:
+
+    trainable non-audio parameters <= 1,200,000
+
+Before production, programmatically instantiate all boundary/worst-case combinations needed to prove this.
+
+Frozen audio parameters do not count toward this cap but MUST remain absent from optimizer groups.
+
+If the specified search space cannot satisfy the cap with the required architecture, stop and report before any production trial. Do not silently shrink the search space.
+
+## 7. Mandatory pre-sweep firewall
+
+Before Optuna trial 1:
+
+1. implement/register model and loss;
+2. create base/sweep configs;
+3. compile model/loss/plugin;
+4. validate base config;
+5. run Chimera Optuna `--dry-run`;
+6. verify:
+   - method optuna;
+   - 24 trials;
+   - exact 10 search variables;
+   - target exactly `dev/mean_score`, max;
+7. verify exact audio checkpoint SHA;
+8. prove frozen audio absent from optimizer groups;
+9. parameter-cap proof for the full search space;
+10. synthetic model smoke:
+    - exact zero-init equality;
+    - exact video-missing fallback;
+    - D scale=0 keeps D exact audio after optimizer steps;
+    - finite forward/loss/backward;
+    - frozen audio gradients None;
+11. trust-loss smoke:
+    - unknown labels masked;
+    - observed BCE correct;
+    - anchor penalty exact against direct reference formula;
+    - base logits structurally detached;
+    - anchor_weight=0 reduces exactly to observed BCE;
+12. two-step wake-up smoke:
+    - first backward trains final correction layer;
+    - after exactly one bounded optimizer step, query/video/gate/residual upstream paths receive finite gradients;
 13. canonical DEV initialization reproduction:
-   - fresh zero-init model reproduces frozen audio D/P/Mean within tolerance 0.0005;
-   - DEV only, no Test iteration for this gate;
-14. append complete frozen search manifest/evidence to PROGRESS_EN.md;
+    - fresh zero-init AA-DQTR reproduces audio D/P/Mean within 0.0005;
+    - DEV only;
+    - no Test loader iteration;
+14. append complete frozen architecture/search manifest to PROGRESS_EN.md;
 15. commit and push one firewall commit.
 
-No Optuna trial may start before that firewall commit exists on origin.
+No metric-bearing Optuna trial may start before the firewall commit exists on origin.
 
-## 6. Exact Optuna production command
+## 8. Exact production sweep
 
 Run exactly once:
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml sweep       --base-config configs/wsm_mm_pd_dep_v1/fusion/31_audio_first_optuna_base_seed42.yaml       --sweep-config configs/wsm_mm_pd_dep_v1/fusion/32_audio_first_optuna_sweep.yaml       --sweep-name audio-first-safe-v1       --max-trials 20
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml sweep \
+      --base-config configs/wsm_mm_pd_dep_v1/fusion/31_aadqtr_optuna_base_seed42.yaml \
+      --sweep-config configs/wsm_mm_pd_dep_v1/fusion/32_aadqtr_optuna_sweep.yaml \
+      --sweep-name aadqtr-safe-v1 \
+      --max-trials 24
 
-Exactly 20 completed trial training invocations are authorized.
+Exactly 24 seed42 trial training invocations are authorized.
 
-Do not manually launch extra trial configs.
+No manually launched extra seed42 trials.
 
-If the sweep aborts because of an implementation/configuration defect before a meaningful trial completes, fix only the defect if it remains inside allowed scope and no search-space semantics change. If a metric-bearing trial has completed, do not change the search space or model semantics; stop and report any subsequent blocker.
+If a code/config defect aborts the sweep BEFORE the first metric-bearing trial completes, a narrow correction is allowed within scope.
 
-## 7. Sweep evidence and ranking
+After any metric-bearing trial has completed:
 
-After the sweep:
+- model semantics are frozen;
+- loss semantics are frozen;
+- search space is frozen;
+- no corrective redesign/tuning is allowed inside this task.
 
-- identify the sweep directory and manifest;
-- verify manifest method `optuna`;
-- verify exactly 20 completed trials;
-- verify objective `dev/mean_score`, mode=max;
-- record every trial:
-  - trial number/id;
-  - exact generated config path;
-  - exact sampled params;
-  - run name;
-  - best target value;
-  - target epoch;
-  - trainable fusion parameter count if available from snapshot/config reconstruction;
-- produce top-5 trial table by DEV Mean.
+Stop and report a blocker if needed.
 
-The ONLY selected candidate is the manifest/study highest-DEV-Mean trial.
+## 9. Sweep audit
 
-Do not substitute a lower-ranked trial.
+After completion verify:
 
-## 8. Frozen safe-audio screen
+- sweep method `optuna`;
+- study `wsm-aadqtr-safe-v1`;
+- exactly 24 completed trials;
+- objective `dev/mean_score`, max;
+- no Test objective.
 
-Highest-Mean seed42 trial passes only if ALL are true:
+Record every trial:
 
-- DEV Mean > `0.7878268765`
-- depression DEV Score >= `0.7379183895`
-- Parkinson DEV Score >= `0.8177353635`
-- frozen audio remained exact/frozen
-- parameter cap satisfied
-- no Test-driven choice occurred
+- trial number/id;
+- generated config;
+- sampled 10 parameters;
+- run name;
+- target DEV Mean;
+- target epoch;
+- trainable parameter count.
 
-Record deltas versus audio.
+Produce top-5 by DEV Mean.
 
-If it fails any condition:
+## 10. Frozen safe-audio eligibility
 
-- record the search as a valid negative optimization result;
-- do NOT create/run seed43/44 confirmation;
-- stop after documentation/evidence commit.
+A seed42 trial is SAFE only if all are true:
 
-## 9. Freeze selected config if seed42 passes
+- DEV Mean > `0.7878268765`;
+- depression Score >= `0.7379183895`;
+- Parkinson Score >= `0.8177353635`;
+- model/audio invariants passed;
+- no Test-driven choice.
 
-If and only if Section 8 passes:
+After all 24 trials:
 
-Create:
+1. form the set of safe trials using ONLY these frozen DEV conditions;
+2. if the set is empty:
+   - record `NO SAFE AUDIO-BEATING AA-DQTR TRIAL`;
+   - do not run seeds43/44;
+3. if safe trials exist:
+   - choose the one with highest DEV Mean;
+   - ties within `1e-12` are broken by lower trainable parameter count;
+   - do not use Test or calibration to break ties.
 
-    configs/wsm_mm_pd_dep_v1/fusion/33_audio_first_optuna_best_seed42.yaml
+This selected safe trial is the only one eligible for confirmation.
 
-It must be an exact tracked copy of the selected generated trial config, preserving all sampled hyperparameters.
+## 11. Freeze selected safe config
+
+If a safe trial exists, create:
+
+    configs/wsm_mm_pd_dep_v1/fusion/33_aadqtr_optuna_selected_seed42.yaml
+
+This must be an exact tracked copy of its generated trial config.
 
 Record:
 
-- source trial config path;
-- full selected config SHA256;
-- selected model trainable parameter count;
+- source generated config path;
+- config SHA256;
+- exact 10 sampled values;
+- model trainable parameter count;
 - selected checkpoint path/SHA256;
-- selected DEV D/P UAR/MF1/Score and Mean.
+- seed42 DEV D/P UAR/MF1/Score and Mean;
+- delta vs frozen audio.
 
-Then create:
+Create:
 
-    34_audio_first_optuna_confirm_seed43.yaml
-    35_audio_first_optuna_confirm_seed44.yaml
+    configs/wsm_mm_pd_dep_v1/fusion/34_aadqtr_confirm_seed43.yaml
+    configs/wsm_mm_pd_dep_v1/fusion/35_aadqtr_confirm_seed44.yaml
 
-These MUST differ from config 33 only in:
+They may differ from config 33 ONLY in:
 
 - top-level seed;
 - run_name.
 
-Do not change any hyperparameter.
+All model/loss/optimizer hyperparameters remain exact.
 
-## 10. Conditional confirmation
+## 12. Conditional true-seed confirmation
 
-Only if seed42 passed the safe screen, run exactly:
+Only if Section 10 finds a safe seed42 trial:
 
-1. seed43 confirmation;
-2. seed44 confirmation.
+1. run seed43 once;
+2. run seed44 once.
 
-Use normal `chimera-ml train`, not another sweep.
+Use normal `chimera-ml train`.
 
-Checkpoint/early stopping remain DEV-only.
+No sweep and no rerun.
 
-For each seed record selected checkpoint SHA256 and full DEV D/P/Mean.
+For seeds42/43/44 record:
 
-### Three-seed provisional success gate
+- selected DEV D/P/Mean;
+- checkpoint SHA256;
+- trainable parameter count.
 
-The selected Optuna configuration is a provisional safe audio-beating candidate only if:
+Compute three-seed mean/sample std.
 
-- safe-audio screen passes separately on seeds42,43,44;
-- three-seed DEV Mean > `0.7878268765`;
-- three-seed depression mean >= `0.7379183895`;
-- three-seed Parkinson mean >= `0.8177353635`;
-- selected checkpoint identities are distinct across true seeds;
-- no Test metric influenced selection or continuation.
+### Provisional safe-audio success
 
-If any fails, preserve the result as non-promoted.
+AA-DQTR passes the provisional confirmation gate only if:
 
-Codex must not declare final promotion; manager decides.
+1. DEV Mean > audio Mean on all three seeds;
+2. D Score >= `0.7379183895` on all three seeds;
+3. P Score >= `0.8177353635` on all three seeds;
+4. three-seed Mean > `0.7878268765`;
+5. three-seed D mean >= `0.7379183895`;
+6. three-seed P mean >= `0.8177353635`;
+7. checkpoint SHA256 values are pairwise distinct;
+8. Test did not influence any choice.
 
-## 11. Test firewall
+Codex MUST NOT declare final promotion.
 
-TEST_NONE/SOFT/HARD remain mandatory epoch-level monitoring.
+Manager decides after audit.
 
-They MUST NOT be used by:
+## 13. Required diagnostics
 
-- Optuna target;
-- sampler/search-space changes;
-- trial ranking;
-- safe screen;
+For the selected safe seed42 trial, and confirmations if executed, record:
+
+- mean/std gate value by task on DEV;
+- mean absolute correction by task on DEV;
+- fraction of observed DEV predictions whose sign changes relative to frozen audio, by task;
+- count:
+  - audio wrong -> AA-DQTR correct;
+  - audio correct -> AA-DQTR wrong;
+- selected loss observed BCE;
+- selected anchor penalty.
+
+These diagnostics are DEV-only and explanatory.
+
+Do not use them for Optuna selection.
+
+## 14. Test firewall
+
+TEST_NONE/SOFT/HARD remain mandatory epoch monitoring only.
+
+They MUST NOT affect:
+
+- Optuna objective;
+- sampler;
+- architecture;
+- loss;
+- search space;
+- safe eligibility;
+- selected safe trial;
 - confirmation decision;
-- architecture redesign;
-- hyperparameter edits;
 - checkpoint selection;
-- final task conclusion.
+- next action.
 
-All search/selection evidence is DEV-only.
-
-## 12. Scope checks
+## 15. Scope verification
 
 Run:
 
@@ -496,40 +814,38 @@ Run:
     git diff origin/main -- src/audio
     git diff origin/main -- src/video
     git diff origin/main -- src/fusion/data
-    git diff origin/main -- src/fusion/loss
     git diff origin/main -- src/common
     git status --short
     git diff --stat origin/main...HEAD
     git log -12 --oneline --decorate
 
-Only the allowed new tunable model/registration/config/audit/evidence files may differ.
+Only authorized model/loss/registration/config/audit/PROGRESS files may differ.
 
 ## Acceptance criteria
 
-TASK-005H-OPTUNA execution passes only if:
+TASK-005H-AA-DQTR-OPTUNA passes only if:
 
-- branch is exactly `codex/task-005h-optuna`;
-- exact frozen audio checkpoint remains unchanged/frozen;
-- model starts exactly at audio function and supports exact video-missing fallback;
-- search family obeys manager hard bounds;
-- every possible sampled architecture respects <=1M trainable fusion params;
-- exact search space is frozen/committed before first trial;
-- Chimera native `method: optuna` sweep is used;
-- exactly 20 seed42 Optuna trials complete;
-- objective is only `dev/mean_score`, max;
-- no Test-driven search/tuning;
+- branch exactly `codex/task-005h-aadqtr-optuna`;
+- AA-DQTR implementation matches this frozen contract;
+- audio remains exact/frozen;
+- zero-init and missing-video exact fallback pass;
+- trust loss matches direct reference;
+- full 10-variable search space is frozen before trial 1;
+- all possible trial architectures respect <=1.2M non-audio trainable parameters;
+- native Chimera Optuna is used;
+- exactly 24 seed42 trials complete;
+- target only `dev/mean_score`, max;
+- no Test-driven search;
+- safe set is filtered only by the frozen DEV gate;
+- selected trial is highest DEV Mean within safe set;
+- seed43/44 execute only when a safe seed42 trial exists;
+- confirmations reuse exact hyperparameters;
+- at most 26 production training invocations;
 - no pseudo labels;
-- no existing source/model/data/loss modification outside allowed files;
-- best trial is selected strictly by highest DEV Mean;
-- no lower-ranked safe-looking trial substitution occurs;
-- seed43/44 confirmation runs only if the exact best seed42 trial passes the frozen safe screen;
-- confirmation configs are exact selected-config copies except seed/run_name;
-- at most 22 production invocations occur;
-- all evidence is recorded;
-- branch is pushed;
-- main/master untouched by Codex.
-
-Passing this task gives the manager evidence to decide whether the optimization sprint has produced a safe multimodal model that genuinely beats the frozen audio reference.
+- no Stage6/7/Text/Final Test;
+- evidence complete;
+- branch pushed;
+- main/master untouched.
 
 ## Required handoff
 
@@ -544,27 +860,31 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch `codex/task-005h-optuna`;
+- branch `codex/task-005h-aadqtr-optuna`;
 - firewall commit SHA;
 - final evidence commit SHA;
-- pushed-to-origin status;
+- pushed status;
 - main/master untouched;
-- exact frozen audio SHA;
-- exact frozen search space and number of variables;
-- Chimera sweep command;
-- sweep directory/manifest/study name;
-- exactly 20 trial count;
-- top-5 trials with sampled params and DEV Mean;
-- exact best trial and seed42 D/P/Mean;
-- audio deltas and safe-screen PASS/FAIL;
-- selected config/checkpoint SHA if passed;
-- seed43/44 confirmation results if executed;
-- three-seed mean/std and safe-screen result if confirmations executed;
-- model parameter counts;
+- frozen audio SHA;
+- exact model equation;
+- exact trust loss equation;
+- exact 10-variable Optuna space;
+- production sweep command;
+- sweep directory/manifest/study;
+- completed trial count;
+- top-5 DEV trials;
+- number of safe trials;
+- selected safe trial or explicit none;
+- selected seed42 D/P/Mean and audio deltas if available;
+- selected config/checkpoint SHA if available;
+- seeds43/44 results if executed;
+- three-seed mean/std and provisional gate if executed;
+- gate/correction/error-transition diagnostics;
+- trainable parameter counts;
 - no Test-driven decision;
 - no post-hoc search-space change;
 - no pseudo labels;
-- no Stage6/7/Text/Final Test;
-- current Stage 5 optimization status.
+- Stage 5 optimization status;
+- no Stage6/7/Text/Final Test.
 
-Stop after TASK-005H-OPTUNA.
+Stop after TASK-005H-AA-DQTR-OPTUNA.
