@@ -4494,3 +4494,54 @@ Frozen safe-audio gate:
 
 Recommended next atomic task: TASK-005H-V2L-OPTUNA — implement the compact two-view WSM adaptation of V2L, freeze a 24-trial Optuna search space, execute the sweep, and conditionally confirm the best safe trial on seeds43/44.
 
+### MANAGER-CORRECTION-053 — Retract literature-model substitution and restore the actual trained-model record
+
+Status: documentation/authorization correction before any new implementation branch.
+
+- The prior V2L assignment was based on a misunderstanding of the owner's reference to "models from the sixth stage/table".
+- No V2L/URDF/CTRL/DCSI/TACVI/CDSA model has been trained in WSM.
+- PLAN Stage 6 is still not started and contains ablations/claims audit, not a bank of trained new architectures.
+- No `codex/task-005h-v2l-optuna` branch existed at the time of this correction.
+- Therefore TASK-005H-V2L-OPTUNA is superseded before execution and must not be sent to Codex.
+
+Restored factual trained-model record relevant to the current optimization decision:
+
+| Method | Evidence scope | DEV D | DEV P | DEV Mean |
+|---|---|---:|---:|---:|
+| Frozen temporal audio | frozen reference | 0.747918 | 0.827735 | 0.787827 |
+| Video V2 prototype | seed42 | 0.620101 | 0.793043 | 0.706572 |
+| F0 gated late A+V | seed42 | 0.642220 | 0.846201 | 0.744211 |
+| F1 shared sparse A+V | seed42 | 0.689708 | 0.857973 | 0.773841 |
+| F2 directed A+V | seed42 | 0.697035 | 0.852104 | 0.774569 |
+| Strong-audio F1 temporal residual | seed42 | 0.709271 | 0.811169 | 0.760220 |
+| Audio-first candidate A zero residual | seed42 | 0.725405 | 0.842436 | 0.783920 |
+| Audio-first candidate B audio-query temporal video | seed42 | 0.708929 | 0.909719 | 0.809324 |
+| Audio-first candidate C confidence-gated | seed42 | 0.724337 | 0.828934 | 0.776635 |
+| R2 direct pseudo student | seed42 | 0.682324 | 0.858227 | 0.770275 |
+| Corrected R3-A | seed42 | 0.661893 | 0.860940 | 0.761417 |
+| Corrected R3-B agreement | seed42 | 0.695808 | 0.893824 | 0.794816 |
+| Corrected R3-B agreement | seed43 | 0.694349 | 0.841176 | 0.767762 |
+| Corrected R3-B agreement | seed44 | 0.698378 | 0.838989 | 0.768684 |
+| Corrected R3-B agreement | 3-seed mean | 0.696178 | 0.857996 | 0.777087 |
+| R4 Equal | seed42 | 0.712498 | 0.843342 | 0.777920 |
+| R4 Static-STCH | seed42 | 0.725077 | 0.849485 | 0.787281 |
+| R4 corrected Progress | seed42 | 0.701245 | 0.873354 | 0.787299 |
+| R4 corrected RA-STCH | seed42 | 0.700992 | 0.864298 | 0.782645 |
+| R4 Equal | 3-seed mean | 0.707925 | 0.850421 | 0.779173 |
+| R4 Static-STCH | 3-seed mean | 0.708698 | 0.852097 | 0.780397 |
+| R4 corrected Progress | 3-seed mean | 0.708271 | 0.861231 | 0.784751 |
+
+Additional true-seed R4 details:
+- Equal seed43/44 Mean: 0.779671 / 0.779927.
+- Static-STCH seed43/44 Mean: 0.776064 / 0.777847.
+- Corrected Progress seed43/44 Mean: 0.792364 / 0.774590.
+
+Important interpretation:
+- Candidate B is the highest single-seed DEV Mean among trained WSM fusion models at 0.809324, but has severe depression negative transfer.
+- Corrected R3-B seed42 also beats frozen audio Mean at 0.794816, but the effect does not repeat at seeds43/44.
+- Corrected Progress seed43 beats frozen audio Mean at 0.792364, but its three-seed mean is 0.784751, below frozen audio.
+- No trained multi-seed fusion/RAMPS method currently beats the frozen audio DEV Mean 0.787827 robustly.
+- Literature-only V2L/URDF/CTRL candidates are excluded from the restored trained-model table.
+
+No new Codex implementation is authorized until the manager/owner selects which already-trained WSM family should receive the Optuna budget.
+
