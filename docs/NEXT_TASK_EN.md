@@ -1,43 +1,37 @@
-# TASK-005G-BUNDLE: Three-Seed Confirmation of Equal, Static-STCH, and Progress
+# TASK-006A-BUNDLE: Stage-6 Shuffled Pseudo-Target Negative Control on the Equal Composition
 
 ## Authority and branch
 
-This task supersedes the cancelled five-seed expansion.
-
 Required branch:
 
-    codex/task-005g
+    codex/task-006a
 
 Start from current `origin/main`, which includes:
 
-- PR #43 merge `d44ccdbb3fad6e4f934bb87aee006560843e5dd5`;
-- manager R4 confirmation freeze `92a5d38333adee37cc5c7aa98f6b779aa9a0695c`;
-- cancelled expansion record `661782b6454423b658968973be675a772e1a05a8`;
-- owner/manager override restoring three-seed confirmation `b9d1b08d2b6d4ba8555b0e97f0925f0561d6417b`.
+- PR #44 merge `de05a2233d318add54b71121193e7e412d0b102a`;
+- manager Stage-5 closure / Stage-6 activation commit `b75cd4f2118f97cd648596bbf4bd443d1ec53f5c`.
 
-If `codex/task-005g` already exists from an earlier TASK-005G assignment, reuse is explicitly authorized. Fetch `origin` and merge current `origin/main` into the task branch. Do not reset, rebase away work, force-push, or touch main/master.
+Create exactly one new task branch from that `origin/main`.
 
-If expansion-only seed45/46 configs were created locally but no production run used them, remove those unneeded task-local files before the firewall commit. No seed45/46 production run is authorized.
-
-This task is experiment-only. Source code MUST remain unchanged.
+This is the first Stage-6 claims/ablation task. It is not a tuning task.
 
 ## Goal
 
-Complete the PLAN-recommended three-seed evidence for the three valid R4 fallback scalarizers:
+Execute the PLAN-required shuffled/mismatched pseudo-target negative control while preserving every non-semantic factor as closely as possible.
 
-1. Equal;
-2. Static STCH;
-3. corrected Progress.
+Use the accepted three-seed Equal full composition as the matched-pseudo reference because:
 
-Retain the already-valid seed42 runs and execute only true seeds43/44 for each method.
+- it has no dynamic/fixed balancing-controller comparison confound;
+- it uses the exact R3 model;
+- it uses the frozen R2 pseudo path and warm-up;
+- it uses the frozen R3 auxiliary/agreement terms;
+- it has valid matched-pseudo results for seeds42/43/44.
 
-Exactly six new production invocations are authorized.
+Build ONE deterministic negative-control pseudo cache by permuting the complete pseudo-supervision tuple among missing rows within each task while leaving canonical rows and observed truth fixed.
 
-Together with retained seed42, each method will have three total seeds:
+Then run the Equal composition at seeds42/43/44 using ONLY that derived shuffled cache.
 
-    42, 43, 44
-
-RA-STCH is already a negative R4 result and MUST NOT be rerun.
+Exactly three production training invocations are authorized.
 
 ## Required reading
 
@@ -46,30 +40,27 @@ Read in this order:
 1. AGENTS.md
 2. docs/README.md
 3. docs/PROJECT_REQUIREMENTS.md
-4. docs/PLAN.md, especially Stage 5, Stage 6 boundary, and Section 7 Promotion Rule
-5. docs/PROGRESS_EN.md through OWNER/MANAGER-OVERRIDE-048
+4. docs/PLAN.md, especially Stage 6 items 3–5 and item 8 plus Section 7 Promotion Rule
+5. docs/PROGRESS_EN.md through MANAGER-DECISION-049
 6. docs/NEXT_TASK_EN.md
-7. configs/wsm_mm_pd_dep_v1/fusion/13_r4_equal_seed42.yaml
-8. configs/wsm_mm_pd_dep_v1/fusion/14_r4_static_stch_seed42.yaml
-9. configs/wsm_mm_pd_dep_v1/fusion/15_r4_progress_seed42.yaml
-10. src/fusion/loss/r4_ramps_balance_loss.py
-11. src/common/callbacks/wsm_r4_balance_callback.py
+7. src/fusion/data/wsm_ramps_semantic_datamodule.py
+8. src/fusion/models/av_r3_disease_query.py
+9. src/fusion/loss/r4_ramps_balance_loss.py
+10. configs/wsm_mm_pd_dep_v1/fusion/13_r4_equal_seed42.yaml
+11. configs/wsm_mm_pd_dep_v1/fusion/19_r4_equal_seed43.yaml
+12. configs/wsm_mm_pd_dep_v1/fusion/20_r4_equal_seed44.yaml
 
 ## Allowed tracked files
 
-Codex may add/modify only:
+Codex may modify/add only:
 
-- configs/wsm_mm_pd_dep_v1/fusion/19_r4_equal_seed43.yaml
-- configs/wsm_mm_pd_dep_v1/fusion/20_r4_equal_seed44.yaml
-- configs/wsm_mm_pd_dep_v1/fusion/21_r4_static_stch_seed43.yaml
-- configs/wsm_mm_pd_dep_v1/fusion/22_r4_static_stch_seed44.yaml
-- configs/wsm_mm_pd_dep_v1/fusion/23_r4_progress_seed43.yaml
-- configs/wsm_mm_pd_dep_v1/fusion/24_r4_progress_seed44.yaml
+- scripts/common/build_ramps_shuffled_pseudo_negative_control.py
+- configs/wsm_mm_pd_dep_v1/ablations/31_shuffled_pseudo_equal_seed42.yaml
+- configs/wsm_mm_pd_dep_v1/ablations/32_shuffled_pseudo_equal_seed43.yaml
+- configs/wsm_mm_pd_dep_v1/ablations/33_shuffled_pseudo_equal_seed44.yaml
 - docs/PROGRESS_EN.md
 
 No source file may change.
-
-If expansion-only config files 25–30 were already committed on this task branch before this override, deleting those files is additionally authorized. They must not survive the final task diff and must not be used for production.
 
 ## Forbidden actions
 
@@ -78,305 +69,298 @@ If expansion-only config files 25–30 were already committed on this task branc
 - Do not modify src/fusion.
 - Do not modify src/common.
 - Do not modify src/chimera_plugin.py.
-- Do not modify existing configs 13–18.
+- Do not modify the original semantic pseudo cache.
+- Do not regenerate teachers, semantic embeddings, thresholds, calibration, or acceptance rules.
+- Do not change accepted counts, pseudo class balance, or the multiset of pseudo target/reliability values.
 - Do not change R3 architecture.
-- Do not change R2 pseudo cache, thresholds, reliability, pseudo targets, or warm-up.
-- Do not change R4 formulas or controller constants.
-- Do not rerun seed42.
-- Do not run seeds45/46.
-- Do not run RA-STCH.
-- Do not tune after seeing seed43.
-- Do not stop the six-run sequence based on intermediate DEV outcomes.
-- Do not use Test for ranking, selection, branching, tuning, or stopping.
-- Do not start Stage 6, Stage 7, Text/Description, or Final Test.
-- Do not make significance, final-model, missing-label correctness, or comorbidity claims.
+- Do not change Equal loss/formula, auxiliary/agreement coefficients, optimizer, warm-up, or instrumentation.
+- Do not run Static, Progress, or RA-STCH.
+- Do not tune based on negative-control results.
+- Do not use Test for selection, ranking, interpretation, or branching.
+- Do not start another Stage-6 ablation.
+- Do not start Stage 7, Text/Description, or Final Test.
+- Do not claim missing-label correctness, comorbidity, significance, or final-model superiority.
 
-## Retained valid seed42 evidence
+## Frozen source cache
 
-### Equal seed42
+Source:
 
-- DEV D/P/Mean:
-  `0.712498 / 0.843342 / 0.777920`
-- checkpoint SHA256:
-  `d84d4f107fb5e927491b9f628d6ad9f913c8a7a2dc82689f9149ac32d206f690`
+    /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt
 
-### Static-STCH seed42
+Required SHA256:
 
-- DEV D/P/Mean:
-  `0.725077 / 0.849485 / 0.787281`
-- checkpoint SHA256:
-  `a1ad7dc4eb4e19e438ce14854d0981ce175e67c75e454c111cf44994f6fb8373`
+    17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945
 
-### Corrected Progress seed42
+Required rows:
 
-- DEV D/P/Mean:
-  `0.701245 / 0.873354 / 0.787299`
-- checkpoint SHA256:
-  `e821bc0b2ebe81c7684721a9f05b8e46ea5c3bcdaf60e860d9dc5dbe8673a15d`
+    6325
 
-Corrected R3-B three-seed comparator:
+Required accepted counts D/P:
 
-- seed42: D/P/Mean `0.695808/0.893824/0.794816`
-- seed43: `0.694349/0.841176/0.767762`
-- seed44: `0.698378/0.838989/0.768684`
-- three-seed means:
-  - D `0.696178`
-  - P `0.857996`
-  - Mean `0.777087`
+    376 / 1801
 
-Frozen F2 comparator:
+Required accepted positive/negative counts:
 
-- D `0.697035`
-- P `0.852104`
-- Mean `0.774569`
+- depression: 376 / 0
+- Parkinson: 212 / 1589
 
-## 1. Freeze six confirmation configs before training
+The source cache is immutable.
+
+## 1. Negative-control cache builder
+
+Implement:
+
+    scripts/common/build_ramps_shuffled_pseudo_negative_control.py
+
+This is an executable/reproducibility helper, not reusable training code.
+
+CLI arguments:
+
+    --source
+    --output
+    --shuffle-seed
+
+Frozen invocation:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3       scripts/common/build_ramps_shuffled_pseudo_negative_control.py       --source /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt       --output /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001.pt       --shuffle-seed 6001
+
+The script MUST fail rather than overwrite an existing output path.
+
+### Frozen permutation contract
+
+Load the source cache read-only on CPU.
+
+For each task independently:
+
+1. identify rows where `observed_mask[:, task] == False`;
+2. use a deterministic `torch.Generator`:
+   - depression seed = `6001`;
+   - Parkinson seed = `6002`;
+3. generate a random ordering of the missing row indices;
+4. create a derangement by circularly shifting that random ordering by exactly one position;
+5. every missing destination row receives the pseudo tuple from a DIFFERENT missing source row;
+6. observed rows are never sources or destinations.
+
+Permute the following fields together as one aligned tuple for that task:
+
+- `pseudo_accept_mask`;
+- `pseudo_targets`;
+- `pseudo_reliability`;
+- `pseudo_class`;
+- `calibrated_audio_probs`.
+
+Do not permute:
+
+- `segment_ids`;
+- `observed_mask`;
+- `observed_targets`;
+- corpus/split identity;
+- teacher/prompt/cache provenance metadata.
+
+The derived cache MUST retain the original required `version`, task names, teacher identities, prompt SHA, and other fields needed by `wsm_ramps_semantic_datamodule`.
+
+Add an extra metadata mapping that does not alter training, for example:
+
+    negative_control:
+      type: within_task_missing_row_tuple_derangement
+      source_cache_sha256: <exact source SHA>
+      shuffle_seed: 6001
+      depression_permutation_sha256: ...
+      parkinson_permutation_sha256: ...
+      permuted_fields: [...]
+
+Do not change the canonical cache version solely for this negative control.
+
+## 2. Mandatory cache invariant audit
+
+Before saving, and again after loading the derived file, prove:
+
+- source SHA256 is exactly the frozen SHA;
+- `segment_ids` unchanged exactly;
+- `observed_mask` unchanged exactly;
+- `observed_targets` unchanged exactly including NaN pattern/finite values;
+- no observed row has pseudo acceptance;
+- each task permutation has zero fixed points among missing-row source/destination identities;
+- missing counts remain `2665/3660`;
+- accepted counts remain `376/1801`;
+- accepted class balance remains D `376/0`, P `212/1589`;
+- pseudo target/reliability/class/calibrated-probability tuple multiset over missing rows is preserved exactly per task;
+- rejected entries still have pseudo_target NaN, reliability 0, pseudo_class -1;
+- accepted pseudo targets remain equal to calibrated_audio_probs at accepted entries;
+- accepted reliability remains finite in [0,1];
+- source file SHA is unchanged after generation;
+- derived cache SHA256 is recorded;
+- derived cache loads successfully through the existing `wsm_ramps_semantic_datamodule`.
+
+Record per-task permutation SHA256 and the number of rows whose acceptance assignment differs from the original.
+
+The purpose is to break sample-to-pseudo alignment while preserving coverage/class/reliability distributions.
+
+## 3. Frozen matched reference
+
+Use these accepted matched-pseudo Equal results:
+
+| Seed | D Score | P Score | Mean |
+|---|---:|---:|---:|
+| 42 | 0.712498 | 0.843342 | 0.777920 |
+| 43 | 0.703299 | 0.856043 | 0.779671 |
+| 44 | 0.707977 | 0.851878 | 0.779927 |
+
+Matched three-seed means:
+
+- D `0.707925`
+- P `0.850421`
+- Mean `0.779173`
+
+Matched three-seed sample std:
+
+- D `0.004600`
+- P `0.006475`
+- Mean `0.001092`
+
+## 4. Freeze three negative-control configs before training
 
 Create:
 
-    19_r4_equal_seed43.yaml
-    20_r4_equal_seed44.yaml
-    21_r4_static_stch_seed43.yaml
-    22_r4_static_stch_seed44.yaml
-    23_r4_progress_seed43.yaml
-    24_r4_progress_seed44.yaml
+    configs/wsm_mm_pd_dep_v1/ablations/31_shuffled_pseudo_equal_seed42.yaml
+    configs/wsm_mm_pd_dep_v1/ablations/32_shuffled_pseudo_equal_seed43.yaml
+    configs/wsm_mm_pd_dep_v1/ablations/33_shuffled_pseudo_equal_seed44.yaml
 
-Each config MUST be an exact copy of its accepted seed42 method config except:
+For each seed, copy the corresponding matched Equal config semantics exactly:
 
-- top-level seed;
-- run_name.
+- seed42 from config 13;
+- seed43 from config 19;
+- seed44 from config 20.
 
-Required values:
+The ONLY semantic changes are:
 
-- 19: Equal, seed43, run_name `r4_equal_seed43_confirm`
-- 20: Equal, seed44, run_name `r4_equal_seed44_confirm`
-- 21: Static STCH, seed43, run_name `r4_static_stch_seed43_confirm`
-- 22: Static STCH, seed44, run_name `r4_static_stch_seed44_confirm`
-- 23: Progress, seed43, run_name `r4_progress_seed43_confirm`
-- 24: Progress, seed44, run_name `r4_progress_seed44_confirm`
+1. `data.params.pseudo_cache_path` points to the derived shuffled cache;
+2. `run_name` identifies the Stage-6 shuffled negative control.
 
-For Progress, copy the corrected seed42 config currently in `15_r4_progress_seed42.yaml`.
+Required run names:
 
-No other semantic difference is permitted.
+- `stage6_shuffled_pseudo_equal_seed42`
+- `stage6_shuffled_pseudo_equal_seed43`
+- `stage6_shuffled_pseudo_equal_seed44`
 
-## 2. Mandatory pre-run firewall
+All other data/model/loss/optimizer/train/callback/logging settings MUST be identical to the matched Equal config for that seed.
 
-Before the first production invocation:
-
-### Config equivalence
-
-Programmatically compare:
-
-- 19 vs 13;
-- 20 vs 13;
-- 21 vs 14;
-- 22 vs 14;
-- 23 vs 15;
-- 24 vs 15.
-
-After normalizing only:
-
-- top-level `seed`;
-- `experiment_info.params.run_name`;
-
-each pair MUST be identical.
-
-### Config validation
-
-Run `chimera-ml validate-config` for all six new configs.
-
-### Registry/build
-
-For each unique mode:
-
-- build the frozen `wsm_av_r3_disease_query_model`;
-- build `wsm_r4_ramps_balance_loss`;
-- build `wsm_ramps_semantic_datamodule`;
-- verify R3 trainable parameter count remains exactly `403079`;
-- verify pseudo cache path and all loss/controller constants match the accepted seed42 config.
-
-No optimizer step.
-
-### Seed identity firewall
-
-For seeds42/43/44:
-
-- call Chimera `define_seed(seed)`;
-- instantiate the exact R3 model;
-- compute deterministic initial-state digest;
-- require pairwise-distinct digests across 42/43/44;
-- reinstantiate seed42 after resetting and require identical digest;
-- record deterministic `torch.randperm(6325)` prefix for each seed;
-- require pairwise-distinct prefixes.
-
-Do not iterate DEV/Test rows.
-
-### Freeze commit
+## 5. Mandatory pre-run firewall commit
 
 Before any production run:
 
-- append exact firewall evidence to PROGRESS_EN.md;
-- commit and push one firewall commit on `codex/task-005g`.
+1. build and audit the derived negative-control cache;
+2. validate all three configs;
+3. programmatically prove config equivalence to matched Equal except cache path/run_name;
+4. build DataModule/model/loss for each seed config;
+5. verify R3 trainable parameter count `403079`;
+6. verify derived cache accepted counts/class balance;
+7. run a tiny TRAIN-only forward/loss/backward at `pseudo_scale=1.0`:
+   - finite loss;
+   - observed gradients non-zero;
+   - accepted missing-head pseudo gradients non-zero;
+   - pseudo target/reliability receive no gradients;
+   - main heads, projections, task queries, and gate have finite gradients;
+   - no optimizer step;
+   - no DEV/Test loader iteration;
+8. append exact evidence to PROGRESS_EN.md;
+9. commit and push one firewall commit.
 
-No production run may start before that firewall commit exists on origin.
+No production run may begin before that firewall commit exists on origin.
 
-## 3. Exact fixed production sequence
+## 6. Exact production sequence
 
-Run exactly six new production invocations in this order:
+Run exactly three new production invocations:
 
-1. Equal seed43
-2. Static-STCH seed43
-3. Progress seed43
-4. Equal seed44
-5. Static-STCH seed44
-6. Progress seed44
+1. shuffled Equal seed42;
+2. shuffled Equal seed43;
+3. shuffled Equal seed44.
 
 Use exactly:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
       --config-path <authorized-config>
 
-Do not sweep.
+No sweep.
 
-Do not stop based on intermediate metrics.
+No rerun for metric improvement.
 
-Do not rerun any method to improve metrics.
+## 7. Selection and Test firewall
 
-## 4. Selection firewall
+For each run:
 
-For every run:
-
-- select checkpoint/epoch only by maximum `dev/mean_score`;
+- checkpoint/epoch selected only by maximum `dev/mean_score`;
 - freeze selected checkpoint before reading same-epoch Test monitoring;
-- Test cannot affect any experiment or conclusion.
+- TEST_NONE/SOFT/HARD remain mandatory monitoring only;
+- Test must not affect interpretation of the negative control.
 
 Record selected checkpoint SHA256.
 
-## 5. Three-seed summaries
+## 8. Frozen negative-control interpretation
 
-For Equal, Static-STCH, and Progress separately, combine retained seed42 with new seeds43/44.
+After all three shuffled runs, compute:
 
-Record for every seed:
+- shuffled D/P/Mean per seed;
+- shuffled three-seed mean/sample std;
+- same-seed `matched - shuffled` deltas;
+- three-seed matched-minus-shuffled deltas.
 
-- depression DEV Score;
-- Parkinson DEV Score;
-- DEV Mean.
+Evidence SUPPORTS sample-specific pseudo alignment only if BOTH are true:
 
-Compute:
+1. matched Equal DEV Mean > shuffled Equal DEV Mean on at least 2 of 3 seeds;
+2. matched Equal three-seed Mean > shuffled Equal three-seed Mean.
 
-- arithmetic mean;
-- sample standard deviation.
+If either condition fails, record:
 
-Also record per-seed Mean deltas versus:
+    SAMPLE-SPECIFIC PSEUDO ALIGNMENT CLAIM NOT SUPPORTED BY THIS NEGATIVE CONTROL
 
-- same-seed Equal;
-- same-seed corrected R3-B;
-- frozen F2 as contextual reference where useful.
+This interpretation is about sample-specific semantic alignment only.
 
-## 6. Frozen three-seed balancing-repeat criterion
+Do NOT claim correctness of the missing disease labels.
 
-For Static and Progress separately compare against Equal on the SAME seed.
+## 9. DEV-only calibration audit
 
-A candidate passes only if ALL are true:
+After all selected checkpoints are frozen, compare matched Equal vs shuffled Equal on identical DEV rows/masks for each seed.
 
-1. candidate DEV Mean > Equal DEV Mean on seed42;
-2. candidate DEV Mean > Equal DEV Mean on seed43;
-3. candidate DEV Mean > Equal DEV Mean on seed44;
-4. candidate three-seed Mean > Equal three-seed Mean;
-5. candidate three-seed depression mean is not more than `0.010000` below Equal depression mean;
-6. candidate three-seed Parkinson mean is not more than `0.010000` below Equal Parkinson mean.
+For D/P record:
 
-Do not alter this criterion after seeing results.
-
-## 7. R-full viability diagnostic
-
-For Static and Progress separately compare against corrected R3-B on seeds42/43/44.
-
-Report:
-
-- per-seed Mean deltas;
-- candidate three-seed Mean versus R3-B `0.777087`;
-- candidate depression mean versus minimum `0.686178`;
-- candidate Parkinson mean versus minimum `0.847996`.
-
-These are Stage-5 composition diagnostics and do not replace the paired Equal balancing-repeat criterion.
-
-## 8. DEV-only calibration and negative-transfer audit
-
-After all checkpoint selections are frozen, run a same-row DEV-only audit.
-
-For seeds42/43/44 and methods:
-
-- Equal;
-- Static;
-- Progress;
-- corrected R3-B;
-
-compute for depression and Parkinson:
-
-- observed row count;
+- observed count;
 - Brier;
-- ECE with 15 bins.
+- ECE-15.
 
-Use the same 933 DEV rows/observed masks within every same-seed comparison.
+Compute three-seed mean calibration deltas:
 
-No recalibration.
+    matched - shuffled
 
-No threshold changes.
+Diagnostics only.
 
-No reruns.
+No recalibration, threshold changes, or reruns.
 
-Summarize:
-
-- three-seed mean Brier/ECE per task/method;
-- Static minus Equal;
-- Progress minus Equal;
-- Static minus R3-B;
-- Progress minus R3-B.
-
-Also report task-score negative-transfer deltas.
-
-## 9. Frozen candidate nomination rule
-
-After all evidence is complete:
-
-1. exclude Static or Progress if it fails the three-seed balancing-repeat criterion;
-2. if neither remains:
-   - record `NO R4 BALANCING CANDIDATE NOMINATED`;
-3. if exactly one remains:
-   - nominate it provisionally for manager Stage-5 composition review;
-4. if both remain:
-   - compare three-seed DEV Mean;
-   - if absolute difference > `0.001000`, nominate the higher Mean;
-   - if absolute difference <= `0.001000`, compare in order:
-     1. worse of the two task-mean deltas versus corrected R3-B;
-     2. DEV-only Brier/ECE versus Equal and R3-B;
-     3. controller complexity/stability;
-   - if still tied, nominate Static-STCH as the simpler fixed scalarizer.
-
-Nomination is not promotion.
-
-Codex MUST NOT declare Stage 5 closed.
-
-## 10. Required evidence per new run
+## 10. Required evidence
 
 Record in PROGRESS_EN.md:
 
-- config;
-- exact command;
-- seed;
-- run directory;
-- MLflow run ID/status/artifact URI;
-- epochs completed/early-stop status;
-- selected epoch/checkpoint;
-- selected checkpoint SHA256;
-- DEV D UAR/MF1/Score;
-- DEV P UAR/MF1/Score;
-- DEV Mean;
-- same-epoch TEST_NONE/SOFT/HARD after DEV selection is frozen;
-- explicit confirmation Test did not influence selection.
-
-For Progress additionally record controller-weight/progress trajectory path or full table.
+- source cache SHA;
+- derived cache absolute path/SHA;
+- negative-control metadata;
+- permutation hashes;
+- zero-fixed-point proof;
+- original-vs-derived invariant table;
+- acceptance-assignment Hamming differences;
+- exact three configs and validation;
+- firewall command/results;
+- exact three production commands;
+- run directories;
+- MLflow IDs/status/artifact URI;
+- epochs/early stopping;
+- selected DEV-only epoch/checkpoint;
+- checkpoint SHA256;
+- full DEV D/P UAR/MF1/Score and Mean;
+- same-epoch TEST_NONE/SOFT/HARD monitoring after DEV freeze;
+- three-seed matched/shuffled tables;
+- frozen negative-control interpretation;
+- calibration audit;
+- explicit no-Test-driven-decision statement.
 
 ## 11. Scope checks
 
@@ -388,35 +372,36 @@ Run:
     git diff --stat origin/main...HEAD
     git log -10 --oneline --decorate
 
-The source diff versus origin/main MUST be empty.
+The source diff MUST be empty.
+
+The generated negative-control cache is an external artifact and MUST NOT be committed to Git.
 
 ## Acceptance criteria
 
-TASK-005G-BUNDLE passes only if:
+TASK-006A-BUNDLE passes only if:
 
-- branch is `codex/task-005g` from current manager-updated origin/main;
-- only six confirmation configs plus PROGRESS change;
-- any obsolete expansion-only configs 25–30 are absent from the final task diff;
-- all config pairs differ from seed42 templates only by seed/run_name;
-- all six configs validate before production;
-- seed42/43/44 initialization/randomness firewall passes;
-- firewall commit is pushed before training;
-- exactly six new production invocations execute in fixed order;
-- no seed42/45/46 rerun occurs;
-- no RA run occurs;
-- no source changes occur;
-- no post-hoc tuning occurs;
-- DEV-only checkpoint selection is preserved;
-- Test remains monitoring-only;
-- checkpoint SHA256 is recorded for every new run;
-- complete three-seed summaries are recorded;
-- three-seed balancing-repeat criteria are applied exactly;
-- DEV-only calibration/negative-transfer audit is complete;
-- nomination rule is applied exactly;
-- branch is pushed;
-- main/master remains untouched.
+- branch is exactly `codex/task-006a` from current manager-updated origin/main;
+- only the script, three ablation configs, and PROGRESS change;
+- original cache remains byte-identical;
+- derived cache is deterministic and clearly marked as a negative control;
+- row/observed-truth identity is unchanged;
+- pseudo tuple is deranged only within each task's missing rows;
+- coverage/class balance/value multisets are preserved;
+- existing semantic DataModule accepts the derived cache;
+- all three configs differ from matched Equal only by cache path/run_name;
+- firewall commit exists before production;
+- exactly three production runs occur;
+- no source changes;
+- no tuning/reruns;
+- DEV-only selection;
+- Test monitoring only;
+- selected checkpoint SHA256 recorded;
+- three-seed negative-control interpretation applied exactly;
+- DEV-only calibration audit complete;
+- branch pushed;
+- main/master untouched.
 
-Passing this task gives the manager the evidence needed to decide whether Stage 5 has a promotable final composition or should close with no promoted RAMPS composition. It does not authorize Stage 6 or Final Test.
+Passing TASK-006A-BUNDLE closes Stage-6 negative-control item 8 for the matched Equal reference. It does not authorize another Stage-6 task.
 
 ## Required handoff
 
@@ -431,25 +416,25 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch `codex/task-005g`;
+- branch `codex/task-006a`;
 - firewall commit SHA;
 - final evidence commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
 - source diff empty;
-- exact config seeds;
-- initial-state digests/randperm evidence for 42/43/44;
-- number of new production invocations = 6;
-- full Equal/Static/Progress seed42/43/44 D/P/Mean table;
-- three-seed mean/std table;
-- balancing-repeat PASS/FAIL for Static and Progress;
-- contextual R3-B diagnostics;
-- calibration/negative-transfer summary;
-- provisional nomination result;
+- source and derived cache SHA256;
+- permutation hashes/fixed-point counts;
+- preserved coverage/class balance;
+- acceptance-assignment Hamming differences;
+- number of production runs = 3;
+- matched vs shuffled seed42/43/44 D/P/Mean table;
+- three-seed mean/std and deltas;
+- frozen sample-specific-pseudo interpretation result;
+- calibration summary;
 - no Test-driven decision;
 - no post-hoc tuning;
-- RA not rerun;
-- no Stage6/7/Text/Final Test;
-- Stage 5 remains active pending manager decision.
+- no missing-label correctness/comorbidity claim;
+- Stage 6 remains active;
+- no Stage7/Text/Final Test.
 
-Stop after TASK-005G-BUNDLE.
+Stop after TASK-006A-BUNDLE.
