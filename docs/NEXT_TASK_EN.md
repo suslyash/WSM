@@ -1,37 +1,37 @@
-# TASK-006A-BUNDLE: Stage-6 Shuffled Pseudo-Target Negative Control on the Equal Composition
+# TASK-005H-OPTUNA: Bounded Chimera Optuna Search for a Safe Audio-Beating Temporal A+V Model
 
 ## Authority and branch
 
+This task is an explicit owner-authorized optimization sprint that supersedes the unexecuted TASK-006A.
+
 Required branch:
 
-    codex/task-006a
+    codex/task-005h-optuna
 
 Start from current `origin/main`, which includes:
 
 - PR #44 merge `de05a2233d318add54b71121193e7e412d0b102a`;
-- manager Stage-5 closure / Stage-6 activation commit `b75cd4f2118f97cd648596bbf4bd443d1ec53f5c`.
+- owner/manager Optuna override `5c2413038bf6a711a72c21256b5b9c946f29b312`.
 
-Create exactly one new task branch from that `origin/main`.
+Create exactly one task branch from that `origin/main`.
 
-This is the first Stage-6 claims/ablation task. It is not a tuning task.
+No `codex/task-006a` branch existed when the override was issued. TASK-006A is superseded before execution, not failed.
 
 ## Goal
 
-Execute the PLAN-required shuffled/mismatched pseudo-target negative control while preserving every non-semantic factor as closely as possible.
+Use Chimera ML's native Optuna sweep to search one bounded, configurable audio-first temporal-video fusion family for a model that safely beats the frozen historical audio reference.
 
-Use the accepted three-seed Equal full composition as the matched-pseudo reference because:
+The search must keep the exact historical temporal-audio model frozen and use video only as a zero-initialized additive correction.
 
-- it has no dynamic/fixed balancing-controller comparison confound;
-- it uses the exact R3 model;
-- it uses the frozen R2 pseudo path and warm-up;
-- it uses the frozen R3 auxiliary/agreement terms;
-- it has valid matched-pseudo results for seeds42/43/44.
+The search is intentionally broader than prior manager tasks. Codex is allowed to choose the exact Optuna search space within manager hard bounds before the first metric-bearing trial.
 
-Build ONE deterministic negative-control pseudo cache by permuting the complete pseudo-supervision tuple among missing rows within each task while leaving canonical rows and observed truth fixed.
+Exactly 20 seed42 Optuna trials are authorized.
 
-Then run the Equal composition at seeds42/43/44 using ONLY that derived shuffled cache.
+If and only if the highest-DEV-Mean trial passes the frozen safe-audio screen, run that exact configuration at true seeds43 and 44.
 
-Exactly three production training invocations are authorized.
+Maximum production training invocations:
+
+    22
 
 ## Required reading
 
@@ -40,368 +40,496 @@ Read in this order:
 1. AGENTS.md
 2. docs/README.md
 3. docs/PROJECT_REQUIREMENTS.md
-4. docs/PLAN.md, especially Stage 6 items 3–5 and item 8 plus Section 7 Promotion Rule
-5. docs/PROGRESS_EN.md through MANAGER-DECISION-049
+4. docs/PLAN.md, especially Stage 4 safe-audio gate and Section 7 Promotion Rule
+5. docs/PROGRESS_EN.md through OWNER/MANAGER-OVERRIDE-050
 6. docs/NEXT_TASK_EN.md
-7. src/fusion/data/wsm_ramps_semantic_datamodule.py
-8. src/fusion/models/av_r3_disease_query.py
-9. src/fusion/loss/r4_ramps_balance_loss.py
-10. configs/wsm_mm_pd_dep_v1/fusion/13_r4_equal_seed42.yaml
-11. configs/wsm_mm_pd_dep_v1/fusion/19_r4_equal_seed43.yaml
-12. configs/wsm_mm_pd_dep_v1/fusion/20_r4_equal_seed44.yaml
+7. docs/SOTA_REVIEW_EN.md relevant fusion/negative-transfer sections
+8. src/fusion/models/frozen_audio_temporal_adapter.py
+9. src/fusion/models/av_audio_query_temporal_video.py
+10. src/fusion/models/av_audio_confidence_gated.py
+11. src/fusion/models/av_audio_first_zero_residual.py
+12. src/common/optimizers/wsm_trainable_adamw.py
+13. src/chimera_plugin.py
+14. configs/wsm_mm_pd_dep_v1/fusion/05_audio_query_temporal_video.yaml
+
+Also read the installed Chimera ML Optuna documentation/source:
+
+- docs/en/user-guide/sweeps.md
+- src/chimera_ml/training/sweep.py
+- src/chimera_ml/cli.py
+
+Do not modify Chimera ML.
+
+## Owner-authorized rule changes for this task
+
+For this task only:
+
+- a bounded Optuna hyperparameter/architecture search is authorized despite the normal broad-search restriction;
+- Stage 6 is paused before execution;
+- Stage 5 is reopened for this sprint;
+- architectural depth and fusion hyperparameters may be tuned;
+- the frozen audio architecture/checkpoint itself MUST NOT be tuned or modified.
+
+All other project invariants remain active.
+
+## Frozen audio anchor and comparator
+
+Exact checkpoint:
+
+    logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt
+
+Required SHA256:
+
+    0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2
+
+Frozen DEV reference:
+
+- depression Score: `0.7479183895`
+- Parkinson Score: `0.8277353635`
+- Mean: `0.7878268765`
+
+Historical Candidate-B evidence:
+
+- seed42 DEV Mean `0.809324`;
+- depression delta vs audio `-0.038989`;
+- Parkinson delta vs audio `+0.081983`.
+
+This motivates task-specific video-correction control but does not authorize manual cherry-picking after the sweep.
 
 ## Allowed tracked files
 
 Codex may modify/add only:
 
-- scripts/common/build_ramps_shuffled_pseudo_negative_control.py
-- configs/wsm_mm_pd_dep_v1/ablations/31_shuffled_pseudo_equal_seed42.yaml
-- configs/wsm_mm_pd_dep_v1/ablations/32_shuffled_pseudo_equal_seed43.yaml
-- configs/wsm_mm_pd_dep_v1/ablations/33_shuffled_pseudo_equal_seed44.yaml
+- src/fusion/models/av_audio_query_temporal_video_tunable.py
+- src/fusion/models/__init__.py
+- src/chimera_plugin.py
+- configs/wsm_mm_pd_dep_v1/fusion/31_audio_first_optuna_base_seed42.yaml
+- configs/wsm_mm_pd_dep_v1/fusion/32_audio_first_optuna_sweep.yaml
+- configs/wsm_mm_pd_dep_v1/fusion/33_audio_first_optuna_best_seed42.yaml
+- configs/wsm_mm_pd_dep_v1/fusion/34_audio_first_optuna_confirm_seed43.yaml
+- configs/wsm_mm_pd_dep_v1/fusion/35_audio_first_optuna_confirm_seed44.yaml
+- scripts/common/audit_audio_first_optuna_sweep.py
 - docs/PROGRESS_EN.md
 
-No source file may change.
+No other tracked file may change.
+
+The audit script is optional; if unnecessary, do not create it.
 
 ## Forbidden actions
 
-- Do not modify src/audio.
-- Do not modify src/video.
-- Do not modify src/fusion.
-- Do not modify src/common.
-- Do not modify src/chimera_plugin.py.
-- Do not modify the original semantic pseudo cache.
-- Do not regenerate teachers, semantic embeddings, thresholds, calibration, or acceptance rules.
-- Do not change accepted counts, pseudo class balance, or the multiset of pseudo target/reliability values.
-- Do not change R3 architecture.
-- Do not change Equal loss/formula, auxiliary/agreement coefficients, optimizer, warm-up, or instrumentation.
-- Do not run Static, Progress, or RA-STCH.
-- Do not tune based on negative-control results.
-- Do not use Test for selection, ranking, interpretation, or branching.
-- Do not start another Stage-6 ablation.
-- Do not start Stage 7, Text/Description, or Final Test.
-- Do not claim missing-label correctness, comorbidity, significance, or final-model superiority.
+- Do not modify anything under `src/audio`.
+- Do not modify anything under `src/video`.
+- Do not modify existing accepted fusion models.
+- Do not modify any DataModule.
+- Do not modify any existing loss.
+- Do not modify Chimera ML.
+- Do not unfreeze the historical audio model.
+- Do not tune the audio architecture/checkpoint.
+- Do not use pseudo labels in this search.
+- Do not use corpus identity, task_id, observed masks, labels, split identity, or Test protocol identity as model input features.
+- Do not change the canonical split/data/cache.
+- Do not use TEST_NONE/SOFT/HARD as an Optuna objective or for search-space edits, trial ranking, acceptance, or continuation.
+- Do not alter the search space after the first metric-bearing Optuna trial begins.
+- Do not add a second model family after seeing results.
+- Do not manually choose a lower-ranked trial because its task balance looks nicer.
+- Do not run more than 20 Optuna trials.
+- Do not run confirmation seeds unless the exact highest-Mean trial passes the safe screen.
+- Do not start Stage 6, Stage 7, Text/Description, or Final Test.
+- Do not make significance/final-model claims.
 
-## Frozen source cache
+## 1. Tunable model family
 
-Source:
+Implement and register:
 
-    /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt
+    src/fusion/models/av_audio_query_temporal_video_tunable.py
 
-Required SHA256:
+Registry key:
 
-    17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945
+    wsm_av_audio_query_temporal_video_tunable_model
 
-Required rows:
+The model is one configurable superset of the accepted Candidate-B mechanism.
 
-    6325
+### Invariants
 
-Required accepted counts D/P:
+- Use `FrozenAudioTemporalAdapter` with the exact frozen checkpoint.
+- Frozen audio stays eval-only, `requires_grad=False`, under `torch.no_grad()`, and absent from optimizer groups.
+- Consume canonical temporal video features and masks.
+- Require audio availability.
+- Missing video must produce exact frozen-audio fallback.
+- Two independent disease logits.
+- No external task/corpus ID input.
+- All floating outputs finite.
+- Every possible search configuration must have <=1,000,000 trainable fusion parameters excluding frozen audio.
 
-    376 / 1801
+### Architecture
 
-Required accepted positive/negative counts:
+The model MUST support these configurable concepts:
 
-- depression: 376 / 0
-- Parkinson: 212 / 1589
+1. video projection from 512 to `hidden_dim`;
+2. optional temporal video encoder stack with `temporal_layers` in [0,3];
+3. audio-task-feature query projection from frozen audio hidden 192 to `hidden_dim`;
+4. one audio-query cross-attention block over temporal video;
+5. task-specific residual MLP with configurable depth;
+6. optional audio-confidence gate MAY be supported if Codex chooses to include it before the firewall;
+7. fixed per-task correction scales:
+   - depression scale;
+   - Parkinson scale;
+8. zero-initialized final correction layer for every task.
 
-The source cache is immutable.
+Required final equation:
 
-## 1. Negative-control cache builder
+    final_logit_t =
+        audio_base_logit_t
+        + video_available
+        * correction_scale_t
+        * optional_gate_t
+        * residual_t
 
-Implement:
+where `optional_gate_t = 1` if confidence gating is disabled.
 
-    scripts/common/build_ramps_shuffled_pseudo_negative_control.py
+At construction, before any optimizer step:
 
-This is an executable/reproducibility helper, not reusable training code.
+    preds == audio_base_logits
 
-CLI arguments:
+must hold exactly for every sample because the final correction layer is zero-initialized.
 
-    --source
-    --output
-    --shuffle-seed
+### Temporal encoder contract
 
-Frozen invocation:
+If `temporal_layers == 0`, bypass the video self-attention encoder.
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3       scripts/common/build_ramps_shuffled_pseudo_negative_control.py       --source /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt       --output /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001.pt       --shuffle-seed 6001
+If `temporal_layers > 0`, use a mask-aware Transformer/self-attention stack over projected video features. The exact PyTorch block organization is Codex-chosen before the firewall, but MUST:
 
-The script MUST fail rather than overwrite an existing output path.
+- use `hidden_dim`;
+- use `num_heads`;
+- use the frozen `temporal_ff_multiplier`;
+- use GELU;
+- use configured dropout;
+- respect video padding mask;
+- keep unavailable video from affecting outputs.
 
-### Frozen permutation contract
+### Residual depth contract
 
-Load the source cache read-only on CPU.
+`residual_layers` means 1–3 hidden MLP transformations before the final zero-initialized scalar layer.
 
-For each task independently:
+Codex may choose the exact repeated block pattern before the firewall, but it MUST be identical across tasks except parameters are task-specific.
 
-1. identify rows where `observed_mask[:, task] == False`;
-2. use a deterministic `torch.Generator`:
-   - depression seed = `6001`;
-   - Parkinson seed = `6002`;
-3. generate a random ordering of the missing row indices;
-4. create a derangement by circularly shifting that random ordering by exactly one position;
-5. every missing destination row receives the pseudo tuple from a DIFFERENT missing source row;
-6. observed rows are never sources or destinations.
+### Task-specific correction scale
 
-Permute the following fields together as one aligned tuple for that task:
+The scale is a fixed non-trainable config scalar.
 
-- `pseudo_accept_mask`;
-- `pseudo_targets`;
-- `pseudo_reliability`;
-- `pseudo_class`;
-- `calibrated_audio_probs`.
+Depression scale `0.0` is explicitly legal.
 
-Do not permute:
+If depression scale is `0.0`, depression output must remain exactly equal to frozen audio throughout training.
 
-- `segment_ids`;
-- `observed_mask`;
-- `observed_targets`;
-- corpus/split identity;
-- teacher/prompt/cache provenance metadata.
+This is an intentionally authorized task-conditioned modality-use hypothesis, not a post-hoc manual head replacement.
 
-The derived cache MUST retain the original required `version`, task names, teacher identities, prompt SHA, and other fields needed by `wsm_ramps_semantic_datamodule`.
+## 2. Manager hard bounds for Codex-designed search space
 
-Add an extra metadata mapping that does not alter training, for example:
+Codex has autonomy to select and freeze 7–10 actual Optuna variables from the pool below.
 
-    negative_control:
-      type: within_task_missing_row_tuple_derangement
-      source_cache_sha256: <exact source SHA>
-      shuffle_seed: 6001
-      depression_permutation_sha256: ...
-      parkinson_permutation_sha256: ...
-      permuted_fields: [...]
+Required variables:
 
-Do not change the canonical cache version solely for this negative control.
+1. `model.params.hidden_dim`
+2. `model.params.temporal_layers`
+3. `model.params.residual_layers`
+4. `model.params.dropout`
+5. `optimizer.params.lr`
+6. `model.params.depression_correction_scale`
+7. `model.params.parkinson_correction_scale`
 
-## 2. Mandatory cache invariant audit
+Optional variables:
 
-Before saving, and again after loading the derived file, prove:
+- `model.params.num_heads`
+- `model.params.temporal_ff_multiplier`
+- `model.params.residual_hidden_dim`
+- `optimizer.params.weight_decay`
+- optional confidence-gate boolean/hidden width if implemented
 
-- source SHA256 is exactly the frozen SHA;
-- `segment_ids` unchanged exactly;
-- `observed_mask` unchanged exactly;
-- `observed_targets` unchanged exactly including NaN pattern/finite values;
-- no observed row has pseudo acceptance;
-- each task permutation has zero fixed points among missing-row source/destination identities;
-- missing counts remain `2665/3660`;
-- accepted counts remain `376/1801`;
-- accepted class balance remains D `376/0`, P `212/1589`;
-- pseudo target/reliability/class/calibrated-probability tuple multiset over missing rows is preserved exactly per task;
-- rejected entries still have pseudo_target NaN, reliability 0, pseudo_class -1;
-- accepted pseudo targets remain equal to calibrated_audio_probs at accepted entries;
-- accepted reliability remains finite in [0,1];
-- source file SHA is unchanged after generation;
-- derived cache SHA256 is recorded;
-- derived cache loads successfully through the existing `wsm_ramps_semantic_datamodule`.
+Hard search bounds:
 
-Record per-task permutation SHA256 and the number of rows whose acceptance assignment differs from the original.
+- hidden_dim choices: subset of `[96,128,160,192,224,256]`
+- num_heads choices: subset of `[2,4,8]`
+- temporal_layers: integer/categorical in `[0,3]`
+- temporal_ff_multiplier: subset of `[2,3,4]`
+- residual_hidden_dim: subset of `[64,96,128,160,192,256,320]`
+- residual_layers: integer/categorical in `[1,3]`
+- dropout: float/categorical entirely inside `[0.05,0.35]`
+- depression_correction_scale: entirely inside `[0.0,0.40]`
+- Parkinson_correction_scale: entirely inside `[0.25,1.50]`
+- AdamW lr: log space entirely inside `[2e-5,4e-4]`
+- weight_decay: log space entirely inside `[1e-5,5e-2]`
 
-The purpose is to break sample-to-pseudo alignment while preserving coverage/class/reliability distributions.
+All hidden_dim choices used in the sweep MUST be divisible by all sampled num_heads choices.
 
-## 3. Frozen matched reference
+Before the first trial, Codex must record:
 
-Use these accepted matched-pseudo Equal results:
+- exact selected search variables;
+- exact ranges/choices/types;
+- rationale;
+- parameter-count proof that every possible sampled model is <=1,000,000 trainable fusion parameters.
 
-| Seed | D Score | P Score | Mean |
-|---|---:|---:|---:|
-| 42 | 0.712498 | 0.843342 | 0.777920 |
-| 43 | 0.703299 | 0.856043 | 0.779671 |
-| 44 | 0.707977 | 0.851878 | 0.779927 |
+After this freeze, no search-space edit is allowed.
 
-Matched three-seed means:
-
-- D `0.707925`
-- P `0.850421`
-- Mean `0.779173`
-
-Matched three-seed sample std:
-
-- D `0.004600`
-- P `0.006475`
-- Mean `0.001092`
-
-## 4. Freeze three negative-control configs before training
+## 3. Base training config
 
 Create:
 
-    configs/wsm_mm_pd_dep_v1/ablations/31_shuffled_pseudo_equal_seed42.yaml
-    configs/wsm_mm_pd_dep_v1/ablations/32_shuffled_pseudo_equal_seed43.yaml
-    configs/wsm_mm_pd_dep_v1/ablations/33_shuffled_pseudo_equal_seed44.yaml
+    configs/wsm_mm_pd_dep_v1/fusion/31_audio_first_optuna_base_seed42.yaml
 
-For each seed, copy the corresponding matched Equal config semantics exactly:
+Fixed fields:
 
-- seed42 from config 13;
-- seed43 from config 19;
-- seed44 from config 20.
+- seed: 42
+- experiment_name: `wsm_mm_pd_dep_v1`
+- run_name: `audio_first_optuna_base_seed42`
+- data: canonical `wsm_av_fusion_datamodule`
+- batch_size: 8
+- model: `wsm_av_audio_query_temporal_video_tunable_model`
+- exact frozen audio checkpoint
+- loss: `wsm_masked_sparse_loss`
+- optimizer: `wsm_trainable_adamw_optimizer`
+- epochs: 30
+- CUDA
+- mixed precision true
+- grad clip 0.5
+- checkpoint monitor only `dev/mean_score`, mode=max
+- early stopping only `dev/mean_score`, patience 6, min_delta 0.0005
+- required snapshot/summary/segment metrics/console/MLflow instrumentation
+- four DEV/Test monitoring streams
 
-The ONLY semantic changes are:
+Base model/searchable parameter values may be chosen by Codex inside the hard bounds before firewall.
 
-1. `data.params.pseudo_cache_path` points to the derived shuffled cache;
-2. `run_name` identifies the Stage-6 shuffled negative control.
+No pseudo DataModule/loss/warm-up.
 
-Required run names:
+## 4. Optuna sweep config
 
-- `stage6_shuffled_pseudo_equal_seed42`
-- `stage6_shuffled_pseudo_equal_seed43`
-- `stage6_shuffled_pseudo_equal_seed44`
+Create:
 
-All other data/model/loss/optimizer/train/callback/logging settings MUST be identical to the matched Equal config for that seed.
+    configs/wsm_mm_pd_dep_v1/fusion/32_audio_first_optuna_sweep.yaml
 
-## 5. Mandatory pre-run firewall commit
+Required:
 
-Before any production run:
+    method: optuna
+    n_trials: 20
+    study_name: wsm-audio-first-safe-v1
+    target:
+      monitor: dev/mean_score
+      mode: max
 
-1. build and audit the derived negative-control cache;
-2. validate all three configs;
-3. programmatically prove config equivalence to matched Equal except cache path/run_name;
-4. build DataModule/model/loss for each seed config;
-5. verify R3 trainable parameter count `403079`;
-6. verify derived cache accepted counts/class balance;
-7. run a tiny TRAIN-only forward/loss/backward at `pseudo_scale=1.0`:
-   - finite loss;
-   - observed gradients non-zero;
-   - accepted missing-head pseudo gradients non-zero;
-   - pseudo target/reliability receive no gradients;
-   - main heads, projections, task queries, and gate have finite gradients;
-   - no optimizer step;
-   - no DEV/Test loader iteration;
-8. append exact evidence to PROGRESS_EN.md;
-9. commit and push one firewall commit.
+Use Chimera typed parameter specs.
 
-No production run may begin before that firewall commit exists on origin.
+The sweep target MUST be exactly:
 
-## 6. Exact production sequence
+    dev/mean_score
 
-Run exactly three new production invocations:
+No task-specific or Test objective is permitted.
 
-1. shuffled Equal seed42;
-2. shuffled Equal seed43;
-3. shuffled Equal seed44.
+If storage is configured, use only a project-local SQLite path under `logs/` and `load_if_exists: false`.
 
-Use exactly:
+## 5. Mandatory firewall before the Optuna sweep
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path <authorized-config>
+Before the first metric-bearing trial:
 
-No sweep.
+1. implement/register the tunable model;
+2. create base and sweep configs;
+3. freeze exact model block organization;
+4. freeze exact 7–10 variable search space;
+5. compile new model/plugin;
+6. validate the base config;
+7. run:
+   `chimera-ml sweep ... --dry-run`
+   and verify the typed search space/target;
+8. strict-load the frozen audio checkpoint and verify SHA;
+9. build representative boundary configurations covering:
+   - minimum model size;
+   - maximum model size;
+   - all num_heads/hidden divisibility combinations used;
+10. prove every boundary configuration <=1,000,000 trainable fusion parameters;
+11. prove frozen audio is absent from optimizer groups;
+12. synthetic both/video-missing smokes:
+   - exact zero-init equality to audio;
+   - exact video-missing fallback;
+   - finite forward/loss/backward;
+   - after one optimizer step, correction path can wake up;
+   - frozen audio gradients remain None;
+13. canonical DEV initialization reproduction:
+   - fresh zero-init model reproduces frozen audio D/P/Mean within tolerance 0.0005;
+   - DEV only, no Test iteration for this gate;
+14. append complete frozen search manifest/evidence to PROGRESS_EN.md;
+15. commit and push one firewall commit.
 
-No rerun for metric improvement.
+No Optuna trial may start before that firewall commit exists on origin.
 
-## 7. Selection and Test firewall
+## 6. Exact Optuna production command
 
-For each run:
+Run exactly once:
 
-- checkpoint/epoch selected only by maximum `dev/mean_score`;
-- freeze selected checkpoint before reading same-epoch Test monitoring;
-- TEST_NONE/SOFT/HARD remain mandatory monitoring only;
-- Test must not affect interpretation of the negative control.
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml sweep       --base-config configs/wsm_mm_pd_dep_v1/fusion/31_audio_first_optuna_base_seed42.yaml       --sweep-config configs/wsm_mm_pd_dep_v1/fusion/32_audio_first_optuna_sweep.yaml       --sweep-name audio-first-safe-v1       --max-trials 20
 
-Record selected checkpoint SHA256.
+Exactly 20 completed trial training invocations are authorized.
 
-## 8. Frozen negative-control interpretation
+Do not manually launch extra trial configs.
 
-After all three shuffled runs, compute:
+If the sweep aborts because of an implementation/configuration defect before a meaningful trial completes, fix only the defect if it remains inside allowed scope and no search-space semantics change. If a metric-bearing trial has completed, do not change the search space or model semantics; stop and report any subsequent blocker.
 
-- shuffled D/P/Mean per seed;
-- shuffled three-seed mean/sample std;
-- same-seed `matched - shuffled` deltas;
-- three-seed matched-minus-shuffled deltas.
+## 7. Sweep evidence and ranking
 
-Evidence SUPPORTS sample-specific pseudo alignment only if BOTH are true:
+After the sweep:
 
-1. matched Equal DEV Mean > shuffled Equal DEV Mean on at least 2 of 3 seeds;
-2. matched Equal three-seed Mean > shuffled Equal three-seed Mean.
+- identify the sweep directory and manifest;
+- verify manifest method `optuna`;
+- verify exactly 20 completed trials;
+- verify objective `dev/mean_score`, mode=max;
+- record every trial:
+  - trial number/id;
+  - exact generated config path;
+  - exact sampled params;
+  - run name;
+  - best target value;
+  - target epoch;
+  - trainable fusion parameter count if available from snapshot/config reconstruction;
+- produce top-5 trial table by DEV Mean.
 
-If either condition fails, record:
+The ONLY selected candidate is the manifest/study highest-DEV-Mean trial.
 
-    SAMPLE-SPECIFIC PSEUDO ALIGNMENT CLAIM NOT SUPPORTED BY THIS NEGATIVE CONTROL
+Do not substitute a lower-ranked trial.
 
-This interpretation is about sample-specific semantic alignment only.
+## 8. Frozen safe-audio screen
 
-Do NOT claim correctness of the missing disease labels.
+Highest-Mean seed42 trial passes only if ALL are true:
 
-## 9. DEV-only calibration audit
+- DEV Mean > `0.7878268765`
+- depression DEV Score >= `0.7379183895`
+- Parkinson DEV Score >= `0.8177353635`
+- frozen audio remained exact/frozen
+- parameter cap satisfied
+- no Test-driven choice occurred
 
-After all selected checkpoints are frozen, compare matched Equal vs shuffled Equal on identical DEV rows/masks for each seed.
+Record deltas versus audio.
 
-For D/P record:
+If it fails any condition:
 
-- observed count;
-- Brier;
-- ECE-15.
+- record the search as a valid negative optimization result;
+- do NOT create/run seed43/44 confirmation;
+- stop after documentation/evidence commit.
 
-Compute three-seed mean calibration deltas:
+## 9. Freeze selected config if seed42 passes
 
-    matched - shuffled
+If and only if Section 8 passes:
 
-Diagnostics only.
+Create:
 
-No recalibration, threshold changes, or reruns.
+    configs/wsm_mm_pd_dep_v1/fusion/33_audio_first_optuna_best_seed42.yaml
 
-## 10. Required evidence
+It must be an exact tracked copy of the selected generated trial config, preserving all sampled hyperparameters.
 
-Record in PROGRESS_EN.md:
+Record:
 
-- source cache SHA;
-- derived cache absolute path/SHA;
-- negative-control metadata;
-- permutation hashes;
-- zero-fixed-point proof;
-- original-vs-derived invariant table;
-- acceptance-assignment Hamming differences;
-- exact three configs and validation;
-- firewall command/results;
-- exact three production commands;
-- run directories;
-- MLflow IDs/status/artifact URI;
-- epochs/early stopping;
-- selected DEV-only epoch/checkpoint;
-- checkpoint SHA256;
-- full DEV D/P UAR/MF1/Score and Mean;
-- same-epoch TEST_NONE/SOFT/HARD monitoring after DEV freeze;
-- three-seed matched/shuffled tables;
-- frozen negative-control interpretation;
-- calibration audit;
-- explicit no-Test-driven-decision statement.
+- source trial config path;
+- full selected config SHA256;
+- selected model trainable parameter count;
+- selected checkpoint path/SHA256;
+- selected DEV D/P UAR/MF1/Score and Mean.
 
-## 11. Scope checks
+Then create:
+
+    34_audio_first_optuna_confirm_seed43.yaml
+    35_audio_first_optuna_confirm_seed44.yaml
+
+These MUST differ from config 33 only in:
+
+- top-level seed;
+- run_name.
+
+Do not change any hyperparameter.
+
+## 10. Conditional confirmation
+
+Only if seed42 passed the safe screen, run exactly:
+
+1. seed43 confirmation;
+2. seed44 confirmation.
+
+Use normal `chimera-ml train`, not another sweep.
+
+Checkpoint/early stopping remain DEV-only.
+
+For each seed record selected checkpoint SHA256 and full DEV D/P/Mean.
+
+### Three-seed provisional success gate
+
+The selected Optuna configuration is a provisional safe audio-beating candidate only if:
+
+- safe-audio screen passes separately on seeds42,43,44;
+- three-seed DEV Mean > `0.7878268765`;
+- three-seed depression mean >= `0.7379183895`;
+- three-seed Parkinson mean >= `0.8177353635`;
+- selected checkpoint identities are distinct across true seeds;
+- no Test metric influenced selection or continuation.
+
+If any fails, preserve the result as non-promoted.
+
+Codex must not declare final promotion; manager decides.
+
+## 11. Test firewall
+
+TEST_NONE/SOFT/HARD remain mandatory epoch-level monitoring.
+
+They MUST NOT be used by:
+
+- Optuna target;
+- sampler/search-space changes;
+- trial ranking;
+- safe screen;
+- confirmation decision;
+- architecture redesign;
+- hyperparameter edits;
+- checkpoint selection;
+- final task conclusion.
+
+All search/selection evidence is DEV-only.
+
+## 12. Scope checks
 
 Run:
 
     git diff --check
-    git diff origin/main -- src
+    git diff origin/main -- src/audio
+    git diff origin/main -- src/video
+    git diff origin/main -- src/fusion/data
+    git diff origin/main -- src/fusion/loss
+    git diff origin/main -- src/common
     git status --short
     git diff --stat origin/main...HEAD
-    git log -10 --oneline --decorate
+    git log -12 --oneline --decorate
 
-The source diff MUST be empty.
-
-The generated negative-control cache is an external artifact and MUST NOT be committed to Git.
+Only the allowed new tunable model/registration/config/audit/evidence files may differ.
 
 ## Acceptance criteria
 
-TASK-006A-BUNDLE passes only if:
+TASK-005H-OPTUNA execution passes only if:
 
-- branch is exactly `codex/task-006a` from current manager-updated origin/main;
-- only the script, three ablation configs, and PROGRESS change;
-- original cache remains byte-identical;
-- derived cache is deterministic and clearly marked as a negative control;
-- row/observed-truth identity is unchanged;
-- pseudo tuple is deranged only within each task's missing rows;
-- coverage/class balance/value multisets are preserved;
-- existing semantic DataModule accepts the derived cache;
-- all three configs differ from matched Equal only by cache path/run_name;
-- firewall commit exists before production;
-- exactly three production runs occur;
-- no source changes;
-- no tuning/reruns;
-- DEV-only selection;
-- Test monitoring only;
-- selected checkpoint SHA256 recorded;
-- three-seed negative-control interpretation applied exactly;
-- DEV-only calibration audit complete;
-- branch pushed;
-- main/master untouched.
+- branch is exactly `codex/task-005h-optuna`;
+- exact frozen audio checkpoint remains unchanged/frozen;
+- model starts exactly at audio function and supports exact video-missing fallback;
+- search family obeys manager hard bounds;
+- every possible sampled architecture respects <=1M trainable fusion params;
+- exact search space is frozen/committed before first trial;
+- Chimera native `method: optuna` sweep is used;
+- exactly 20 seed42 Optuna trials complete;
+- objective is only `dev/mean_score`, max;
+- no Test-driven search/tuning;
+- no pseudo labels;
+- no existing source/model/data/loss modification outside allowed files;
+- best trial is selected strictly by highest DEV Mean;
+- no lower-ranked safe-looking trial substitution occurs;
+- seed43/44 confirmation runs only if the exact best seed42 trial passes the frozen safe screen;
+- confirmation configs are exact selected-config copies except seed/run_name;
+- at most 22 production invocations occur;
+- all evidence is recorded;
+- branch is pushed;
+- main/master untouched by Codex.
 
-Passing TASK-006A-BUNDLE closes Stage-6 negative-control item 8 for the matched Equal reference. It does not authorize another Stage-6 task.
+Passing this task gives the manager evidence to decide whether the optimization sprint has produced a safe multimodal model that genuinely beats the frozen audio reference.
 
 ## Required handoff
 
@@ -416,25 +544,27 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch `codex/task-006a`;
+- branch `codex/task-005h-optuna`;
 - firewall commit SHA;
 - final evidence commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
-- source diff empty;
-- source and derived cache SHA256;
-- permutation hashes/fixed-point counts;
-- preserved coverage/class balance;
-- acceptance-assignment Hamming differences;
-- number of production runs = 3;
-- matched vs shuffled seed42/43/44 D/P/Mean table;
-- three-seed mean/std and deltas;
-- frozen sample-specific-pseudo interpretation result;
-- calibration summary;
+- exact frozen audio SHA;
+- exact frozen search space and number of variables;
+- Chimera sweep command;
+- sweep directory/manifest/study name;
+- exactly 20 trial count;
+- top-5 trials with sampled params and DEV Mean;
+- exact best trial and seed42 D/P/Mean;
+- audio deltas and safe-screen PASS/FAIL;
+- selected config/checkpoint SHA if passed;
+- seed43/44 confirmation results if executed;
+- three-seed mean/std and safe-screen result if confirmations executed;
+- model parameter counts;
 - no Test-driven decision;
-- no post-hoc tuning;
-- no missing-label correctness/comorbidity claim;
-- Stage 6 remains active;
-- no Stage7/Text/Final Test.
+- no post-hoc search-space change;
+- no pseudo labels;
+- no Stage6/7/Text/Final Test;
+- current Stage 5 optimization status.
 
-Stop after TASK-006A-BUNDLE.
+Stop after TASK-005H-OPTUNA.
