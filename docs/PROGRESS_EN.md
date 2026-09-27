@@ -4545,3 +4545,88 @@ Important interpretation:
 
 No new Codex implementation is authorized until the manager/owner selects which already-trained WSM family should receive the Optuna budget.
 
+### OWNER/MANAGER-OVERRIDE-054 — Equal-budget Optuna comparison of Candidate B, R3-B, and R4 RA-STCH
+
+Status: active owner-authorized optimization bundle.
+
+Owner decision:
+
+- Tune exactly these three already-trained WSM families:
+  1. Candidate B — `wsm_av_audio_query_temporal_video_model`;
+  2. corrected R3-B — `wsm_av_r3_disease_query_model` + `wsm_r3_aux_agreement_loss`;
+  3. corrected R4 RA-STCH — the same corrected R3 model with frozen semantic pseudo cache, `wsm_r4_ramps_balance_loss(mode=ra_stch)`, pseudo warm-up, and DEV-only controller.
+- Use the additional experiments to decide which family deserves later true-seed confirmation.
+- Do not spend this bundle on confirmation seeds.
+- Do not introduce a fourth architecture or a new literature-only family.
+
+Search-design policy:
+
+- exactly 20 native Chimera Optuna trials per family;
+- all trials use true top-level seed 42;
+- exactly 60 production training invocations maximum and expected for full acceptance;
+- all three searches use the same sole Optuna objective:
+  `dev/mean_score`, mode `max`;
+- all six base/sweep configs and all search spaces must be frozen in one pushed firewall commit before the first metric-bearing trial of any family;
+- family order: Candidate B -> R3-B -> R4 RA-STCH;
+- no seed43/44 runs in this bundle;
+- no post-hoc search-space edits after the first metric-bearing trial begins.
+
+Frozen comparator:
+
+- frozen audio D `0.7479183895`;
+- frozen audio P `0.8277353635`;
+- frozen audio Mean `0.7878268765`.
+
+For every family, report two predeclared representatives without promoting either:
+
+1. **Objective winner** = exact highest DEV Mean trial.
+2. **Safe winner** = exact highest DEV Mean trial among trials satisfying:
+   - Mean > `0.7878268765`;
+   - D >= `0.7379183895`;
+   - P >= `0.8177353635`.
+   If none, report none.
+
+Also report the stricter diagnostic count satisfying:
+
+- Mean > audio Mean;
+- D >= audio D;
+- P >= audio P.
+
+No Test metric may influence either representative, any search variable, stopping, or the eventual family choice.
+
+Frozen search spaces:
+
+Candidate B — exactly 6 variables:
+- `model.params.hidden_dim`: categorical [96,128,160,192,224,256];
+- `model.params.num_heads`: categorical [2,4,8];
+- `model.params.residual_hidden_dim`: categorical [64,96,128,160,192,256];
+- `model.params.dropout`: float [0.05,0.35];
+- `optimizer.params.lr`: log-float [2e-5,4e-4];
+- `optimizer.params.weight_decay`: log-float [1e-5,5e-2].
+Every hidden choice is divisible by every head choice. Frozen historical audio checkpoint remains exact and absent from optimizer groups. Every sampled trainable fusion model must be <=1,000,000 parameters.
+
+R3-B — exactly 7 variables:
+- `model.params.hidden_dim`: categorical [128,160,192,224,256];
+- `model.params.gate_hidden_dim`: categorical [96,128,160,192,256];
+- `model.params.dropout`: float [0.05,0.35];
+- `loss.params.aux_weight`: float [0.05,0.50];
+- `loss.params.agreement_weight`: log-float [0.01,0.50];
+- `optimizer.params.lr`: log-float [2e-5,4e-4];
+- `optimizer.params.weight_decay`: log-float [1e-5,5e-2].
+The corrected R3 architecture semantics remain unchanged. Every sampled model must remain <=736,004 trainable parameters.
+
+R4 RA-STCH — exactly 10 variables:
+- `model.params.hidden_dim`: categorical [128,160,192,224,256];
+- `model.params.gate_hidden_dim`: categorical [96,128,160,192,256];
+- `model.params.dropout`: float [0.05,0.35];
+- `loss.params.aux_weight`: float [0.05,0.50];
+- `loss.params.agreement_weight`: log-float [0.01,0.50];
+- `loss.params.tau`: log-float [0.03,0.30];
+- `loss.params.progress_temperature`: log-float [0.10,0.75];
+- `loss.params.controller_ema`: float [0.50,0.95];
+- `optimizer.params.lr`: log-float [2e-5,4e-4];
+- `optimizer.params.weight_decay`: log-float [1e-5,5e-2].
+Keep fixed: grad_ema=0.9, reliability_ema=0.9, weight_min=0.2, weight_max=0.8, progress references D/P=0.697035/0.852104, pseudo warm-up 3 observed-only epochs + 5 ramp epochs to 1.0, semantic pseudo cache SHA256 `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`. Every sampled R3 model must remain <=736,004 trainable parameters.
+
+This bundle is a family-capacity/search comparison, not a final promotion test. The manager will choose the next family only after auditing all 60 seed42 trials.
+
