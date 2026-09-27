@@ -4097,3 +4097,45 @@ Candidate nomination remains:
 
 No Stage-5 promotion or closure is delegated to Codex.
 
+
+
+### TASK-005G-BUNDLE — frozen three-seed R4 confirmation firewall
+
+Status: partial; six production configs are frozen and the mandatory no-training firewall passed. Production runs and remaining summaries are pending.
+
+Changed files so far: configs/wsm_mm_pd_dep_v1/fusion/19_r4_equal_seed43.yaml, 20_r4_equal_seed44.yaml, 21_r4_static_stch_seed43.yaml, 22_r4_static_stch_seed44.yaml, 23_r4_progress_seed43.yaml, and 24_r4_progress_seed44.yaml.
+
+Verification: chimera-ml validate-config passed for all six configs. The required model, R4 loss, and semantic datamodule registry keys were available; no project-module warning was emitted. No source file changed and no Test metrics were inspected.
+
+Firewall result: MODEL_PARAMS 403079; datamodule counts were train=6325, dev=933, test_none=1364, test_soft=1208, test_hard=1014; cache identity remained ramps-r2-semantic-v1, openai/clip-vit-base-patch32, revision main. Model digests for seeds 42/43/44 were respectively 7c4b7648c1fa3bca35726b87244820cf56c132efbb40a083af93b58e600a8d3e, d71874ba6e3df76383e73dce22cfdbcae1558ffdd47669344b3b043558a9a3e8, and 10a6bf8552c97611c47c4c52cdc6ce03e051e34b0d7279787a651f481f8a44c9; seed-42 reset reproduced its digest, all three randperm(6325) prefixes were distinct, and the firewall printed FIREWALL_PASS. No dataloader iteration or optimizer step ran.
+
+Blocker/deviation: production training has not started in this checkpoint. The six fixed-order runs, selected-checkpoint hashes, three-seed summaries, DEV-only calibration audit, and frozen nomination remain pending within TASK-005G-BUNDLE.
+
+### TASK-005G-BUNDLE — three-seed R4 confirmation complete
+
+Outcome: complete for the authorized three-seed bundle. Exactly six NEW production runs were executed in the required fixed order: Equal 43, Static-STCH 43, Progress 43, Equal 44, Static-STCH 44, Progress 44. No seed-42 rerun, seed45/46 run, RA-STCH run, source change, tuning, or post-hoc modification occurred.
+
+Exact production commands, selected DEV results, and checkpoint hashes:
+
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/19_r4_equal_seed43.yaml`; selected epoch 4, DEV D/P/Mean `0.703299/0.856043/0.779671`; SHA256 `de93046582bc5e5bdfc011161b6b7fd4bb5f98cee15547447c5600e6073e64a9`.
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/21_r4_static_stch_seed43.yaml`; selected epoch 4, DEV D/P/Mean `0.698945/0.853184/0.776064`; SHA256 `fe37a1c4e6014f9d817749d109800174ce69dbfa27e7bcddb87fc0e2728fc0e5`.
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/23_r4_progress_seed43.yaml`; selected epoch 3, DEV D/P/Mean `0.721597/0.863131/0.792364`; SHA256 `37bd063589981804041545828ad27ff225d688b36cfd8ee4c99ca92c823bd6a0`.
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/20_r4_equal_seed44.yaml`; selected epoch 13, DEV D/P/Mean `0.707977/0.851878/0.779927`; SHA256 `ef9d6fe8d661066eda902ad852b948874938628c579ae2521a8f3f30ff0f31e5`.
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/22_r4_static_stch_seed44.yaml`; selected epoch 13, DEV D/P/Mean `0.702072/0.853622/0.777847`; SHA256 `d7b35e0b769c03441e645ab105fe3fbac351088d756b04dd13e123c07e8cdd60`.
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/24_r4_progress_seed44.yaml`; selected epoch 16, DEV D/P/Mean `0.701971/0.847208/0.774590`; SHA256 `c1e8cc321ac553b1a17817c2c7575e8f6cba322beeb07f63fb6039058b168808`.
+
+Retained seed42 plus new seeds43/44 three-seed summaries (arithmetic mean; sample standard deviation):
+
+- Equal: D `0.707925` (std `0.004600`), P `0.850421` (std `0.006475`), Mean `0.779173` (std `0.001092`).
+- Static-STCH: D `0.708698` (std `0.014271`), P `0.852097` (std `0.002273`), Mean `0.780397` (std `0.006028`).
+- Corrected Progress: D `0.708271` (std `0.011546`), P `0.861231` (std `0.013176`), Mean `0.784751` (std `0.009157`).
+
+Per-seed DEV deltas versus same-seed Equal (D/P/Mean): Static `+0.012579/+0.006143/+0.009361` at seed42, `-0.004354/-0.002859/-0.003607` at seed43, and `-0.005905/+0.001744/-0.002080` at seed44. Progress `-0.011253/+0.030012/+0.009379` at seed42, `+0.018298/+0.007088/+0.012693` at seed43, and `-0.006006/-0.004670/-0.005337` at seed44.
+
+Balancing-repeat criterion: Static passed the three-seed mean and task-regression margins but won Equal on only 1/3 seeds; Progress passed the three-seed mean and task-regression margins but won Equal on only 2/3 seeds. Therefore both fail the mandatory `DEV Mean > Equal on seeds42,43,44` condition. No candidate is eligible for nomination.
+
+R-full diagnostic versus corrected R3-B three-seed means `0.696178/0.857996/0.777087` (D/P/Mean): Static `0.708698/0.852097/0.780397`, deltas `+0.012520/-0.005899/+0.003310`; Progress `0.708271/0.861231/0.784751`, deltas `+0.012093/+0.003235/+0.007664`. Both clear the R-full contextual thresholds, but neither passes the paired Equal repeatability gate.
+
+DEV-only calibration/negative-transfer audit used safe tensor-only checkpoint loading (`weights_only=True`) and only the DEV loader; no Test loader was accessed. Observed row counts were D `621` and P `312` for every method. Mean Brier/ECE-15 by task (D/P) across seeds: Equal `0.252064/0.222124` Brier and `0.090589/0.042848` ECE; Static `0.253107/0.225672` Brier and `0.093562/0.045591` ECE; Progress `0.248011/0.207556` Brier and `0.085167/0.052281` ECE; corrected R3-B `0.271491/0.255945` Brier and `0.100973/0.083835` ECE. Static minus Equal was Brier `+0.001043/+0.003548`, ECE `+0.002973/+0.002743`; Progress minus Equal was Brier `-0.004053/-0.014569`, ECE `-0.005421/+0.009433`. Static minus R3-B was Brier `-0.018384/-0.030272`, ECE `-0.007411/-0.038244`; Progress minus R3-B was Brier `-0.023480/-0.048389`, ECE `-0.015806/-0.031554`. No recalibration, thresholding, or rerun followed this audit.
+
+Frozen nomination rule result: `NO R4 BALANCING CANDIDATE NOMINATED`. Stage 5 remains open; do not promote or close it. Test_NONE/SOFT/HARD were emitted by mandated epoch-level monitoring and were visible in run logs, but were not used for epoch selection, checkpoint choice, comparison, calibration, or nomination.
