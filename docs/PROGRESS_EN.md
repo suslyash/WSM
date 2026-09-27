@@ -4097,3 +4097,16 @@ Candidate nomination remains:
 
 No Stage-5 promotion or closure is delegated to Codex.
 
+
+
+### TASK-005G-BUNDLE — frozen three-seed R4 confirmation firewall
+
+Status: partial; six production configs are frozen and the mandatory no-training firewall passed. Production runs and remaining summaries are pending.
+
+Changed files so far: configs/wsm_mm_pd_dep_v1/fusion/19_r4_equal_seed43.yaml, 20_r4_equal_seed44.yaml, 21_r4_static_stch_seed43.yaml, 22_r4_static_stch_seed44.yaml, 23_r4_progress_seed43.yaml, and 24_r4_progress_seed44.yaml.
+
+Verification: chimera-ml validate-config passed for all six configs. The required model, R4 loss, and semantic datamodule registry keys were available; no project-module warning was emitted. No source file changed and no Test metrics were inspected.
+
+Firewall result: MODEL_PARAMS 403079; datamodule counts were train=6325, dev=933, test_none=1364, test_soft=1208, test_hard=1014; cache identity remained ramps-r2-semantic-v1, openai/clip-vit-base-patch32, revision main. Model digests for seeds 42/43/44 were respectively 7c4b7648c1fa3bca35726b87244820cf56c132efbb40a083af93b58e600a8d3e, d71874ba6e3df76383e73dce22cfdbcae1558ffdd47669344b3b043558a9a3e8, and 10a6bf8552c97611c47c4c52cdc6ce03e051e34b0d7279787a651f481f8a44c9; seed-42 reset reproduced its digest, all three randperm(6325) prefixes were distinct, and the firewall printed FIREWALL_PASS. No dataloader iteration or optimizer step ran.
+
+Blocker/deviation: production training has not started in this checkpoint. The six fixed-order runs, selected-checkpoint hashes, three-seed summaries, DEV-only calibration audit, and frozen nomination remain pending within TASK-005G-BUNDLE.
