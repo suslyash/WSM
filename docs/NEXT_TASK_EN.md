@@ -1,32 +1,38 @@
-# TASK-006C: Isolated Three-Seed RA-STCH Balancing Contribution Audit
+# TASK-006D: Direct Pseudo-Supervision Ablation on Optimized R4 Trial-012
 
 ## Authority and branch
 
-This task follows **MANAGER-DECISION-064**.
+This task follows **MANAGER-DECISION-065**.
 
 Required branch:
 
-    codex/task-006c
+    codex/task-006d
 
 Start from current manager-updated `origin/main`.
 
 Create exactly one new task branch from that main.
 
-This is a Stage-6 ablation/claims audit, not Stage-5 optimization.
+This is a Stage-6 component ablation. Stage-5 optimization remains closed.
 
-## Goal
+## Scientific question
 
-Complete the original **fixed-composition RA-STCH** three-seed evidence by running only the two frozen, previously unrun RA-STCH configs for seeds43 and44.
+Does the **direct accepted-pseudo BCE supervision term** contribute repeatably to the leading optimized R4 trial-012 composition?
 
-Then compare RA-STCH against the same-seed frozen controls:
+This task removes only direct pseudo loss by keeping `pseudo_scale=0` for the entire training run.
 
-- Equal weighting;
-- Static-STCH;
-- corrected Progress.
+It intentionally RETAINS:
 
-The purpose is to isolate the balancing/controller contribution with architecture, pseudo supervision, optimizer, warm-up, and all non-balancing factors held fixed.
+- the exact semantic pseudo cache;
+- pseudo accept masks;
+- pseudo reliability values;
+- RA reliability EMA;
+- RA controller logic;
+- architecture;
+- auxiliary/agreement terms;
+- optimizer;
+- all optimized trial-012 hyperparameters.
 
-Do **not** use the optimized trial-012 R4 configs37/38/39 as the RA ablation result. Those differ in model/loss/optimizer hyperparameters and are not an isolated balancing comparison.
+Therefore TASK-006D does **not** test reliability contribution or semantic-acceptance contribution. Those remain separate future Stage-6 claims.
 
 ## Required reading
 
@@ -38,339 +44,302 @@ Read in this exact order:
 4. `docs/PROGRESS_EN.md`
 5. `docs/plan/STAGE_6.md`
 6. `docs/NEXT_TASK_EN.md`
-7. `src/fusion/models/av_r3_disease_query.py`
-8. `src/fusion/loss/r4_ramps_balance_loss.py`
+7. `src/fusion/loss/r4_ramps_balance_loss.py`
+8. `src/common/callbacks/wsm_pseudo_scale_warmup_callback.py`
 9. `src/common/callbacks/wsm_r4_balance_callback.py`
 10. `src/fusion/data/wsm_ramps_semantic_datamodule.py`
-11. configs `13_r4_equal_seed42.yaml` through `24_r4_progress_seed44.yaml`
+11. `src/fusion/models/av_r3_disease_query.py`
+12. configs37/38/39.
 
-The Stage-5 historical archive may be read only to verify the retained selected checkpoints/results listed below.
+## Allowed tracked files
 
-## No implementation changes
+Codex may add/modify only:
 
-This task is experiment/evidence only.
-
-Allowed tracked modification:
-
+- `configs/wsm_mm_pd_dep_v1/ablations/40_no_direct_pseudo_seed42.yaml`
+- `configs/wsm_mm_pd_dep_v1/ablations/41_no_direct_pseudo_seed43.yaml`
+- `configs/wsm_mm_pd_dep_v1/ablations/42_no_direct_pseudo_seed44.yaml`
 - `docs/PROGRESS_EN.md`
 
-Forbidden tracked modifications:
+No `src/*` file may change.
+No existing config may change.
+No script may change.
 
-- every `src/*` file;
-- every config;
-- every script;
-- `src/audio`, `src/video`, common training code, plugin registration.
+## Frozen full reference
 
-If an existing frozen config or source implementation cannot run as-is, STOP and report the blocker. Do not patch it inside TASK-006C.
+Use configs37/38/39 as the full-method reference.
 
-## Frozen RA-STCH composition
+### Seed42
 
-Use configs exactly as committed:
+Config:
 
-- seed42: `configs/wsm_mm_pd_dep_v1/fusion/16_r4_ra_stch_seed42.yaml` — retained, DO NOT rerun;
-- seed43: `configs/wsm_mm_pd_dep_v1/fusion/17_r4_ra_stch_seed43.yaml`;
-- seed44: `configs/wsm_mm_pd_dep_v1/fusion/18_r4_ra_stch_seed44.yaml`.
+    configs/wsm_mm_pd_dep_v1/fusion/37_r4_ra_stch_optuna_selected_seed42.yaml
 
-All three must be semantically identical except top-level `seed` and `run_name`.
+DEV D/P/Mean:
 
-Frozen composition:
-
-- model `wsm_av_r3_disease_query_model`;
-- audio/video dims `768/512`;
-- hidden/gate hidden `192/192`;
-- dropout `0.2`;
-- trainable params `403079`;
-- semantic pseudo cache:
-  `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt`;
-- pseudo cache SHA256:
-  `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`;
-- loss `wsm_r4_ramps_balance_loss`, mode `ra_stch`;
-- aux weight `0.25`;
-- agreement weight `0.10`;
-- tau `0.1`;
-- progress temperature `0.25`;
-- progress references D/P `0.697035/0.852104`;
-- controller EMA `0.8`;
-- grad EMA `0.9`;
-- reliability EMA `0.9`;
-- weight min/max `0.2/0.8`;
-- AdamW lr `1e-4`, weight decay `0.01`;
-- pseudo warm-up: 3 observed-only epochs, 5 ramp epochs, final scale 1.0.
-
-## Retained valid RA seed42
-
-Do not rerun seed42.
-
-Run:
-
-    logs/wsm_mm_pd_dep_v1/r4_ra_stch_seed42_c1_2026-09-25_16-51_wsm_av_r3_disease_query_model_c350ca36
-
-Selected epoch:
-
-    13
-
-Checkpoint:
-
-    logs/wsm_mm_pd_dep_v1/r4_ra_stch_seed42_c1_2026-09-25_16-51_wsm_av_r3_disease_query_model_c350ca36/checkpoints/epoch=13_dev_mean_score=0.7826.pt
+    0.759025 / 0.879259 / 0.8191424538
 
 Checkpoint SHA256:
 
-    53397e3bbcbfc95abd30bdf63fec018a28f0effc2d92d66231061fb2d051254a
+    104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a
 
-DEV:
+### Seed43
 
-- D `0.700992`
-- P `0.864298`
-- Mean `0.782645`
+Config:
 
-Selected-epoch controller diagnostics:
+    configs/wsm_mm_pd_dep_v1/fusion/38_r4_ra_stch_optuna_confirm_seed43.yaml
 
-- alpha D/P `0.269192/0.730808` in the accepted Stage-5 record;
-- final logged controller trajectory alpha `0.256828/0.743172`;
-- progress `0.020070/-0.151804`;
-- grad-norm EMA D/P `0.248995/0.121096`;
-- grad-cosine EMA `0.009814`;
-- reliability EMA D/P `0.671974/0.773563`.
+DEV D/P/Mean:
 
-Verify the retained checkpoint file and SHA before production.
+    0.718527 / 0.804363 / 0.7614450000
 
-## Frozen three-seed controls
+Checkpoint SHA256:
 
-### Equal
+    6af4a4ed21040aff4db2906b0adc8aa5fd27a4b72c375fbb67f68de04ab8446e
 
-| Seed | D | P | Mean |
-|---:|---:|---:|---:|
-| 42 | 0.712498 | 0.843342 | 0.777920 |
-| 43 | 0.703299 | 0.856043 | 0.779671 |
-| 44 | 0.707977 | 0.851878 | 0.779927 |
+### Seed44
 
-Three-seed means:
+Config:
 
-- D `0.707925`
-- P `0.850421`
-- Mean `0.7791726667`
+    configs/wsm_mm_pd_dep_v1/fusion/39_r4_ra_stch_optuna_confirm_seed44.yaml
 
-### Static-STCH
+DEV D/P/Mean:
 
-| Seed | D | P | Mean |
-|---:|---:|---:|---:|
-| 42 | 0.725077 | 0.849485 | 0.787281 |
-| 43 | 0.698945 | 0.853184 | 0.776064 |
-| 44 | 0.702072 | 0.853622 | 0.777847 |
+    0.728217 / 0.832060 / 0.7801390000
 
-Three-seed means:
+Checkpoint SHA256:
 
-- D `0.708698`
-- P `0.852097`
-- Mean `0.7803973333`
+    b06fec6912b27cd19d811b72b2c3c08cd1b0a6c826b637f87a314e3976b88c17
 
-### Corrected Progress
+Full three-seed means/sample std:
 
-| Seed | D | P | Mean |
-|---:|---:|---:|---:|
-| 42 | 0.701245 | 0.873354 | 0.787299 |
-| 43 | 0.721597 | 0.863131 | 0.792364 |
-| 44 | 0.701971 | 0.847208 | 0.774590 |
+- D mean `0.7352563333`, std `0.0211467766`;
+- P mean `0.8385606667`, std `0.0378688091`;
+- Mean `0.7869088179`, std `0.0294384420`.
 
-Three-seed means:
+## Frozen pseudo cache
 
-- D `0.708271`
-- P `0.861231`
-- Mean `0.7847510000`
+Path:
+
+    /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt
+
+SHA256:
+
+    17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945
+
+Accepted missing D/P:
+
+    376 / 1801
+
+Accepted class counts:
+
+- D positive/negative: `376 / 0`
+- P positive/negative: `212 / 1589`
+
+Observed truth continues to override pseudo supervision.
+
+## Exact ablation configs
+
+Create configs40/41/42 by copying configs37/38/39 respectively.
+
+Allowed semantic differences from the corresponding full config are exactly:
+
+1. `experiment_info.params.run_name`;
+2. `wsm_pseudo_scale_warmup_callback.params.final_scale: 0.0`.
+
+Required run names:
+
+- seed42: `stage6_no_direct_pseudo_trial012_seed42`
+- seed43: `stage6_no_direct_pseudo_trial012_seed43`
+- seed44: `stage6_no_direct_pseudo_trial012_seed44`
+
+Keep:
+
+- `loss.params.pseudo_scale: 0.0`;
+- observed-only epochs = 3;
+- ramp epochs = 5;
+- the warm-up callback present;
+- every other config field byte/semantic-equivalent to its full reference except run_name/final_scale.
+
+With `final_scale=0.0`, callback `scale_for_epoch` must return exactly zero at every epoch.
+
+Do not remove the pseudo cache or acceptance masks.
+
+## Isolation contract
+
+This is specifically a **direct pseudo-loss** ablation.
+
+The accepted pseudo mask continues to affect task activity exactly as in the current loss implementation.
+
+Pseudo reliability continues to update the RA reliability EMA/controller exactly as in the full method.
+
+Do not describe this variant as “no pseudo information” or “no semantic pseudo path.”
+
+Describe it only as:
+
+    no direct pseudo-supervision loss
 
 ## Mandatory pre-run firewall
 
-Before either production run:
+Before any production run:
 
-1. validate configs16/17/18;
-2. programmatically prove 17 and18 are semantically identical to16 except `seed` and `run_name`;
-3. prove seeds are exactly 42/43/44;
-4. verify retained seed42 checkpoint path/SHA;
-5. instantiate DataModule/model/loss for configs17/18;
-6. verify trainable params `403079`;
-7. verify semantic cache path/SHA and accepted counts D/P `376/1801`;
-8. run one TRAIN-only forward/loss/backward smoke for each of configs17/18;
-9. verify finite loss and non-zero finite gradients for main model under observed+pseudo supervision;
-10. verify RA controller diagnostics are finite;
-11. verify pseudo target/reliability are detached;
-12. no optimizer step;
-13. no DEV/Test loader iteration;
-14. `git diff --check`;
-15. `git diff origin/main -- src` is empty;
-16. `git diff origin/main -- configs` is empty;
-17. append firewall evidence to PROGRESS;
-18. commit and push one firewall commit.
+1. verify full-reference checkpoint SHAs above;
+2. validate configs40/41/42;
+3. programmatically prove each new config differs from its corresponding full config only by run_name and warm-up final_scale;
+4. prove seeds remain exactly 42/43/44;
+5. instantiate DataModule/model/loss/callbacks for all three configs;
+6. verify trainable params match the optimized trial-012 model;
+7. verify pseudo cache path/SHA/counts/class balance;
+8. prove warm-up `scale_for_epoch(e) == 0.0` for every epoch 1..30;
+9. run TRAIN-only forward/loss/backward with accepted missing pseudo rows present;
+10. verify finite nonzero observed/aux/agreement model gradients;
+11. verify the direct pseudo-loss contribution is zero:
+    - loss `pseudo_scale == 0.0`;
+    - perturb accepted `pseudo_targets` deterministically while keeping accept/reliability/observed fields fixed;
+    - total loss and model gradients must remain identical within strict numerical tolerance because the pseudo BCE is multiplied by zero;
+12. verify pseudo targets/reliability remain detached;
+13. verify RA reliability EMA still updates from accepted reliability entries;
+14. verify controller diagnostics finite;
+15. no optimizer step;
+16. no DEV/Test loader iteration;
+17. `git diff --check`;
+18. `git diff origin/main -- src` empty;
+19. append firewall evidence to PROGRESS;
+20. commit and push one firewall commit.
 
-No production run before the firewall commit exists on origin.
+No production run before the firewall commit is visible on origin.
 
-## Exactly two production runs
+## Exactly three production runs
 
-Run exactly in this order:
+Run exactly in order:
 
-1. RA-STCH seed43;
-2. RA-STCH seed44.
+1. seed42;
+2. seed43;
+3. seed44.
 
 Commands:
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/fusion/17_r4_ra_stch_seed43.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/ablations/40_no_direct_pseudo_seed42.yaml
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/fusion/18_r4_ra_stch_seed44.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/ablations/41_no_direct_pseudo_seed43.yaml
 
-No seed42 rerun.
-No retry for metric improvement.
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/ablations/42_no_direct_pseudo_seed44.yaml
+
 No sweep.
-No config change between runs.
-No optimized trial-012 run.
+No retry for metric improvement.
+No extra seed.
+No config modification after the firewall.
 
 ## Selection/Test firewall
 
-For each new run:
+For each run:
 
-- select checkpoint only by maximum `dev/mean_score`;
-- freeze selected epoch/checkpoint before using same-epoch Test monitoring;
+- checkpoint selection only by maximum `dev/mean_score`;
+- freeze selected checkpoint identity before reading same-epoch Test monitoring;
 - record checkpoint SHA256;
-- Test remains mandatory epoch-level monitoring but cannot enter any Stage-6 conclusion.
+- Test cannot affect interpretation or follow-up.
 
-## Three-seed RA evidence
+## Three-seed comparison
 
-Combine retained valid seed42 with new seeds43/44.
+Compute no-direct-pseudo D/P/Mean by seed and three-seed mean/sample std/range.
 
-Compute RA-STCH:
+Compute same-seed:
 
-- D/P/Mean by seed;
-- three-seed arithmetic mean;
-- sample std;
-- min/max/range.
+    full trial012 - no-direct-pseudo
 
-Compute same-seed RA minus Equal D/P/Mean deltas.
+for D, P, and Mean.
 
-Compute same-seed RA minus Static D/P/Mean deltas.
+Compute aggregate full-minus-ablation D/P/Mean deltas.
 
-Compute same-seed RA minus Progress D/P/Mean deltas.
-
-For a same-seed “best simpler balancing” comparator use:
-
-    max(Static Mean, Progress Mean)
-
-and report:
-
-    RA Mean - best_simple Mean
-
-for each seed.
-
-## Frozen claim rule A — contribution over Equal
+## Frozen claim rule
 
 Record exactly:
 
-    RA-STCH BALANCING CONTRIBUTION OVER EQUAL SUPPORTED
+    DIRECT PSEUDO-SUPERVISION CONTRIBUTION SUPPORTED
 
-only if ALL hold:
+only if ALL conditions hold:
 
-1. RA DEV Mean > Equal DEV Mean on at least 2/3 seeds;
-2. RA three-seed Mean > Equal three-seed Mean;
-3. RA three-seed D mean is not more than `0.010000` below Equal D mean;
-4. RA three-seed P mean is not more than `0.010000` below Equal P mean.
-
-Otherwise record exactly:
-
-    RA-STCH BALANCING CONTRIBUTION OVER EQUAL NOT SUPPORTED
-
-## Frozen claim rule B — advantage beyond simpler balancing
-
-Record exactly:
-
-    RA-STCH ADVANTAGE OVER SIMPLER BALANCING SUPPORTED
-
-only if ALL hold:
-
-1. RA Mean > same-seed `max(Static, Progress)` on at least 2/3 seeds;
-2. RA three-seed Mean > both Static three-seed Mean and Progress three-seed Mean;
-3. relative to corrected Progress three-seed task means, neither RA D mean nor RA P mean is lower by more than `0.010000`.
+1. full trial012 DEV Mean > no-direct-pseudo DEV Mean on at least 2/3 seeds;
+2. full trial012 three-seed Mean > no-direct-pseudo three-seed Mean;
+3. full trial012 three-seed D mean is not more than `0.010000` below no-direct-pseudo D mean;
+4. full trial012 three-seed P mean is not more than `0.010000` below no-direct-pseudo P mean.
 
 Otherwise record exactly:
 
-    RA-STCH ADVANTAGE OVER SIMPLER BALANCING NOT SUPPORTED
+    DIRECT PSEUDO-SUPERVISION CONTRIBUTION NOT SUPPORTED
 
-The two claim rules are independent. Report both.
+This rule addresses only the direct pseudo BCE term.
 
-## Controller/mechanism diagnostics
+Even if supported, do not claim pseudo-label correctness, missing-label recovery, comorbidity recovery, or significance.
 
-For each RA seed at the DEV-selected epoch, record:
+## Controller diagnostics
 
+At each DEV-selected epoch record for the no-direct-pseudo runs:
+
+- pseudo scale — MUST be `0.0`;
 - alpha D/P;
 - progress D/P;
 - grad-norm EMA D/P;
 - grad-cosine EMA;
-- reliability EMA D/P;
-- pseudo scale.
+- reliability EMA D/P.
 
-Also report across the three seeds:
+Explicitly record that reliability/controller information remains present despite zero direct pseudo loss.
 
-- whether all values are finite;
-- whether alpha remains within the frozen `[0.2,0.8]` bounds;
-- whether alpha values are identical across all seeds or show seed-specific adaptation;
-- sign/range of grad-cosine EMA;
-- D/P reliability EMA ranges.
+## DEV-only calibration/gate audit
 
-These are diagnostics only. They cannot rescue a failed DEV claim gate.
+After checkpoint freeze, evaluate DEV only.
 
-## DEV-only calibration and gate audit
+For each seed/task report:
 
-After selected checkpoints are frozen, evaluate **DEV only** for RA seeds42/43/44.
-
-Record for each seed/task:
-
-- observed row count;
+- observed count;
 - Brier;
-- ECE-15.
+- ECE-15;
+- task-modality audio gate mean/std.
 
-Record three-seed mean Brier/ECE for D/P.
+Report three-seed means.
 
-Compare RA three-seed calibration against Equal and corrected Progress using the already-frozen comparator means where available.
+Compare full trial012 vs no-direct-pseudo using `full - ablation` direction for Brier/ECE and gate means.
 
-Also report DEV task-modality audio gate mean and sample std for each task and seed from `task_modality_weights`.
+Do not recalibrate or threshold-search.
+No Test row in post-hoc diagnostics.
 
-Do not recalibrate, threshold-search, or rerun.
-
-No Test row may be used in this post-hoc audit.
-
-## Pseudo/negative-transfer diagnostics
+## Negative-transfer and pseudo diagnostics
 
 Record:
 
-- frozen pseudo accepted counts D/P `376/1801`;
-- frozen pseudo class counts D `376/0`, P `212/1589`;
-- RA minus Equal three-seed D/P/Mean;
-- RA minus corrected R3-B contextual three-seed means:
-  - R3-B D `0.696178`;
-  - R3-B P `0.857996`;
-  - R3-B Mean `0.777087`.
+- accepted pseudo counts/class balance remain frozen;
+- no-direct-pseudo vs full three-seed D/P/Mean;
+- no-direct-pseudo vs matched audio three-seed contextual means:
+  - audio D `0.7303377965`;
+  - audio P `0.8162961212`;
+  - audio Mean `0.7733169588`.
 
-This is diagnostic only and does not reopen Stage 5.
+Contextual audio comparison does not replace the full-vs-ablation claim gate.
 
 ## Required PROGRESS evidence
 
 Record:
 
 - task/branch;
-- retained seed42 checkpoint path/SHA and DEV metrics;
-- config equivalence proof;
+- configs40/41/42;
+- full-reference checkpoint SHAs;
+- config-equivalence proof;
+- pseudo cache SHA/counts/classes;
+- firewall proof including pseudo-target perturbation invariance;
 - firewall commit SHA;
-- exact two production commands;
-- production count = exactly 2;
-- seed43/44 run dirs, MLflow IDs/status/artifact URIs;
+- exact three production commands;
+- production count = exactly 3;
+- run dirs / MLflow IDs / status / artifact URIs;
 - selected epochs/checkpoints/SHA256;
-- DEV D/P UAR/MF1/Score/Mean;
-- same-epoch Test monitoring only after freeze;
-- full three-seed RA mean/std/range;
-- all paired comparator deltas;
-- both exact frozen claim strings;
-- controller diagnostics;
-- DEV-only calibration and gate audit;
-- pseudo coverage/class counts;
+- full DEV D/P UAR/MF1/Score/Mean;
+- same-epoch Test monitoring after freeze only;
+- three-seed ablation mean/std/range;
+- full-minus-ablation per-seed and aggregate deltas;
+- exact frozen claim string;
+- controller diagnostics with pseudo_scale=0;
+- DEV-only calibration/gate audit;
 - no Test-driven decision;
 - no tuning/rerun;
-- no source/config changes.
+- no source changes.
 
 ## Final scope checks
 
@@ -378,34 +347,32 @@ Run:
 
     git diff --check
     git diff origin/main -- src
-    git diff origin/main -- configs
     git status --short
     git diff --stat origin/main...HEAD
     git log -12 --oneline --decorate
 
-Only PROGRESS may differ from origin/main.
+Only configs40/41/42 and PROGRESS may differ from origin/main.
 
 ## Acceptance criteria
 
-TASK-006C passes only if:
+TASK-006D passes only if:
 
-- branch exactly `codex/task-006c` from current manager main;
-- no source/config/script changes;
-- retained seed42 checkpoint is verified;
-- configs17/18 remain frozen;
+- branch exactly `codex/task-006d` from current manager main;
+- no source changes;
+- configs differ only by run_name/final_scale;
+- direct pseudo scale is exactly zero for every epoch;
+- pseudo acceptance/reliability/controller information remains otherwise intact;
 - firewall pushed before production;
-- exactly two production runs occur, seed43 then44;
-- seed42 is not rerun;
+- exactly three runs seeds42/43/44;
 - DEV-only selection;
-- Test is monitoring-only;
-- three-seed RA evidence uses retained42 + new43/44 only;
-- both frozen claim rules are applied exactly;
-- controller, calibration, gate, pseudo, and negative-transfer diagnostics are recorded;
-- no tuning, sweep, retry, or Stage-5 reopening;
+- Test monitoring only;
+- claim rule applied exactly;
+- calibration/gate/controller diagnostics recorded;
+- no tuning/sweep/retry;
 - branch pushed;
 - main/master untouched.
 
-Passing TASK-006C closes only the detailed Stage-6 RA-STCH balancing contribution item. It authorizes no next task.
+Passing TASK-006D closes only Stage-6 direct pseudo-supervision item 3. It authorizes no next task.
 
 ## Required handoff
 
@@ -420,29 +387,29 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch `codex/task-006c`;
+- branch `codex/task-006d`;
 - firewall SHA;
 - final evidence SHA;
 - pushed status;
 - main/master untouched;
-- source/config diff empty;
-- retained seed42 checkpoint/SHA;
-- seed43/44 run identities/checkpoint SHA;
-- exactly two new production runs;
-- three-seed RA D/P/Mean and std;
-- same-seed RA-minus-Equal;
-- same-seed RA-minus-best-simple;
-- both exact frozen claim strings;
-- controller diagnostics summary;
+- source diff empty;
+- config equivalence;
+- exactly three production runs;
+- per-seed no-direct-pseudo D/P/Mean;
+- three-seed mean/std;
+- full-minus-ablation deltas;
+- exact frozen claim string;
+- controller diagnostics and pseudo_scale=0;
 - calibration/gate summary;
+- explicit statement that reliability/controller information was retained;
+- no pseudo correctness/comorbidity/significance claim;
 - no Test-driven decision;
-- no tuning/rerun;
 - Stage 6 active;
 - Stage-5 optimization closed;
 - no Stage7/Text/Final Test.
 
 For section 6 write only:
 
-    Manager review of TASK-006C; do not start another task.
+    Manager review of TASK-006D; do not start another task.
 
 Stop.
