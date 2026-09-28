@@ -332,3 +332,45 @@ TRAIN-only registry/data/model/loss smoke passed with the derived cache and no o
 Required frozen hashes checked: audio checkpoint `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`; source pseudo cache `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`. `git diff --check` passed and `git diff -- src/audio` is empty.
 
 The firewall commit must precede exactly these production commands, in order: config31 seed42, config32 seed43, config33 seed44. No sweep, tuning, Test-driven selection, or other Stage-6 work is authorized.
+
+
+### TASK-006A-BUNDLE   shuffled pseudo negative-control production evidence
+
+Status: complete. Exactly three production runs completed, in the authorized order: shuffled Equal seed42, seed43, seed44. No sweep, extra seed, optimizer-only run, post-hoc tuning, or source/config change occurred.
+
+Selected only by maximum DEV `dev/mean_score`:
+
+| Seed | Run | Selected epoch | DEV D Score | DEV P Score | DEV Mean | Selected checkpoint SHA256 |
+|---:|---|---:|---:|---:|---:|---|
+| 42 | `stage6_shuffled_pseudo_equal_seed42_2026-09-28_13-49_wsm_av_r3_disease_query_model_dea1d1da` | 1 | 0.707618 | 0.746877 | 0.727247 | `b24a8be454db99ba735fadf3b040b07a154bfbb78caa52d3ce0664df717c2302` |
+| 43 | `stage6_shuffled_pseudo_equal_seed43_2026-09-28_13-52_wsm_av_r3_disease_query_model_a77a85b2` | 3 | 0.689827 | 0.776322 | 0.733074 | `fb0b863509ff10fa19adfc5e07d89e8d8350aa49ea8f58be219a65734da3b8fa` |
+| 44 | `stage6_shuffled_pseudo_equal_seed44_2026-09-28_13-55_wsm_av_r3_disease_query_model_7c7c3c9f` | 3 | 0.674850 | 0.807394 | 0.741122 | `95c523d35dc747cdcd1f102661866b9cb4e846d09fb61bf5d5efa12bf9ca2392` |
+
+The three shuffled DEV Mean values have mean `0.7338143333`, sample standard deviation `0.0069670637`, and range `0.727247 0.741122`. Matched Equal DEV Mean values are `0.777920/0.779671/0.779927`, mean `0.7791726667`, sample standard deviation `0.0010923664`, and range `0.777920 0.779927`. Shuffled minus matched paired deltas are seed42 `-0.0506730`, seed43 `-0.0465970`, and seed44 `-0.0388050`; three-seed mean delta is `-0.0453583333`. Matched Equal exceeds shuffled on `3/3` seeds and in the three-seed mean.
+
+Same-epoch Test protocol outputs were recorded only as post-freeze monitoring, never for selection or interpretation. Shuffled TEST_NONE/SOFT/HARD Mean values were seed42 `0.820707/0.837643/0.836956`, seed43 `0.745789/0.745173/0.726297`, and seed44 `0.780918/0.783803/0.780038`.
+
+DEV calibration audit used identical DEV rows and observed masks, with binary Brier score and 15-bin confidence ECE. Observed counts were D/P `621/312` for every seed and both methods.
+
+| Seed | Method | D Brier | D ECE-15 | P Brier | P ECE-15 |
+|---:|---|---:|---:|---:|---:|
+| 42 | matched Equal | 0.250991 | 0.216796 | 0.090156 | 0.041386 |
+| 42 | shuffled | 0.183690 | 0.078068 | 0.133782 | 0.054640 |
+| 43 | matched Equal | 0.250396 | 0.221254 | 0.093445 | 0.048379 |
+| 43 | shuffled | 0.258899 | 0.218367 | 0.128615 | 0.111257 |
+| 44 | matched Equal | 0.254806 | 0.228324 | 0.088165 | 0.038778 |
+| 44 | shuffled | 0.262067 | 0.219220 | 0.120834 | 0.082013 |
+
+Calibration deltas (shuffled minus matched) were D Brier `-0.067301/+0.008503/+0.007262` and D ECE `-0.138728/-0.002886/-0.009104` for seeds42/43/44; P Brier `+0.043627/+0.035171/+0.032668` and P ECE `+0.013254/+0.062877/+0.043235`. This is a DEV calibration audit only.
+
+Interpretation: `SAMPLE-SPECIFIC PSEUDO ALIGNMENT CLAIM SUPPORTED BY THIS NEGATIVE CONTROL`, because matched Equal DEV Mean exceeds shuffled on all 3/3 seeds and the matched three-seed mean exceeds shuffled by `0.0453583333`. This supports the sample-specific alignment claim for this frozen negative control; it does not establish missing-label correctness, comorbidity recovery, final-method promotion, or statistical significance.
+
+Production commands were exactly:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/ablations/31_shuffled_pseudo_equal_seed42.yaml
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/ablations/32_shuffled_pseudo_equal_seed43.yaml
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/ablations/33_shuffled_pseudo_equal_seed44.yaml
+```
+
+No Test protocol was used for selection, comparison, calibration, or interpretation. No Stage-5 optimization was reopened; no Stage-7, Text/Description, or Final Test work started. Stage 6 remains active for the remaining manager-assigned claims audit.
