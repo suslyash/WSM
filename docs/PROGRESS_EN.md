@@ -920,3 +920,34 @@ Final checks: config validation passed for configs49/50/51; default full behavio
 Branch codex/task-006h. Configs52/53/54 validated and are equivalent to refs37/38/39 except run_name and modality_available_override [false,true]; seeds remain 42/43/44. Frozen full trial-012 checkpoint SHA256 values were verified: seed42 104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a, seed43 6af4a4ed21040aff4db2906b0adc8aa5fd27a4b72c375fbb67f68de04ab8446e, seed44 b06fec6912b27cd19d811b72b2c3c08cd1b0a6c826b637f87a314e3976b88c17.
 
 TRAIN-only firewall passed before production. Pseudo cache SHA remained 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945; accepted counts D/P 376/1801; class counts D 376/0 and P 212/1589. All TRAIN rows exposed availability [false,true]. Trainable parameters remained 295239. Audio modality weight was exactly 0 and video exactly 1; features_audio was exactly zero; audio_aux_valid was all false and video_aux_valid all true. Strong perturbation of audio_cls and temporal audio left logits, total loss, and non-audio-specific gradients unchanged within 1e-7. Audio projection and audio auxiliary-head gradients were zero; active video gradients were finite and nonzero. Observed and accepted pseudo supervision remained active at pseudo_scale 1.0; pseudo targets/reliability were detached; controller diagnostics were finite. No optimizer step and no DEV/Test iteration occurred. git diff origin/main -- src was empty. Firewall evidence passed before any production run.
+
+
+### TASK-006H final no-audio online-input ablation evidence
+
+Status: complete; branch codex/task-006h. The already-merged modality availability implementation was reused unchanged. The experiment removes only the online student audio input branch with availability [false,true]. The frozen pseudo cache remains unchanged and was built from historical audio/video teacher evidence including calibrated audio probabilities; this is not a pure removal of all audio-derived information.
+
+Exactly three production runs were executed in order with no sweep, retry, tuning, extra seed, or post-firewall change. Firewall commit: 2d008e3. MLflow runs:
+- seed42: run 5360fbad0d31412f844e09c3a8634ba5; directory stage6_no_audio_trial012_seed42_2026-09-28_21-37_wsm_av_r3_disease_query_model_3ed3db4c; selected epoch15; checkpoint SHA 65dd8cdb87b714f182c48236fd2fcd0f2edd888d631a4ef96923bb7962445c8e.
+- seed43: run 680298d3e42b4f6eab47eb9e7b64d6ea; directory stage6_no_audio_trial012_seed43_2026-09-28_21-44_wsm_av_r3_disease_query_model_16bb529f; selected epoch17; checkpoint SHA 33fd0aa9feff542cabae342f1e7707cdd258de7bf66cf922165e7ca8a0bf8b84.
+- seed44: run 807d52750853430cb47142b94e1ccebe; directory stage6_no_audio_trial012_seed44_2026-09-28_21-53_wsm_av_r3_disease_query_model_fce7eb00; selected epoch15; checkpoint SHA d7225afca6be82fa8cd173c4bc296b3cd6d77fc5df61b2bfc6166b87a0a42e64.
+
+Selected DEV metrics, D UAR/MF1/Score; P UAR/MF1/Score; Mean:
+- seed42: 0.663072/0.663023/0.663048; 0.777847/0.787413/0.782630; 0.722839.
+- seed43: 0.621709/0.621578/0.621643; 0.792133/0.800256/0.796194; 0.708919.
+- seed44: 0.675630/0.675237/0.675434; 0.792202/0.802331/0.797266; 0.736350.
+
+Same-epoch Test monitoring was read only after checkpoint freeze. NONE/SOFT/HARD Mean: seed42 0.719794/0.724139/0.711500; seed43 0.722973/0.722234/0.715096; seed44 0.712371/0.717666/0.716429. Test affected no selection, claim, or next-step decision and no Test rows entered the calibration audit.
+
+No-audio three-seed DEV mean/std/range: D 0.653375/0.028170/0.053791; P 0.792030/0.008158/0.014636; Mean 0.722703/0.013716/0.027431. Full-minus-no-audio deltas: D +0.081881, P +0.046531, Mean +0.064206. Per-seed full-minus-no-audio D/P/Mean: seed42 +0.095977/+0.096629/+0.096303; seed43 +0.096884/+0.008169/+0.052526; seed44 +0.052783/+0.034794/+0.043789. All frozen claim criteria pass. Exact claim: ONLINE AUDIO INPUT MODALITY CONTRIBUTION SUPPORTED. This concerns only the online student audio branch under the unchanged pseudo-training pipeline.
+
+Selected controller diagnostics alpha D/P; progress D/P; grad-norm EMA D/P; grad-cosine EMA; reliability EMA D/P; pseudo scale:
+- seed42 0.295119/0.704881; -0.116082/-0.587310; 0.451352/0.347683; +0.021724; 0.671878/0.769233; 1.0.
+- seed43 0.314330/0.685670; -0.264692/-0.556062; 0.543409/0.294848; +0.019771; 0.665876/0.771728; 1.0.
+- seed44 0.278227/0.721773; -0.066403/-0.389670; 0.402969/0.263181; -0.000277; 0.670356/0.763186; 1.0.
+Task modality weights were exactly audio 0/video 1 at selected evaluation. Pseudo cache SHA remained 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945 with accepted counts D/P 376/1801 and classes D 376/0, P 212/1589.
+
+DEV-only post-freeze calibration observed counts were D/P 621/312. Per-seed D Brier/ECE-15: 0.217216/0.133699, 0.244519/0.189715, 0.205690/0.096362. Per-seed P: 0.142127/0.098603, 0.142571/0.084615, 0.143890/0.121325. Audio gate mean/std was exactly 0.000000/0.000000 and video gate mean/std exactly 1.000000/0.000000 for all seeds. Three-seed ablation calibration means D Brier/ECE 0.222475/0.139925 and P 0.142863/0.101514. Full-minus-ablation calibration deltas: D -0.043550/-0.069921; P -0.052915/-0.011675. No recalibration or threshold search occurred.
+
+Contextual Stage-2 V2 video reference: D/P/Mean 0.6201013364/0.7930427585/0.7065720475. No-audio minus Stage-2 video per seed: seed42 +0.042947/-0.010413/+0.016267; seed43 +0.001542/+0.003151/+0.002347; seed44 +0.055333/+0.004223/+0.029778. This is contextual and not architecture-equivalent.
+
+Final scope checks: config validation, exact equivalence, frozen full checkpoint SHA verification, and firewall all passed; git diff --check passed; git diff origin/main -- src was empty; only configs52/53/54 and this ledger differ. No source, existing config, or pseudo-cache changes occurred. No significance, total audio-information removal, missing-label, comorbidity, causality, or final-promotion claim is made. Stage 6 modality-removal item 7 is complete; Stage 5 remains closed; Stage 7, Text/Description, and Final Test remain locked.
