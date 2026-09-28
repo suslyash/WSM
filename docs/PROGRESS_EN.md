@@ -697,3 +697,14 @@ Selected-epoch controller diagnostics (alpha D/P; progress D/P; grad-norm EMA D/
 Post-freeze DEV-only calibration/gate audit used observed counts D/P `621/312` for every seed and no Test rows. RA three-seed means: D Brier/ECE-15 `0.2505394063/0.2257061193`, P `0.0952518079/0.0757453021`; task audio-gate mean/sample-std D `0.3630868495/0.1935827980`, P `0.3701813122/0.1922030300`. RA minus frozen Equal calibration means: D Brier/ECE `-0.0015246377/-0.0058562747`, P `+0.0046632639/+0.0142875391`. RA minus corrected Progress: D `+0.0025287953/+0.0075696203`, P `+0.0100845399/+0.0059937391`.
 
 Same-epoch Test monitoring was read only after each selected checkpoint was frozen and did not affect selection, calibration, comparison, or claims: seed42 TEST_NONE/SOFT/HARD `0.777133/0.767804/0.760071`; seed43 `0.746138/0.739737/0.729451`; seed44 `0.797072/0.798145/0.805330`. No Test row was used in post-hoc diagnostics. Frozen pseudo coverage remains D/P `376/1801`, with class counts D `376/0` and P `212/1589`. Stage-5 optimization remains closed; Stage 6 remains active; Stage 7, Text/Description, and Final Test remain locked.
+
+
+### TASK-006D — no direct pseudo-supervision firewall
+
+Status: firewall complete; production runs not started. Branch: `codex/task-006d`, based on manager `origin/main` `b927bf8`. Added only configs40/41/42; no source, existing-config, or script changes.
+
+Validated all three configs with `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config --config-path ...`: all valid. Programmatic comparison against fusion refs37/38/39 passed: only `experiment_info.params.run_name` and warmup `final_scale` differ; required seeds are 42/43/44, `loss.params.pseudo_scale=0.0`, observed-only epochs `3`, ramp epochs `5`, and cache/reliability settings unchanged. `scale_for_epoch(1..30)==0.0`.
+
+Firewall command completed with TRAIN-only forward/loss/backward checks for all three configs: frozen semantic cache SHA `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`; accepted counts D/P `376/1801`, classes D `376/0`, P `212/1589`; accepted rows present; trainable parameters `403079`; pseudo targets/reliability detached; controller diagnostics finite and reliability EMA updated from accepted reliability. Deterministic pseudo-target perturbation left total loss and model gradients unchanged within strict `1e-12` tolerance because pseudo scale is zero. No optimizer step and no DEV/Test iteration occurred. `git diff origin/main -- src` and `git diff origin/main -- configs` were empty; `git diff --check` passed.
+
+Mandatory firewall commit/push precedes exactly three production runs in order seed42, seed43, seed44.
