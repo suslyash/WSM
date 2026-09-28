@@ -1,60 +1,26 @@
-# TASK-006H: No-Audio Online-Input Modality-Removal Ablation on Optimized R4 Trial-012
+# TASK-006I: Equal-Parameter Task-Aware Fusion Ablation on Optimized R4 Trial-012
 
 ## Authority and branch
 
-This task follows **MANAGER-DECISION-069**.
+This task follows **MANAGER-DECISION-070**.
 
 Required branch:
 
-    codex/task-006h
+    codex/task-006i
 
 Start from current manager-updated `origin/main`.
 
 Create exactly one new task branch from that main.
 
-Stage-5 optimization remains closed. This is a Stage-6 ablation only.
+Stage-5 optimization remains closed. This is a Stage-6 component ablation only.
 
 ## Scientific question
 
-Does the **online audio input branch** contribute repeatably to the leading optimized R4 trial-012 composition when all other training semantics are held fixed?
+Does **task-aware fusion specialization** contribute repeatably to the leading optimized R4 trial-012 composition when sparse MTL, separate disease heads, pseudo supervision, reliability, RA controller, optimizer, and model parameter count are held fixed?
 
-Remove audio through the existing `modality_available` mask.
+This task removes task-conditioned fusion specialization while retaining sparse multi-task learning.
 
-Do not delete audio parameters or change architecture.
-
-The no-audio variant must retain:
-
-- the same model class and all parameters;
-- the same hidden/gate dimensions and dropout;
-- the same semantic pseudo cache;
-- direct pseudo supervision;
-- graded reliability;
-- RA controller;
-- aux/agreement loss implementation;
-- optimizer;
-- warm-up;
-- all optimized trial-012 hyperparameters.
-
-Only online modality availability changes:
-
-    audio = false
-    video = true
-
-## Critical interpretation boundary
-
-The frozen pseudo cache was constructed from historical audio/video teacher evidence and stores calibrated audio probabilities as pseudo targets.
-
-Therefore TASK-006H does NOT remove every audio-derived signal from the whole training pipeline.
-
-It removes the **online audio feature branch** from the student while leaving the frozen pseudo-training path unchanged.
-
-Any accepted claim must be phrased only as an online-audio-input contribution under the current pipeline.
-
-Do not describe the ablation as:
-
-- no audio information;
-- video-only in a fully information-pure sense;
-- removal of audio-derived pseudo supervision.
+It does NOT test whether sparse MTL itself is useful. That is a separate Stage-6 claim.
 
 ## Required reading
 
@@ -66,41 +32,116 @@ Read in order:
 4. `docs/PROGRESS_EN.md`
 5. `docs/plan/STAGE_6.md`
 6. `docs/NEXT_TASK_EN.md`
-7. `src/fusion/data/wsm_ramps_semantic_datamodule.py`
-8. `src/fusion/models/av_r3_disease_query.py`
-9. `src/fusion/loss/r4_ramps_balance_loss.py`
-10. configs37/38/39;
-11. configs49/50/51 only to verify the already-merged availability mechanism, not as performance comparators.
+7. `src/fusion/models/av_r3_disease_query.py`
+8. `src/fusion/loss/r4_ramps_balance_loss.py`
+9. `src/fusion/data/wsm_ramps_semantic_datamodule.py`
+10. configs37/38/39.
+
+Historical Stage-4 F1/F2 evidence may be read only for context. It does not replace this required three-seed trial-012 ablation.
 
 ## Allowed tracked files
 
 Only:
 
-- `configs/wsm_mm_pd_dep_v1/ablations/52_no_audio_seed42.yaml`
-- `configs/wsm_mm_pd_dep_v1/ablations/53_no_audio_seed43.yaml`
-- `configs/wsm_mm_pd_dep_v1/ablations/54_no_audio_seed44.yaml`
+- `src/fusion/models/av_r3_disease_query.py`
+- `configs/wsm_mm_pd_dep_v1/ablations/55_shared_fusion_seed42.yaml`
+- `configs/wsm_mm_pd_dep_v1/ablations/56_shared_fusion_seed43.yaml`
+- `configs/wsm_mm_pd_dep_v1/ablations/57_shared_fusion_seed44.yaml`
 - `docs/PROGRESS_EN.md`
-
-No source change is authorized.
 
 Forbidden:
 
-- all `src/*` changes;
-- all existing config changes;
+- DataModule changes;
+- loss/callback changes;
+- `src/audio/*` and `src/video/*` changes;
+- existing config changes;
 - pseudo-cache changes;
 - tuning.
 
-## Frozen availability implementation
+## Minimal backward-compatible model switch
 
-Reuse the already-merged semantic DataModule parameter:
+Extend `WSMAVR3DiseaseQueryModel` with:
 
-    modality_available_override
+    task_aware_fusion: bool = true
 
-TASK-006H must use exactly:
+Validation:
+- value must be boolean;
+- default true.
 
-    modality_available_override: [false, true]
+Registry/provider behavior remains unchanged except accepting the optional model parameter.
 
-Do not edit its implementation.
+### Full/default path
+
+When `task_aware_fusion=true`, forward behavior must be tensor-identical to current `origin/main`.
+
+Do not refactor the full path in a way that changes numerical ordering.
+
+### Shared-fusion ablation path
+
+When `task_aware_fusion=false`, retain all existing parameter tensors but remove task-specific fusion specialization as follows.
+
+Let:
+
+    q_shared = mean(task_queries, dim=0)
+
+For each batch, create the same `query_batch` from `q_shared` for both tasks.
+
+Shared audio candidate:
+
+    audio_candidate =
+        0.5 * (
+            task_candidate_norms[0](features_audio + query_batch)
+            + task_candidate_norms[1](features_audio + query_batch)
+        )
+
+Shared video candidate:
+
+    video_candidate =
+        0.5 * (
+            task_candidate_norms[0](features_video + query_batch)
+            + task_candidate_norms[1](features_video + query_batch)
+        )
+
+Compute exactly one audio score and one video score using the existing `shared_query_gate`, apply the existing availability mask, and obtain one two-modality softmax weight vector.
+
+Let:
+
+    fused_pre =
+        query_batch
+        + weight_audio * audio_candidate
+        + weight_video * video_candidate
+
+Shared fused representation:
+
+    fused_shared =
+        0.5 * (
+            task_fusion_norms[0](fused_pre)
+            + task_fusion_norms[1](fused_pre)
+        )
+
+Then:
+
+- `task_audio_features[:,0]` and `[:,1]` are both `audio_candidate`;
+- `task_video_features[:,0]` and `[:,1]` are both `video_candidate`;
+- `task_modality_weights[:,0]` and `[:,1]` are the same shared weights;
+- `task_features[:,0]` and `[:,1]` are both `fused_shared`;
+- main head 0 consumes `fused_shared` for depression;
+- main head 1 consumes `fused_shared` for Parkinson;
+- audio/video auxiliary heads remain task-specific and consume the shared audio/video candidate respectively.
+
+Do not tie, delete, freeze, or resize any existing parameter tensor.
+
+Both task-query parameters, both candidate norms, both fusion norms, both task heads, both audio aux heads, both video aux heads, projections, and shared gate must remain trainable and participate in the graph.
+
+## Equal-parameter contract
+
+Full and ablation trainable parameter counts MUST both be exactly:
+
+    295239
+
+Because parameter count is identical, no separate size-matched control is required for this comparison.
+
+Record this explicitly.
 
 ## Frozen full reference
 
@@ -128,57 +169,61 @@ Verify these before production.
 
 ## Exact ablation configs
 
-Create configs52/53/54 by copying refs37/38/39 respectively.
+Create configs55/56/57 from refs37/38/39 respectively.
 
 Allowed semantic differences only:
 
-1. run_name;
-2. `data.params.modality_available_override: [false, true]`.
+1. `experiment_info.params.run_name`;
+2. `model.params.task_aware_fusion: false`.
 
 Required run names:
 
-- seed42: `stage6_no_audio_trial012_seed42`
-- seed43: `stage6_no_audio_trial012_seed43`
-- seed44: `stage6_no_audio_trial012_seed44`
+- seed42: `stage6_shared_fusion_trial012_seed42`
+- seed43: `stage6_shared_fusion_trial012_seed43`
+- seed44: `stage6_shared_fusion_trial012_seed44`
 
-Everything else must match the corresponding full config exactly.
+Everything else must match the corresponding full config.
 
 ## Mandatory pre-run firewall
 
 Before any production run:
 
-1. validate configs52/53/54;
-2. programmatically prove each config differs from its full ref only by run_name and availability override;
-3. verify seeds remain 42/43/44;
-4. verify full checkpoint paths/SHA values;
-5. instantiate DataModule/model/loss/callbacks for each config;
-6. verify trainable parameter count remains `295239`;
-7. verify pseudo cache path/SHA/counts/classes remain full frozen values;
-8. on TRAIN batch verify `modality_available == [false,true]` for every row;
-9. forward invariants:
-   - audio modality weight exactly 0;
-   - video modality weight exactly 1;
-   - `features_audio` exactly zero;
-   - `audio_aux_valid` all false;
-   - `video_aux_valid` all true;
-10. deterministic isolation test:
-    - strongly perturb `audio_cls` and the collated raw/temporal audio tensor while availability remains false;
-    - main logits, total loss, and non-audio-specific parameter gradients remain identical within strict numerical tolerance;
-11. verify audio-specific parameter gradients are zero/None:
-    - audio projection;
-    - audio auxiliary heads;
-12. verify active video path has finite nonzero gradients;
-13. verify observed supervision and accepted pseudo supervision remain finite/nonzero at pseudo_scale=1;
-14. verify pseudo targets/reliability detached;
-15. verify controller diagnostics finite;
-16. no optimizer step;
-17. no DEV/Test loader iteration;
-18. `git diff --check`;
-19. `git diff origin/main -- src` must be empty;
-20. append firewall evidence to PROGRESS;
-21. commit and push one firewall commit.
+1. implement the model switch;
+2. prove default/full backward compatibility:
+   - instantiate a clean `origin/main` model and the modified model with `task_aware_fusion=true`;
+   - same fixed RNG initialization/state dict;
+   - same deterministic TRAIN batch;
+   - in eval mode, every `preds` and relevant `aux` tensor must be bit/tensor-identical;
+3. validate configs55/56/57;
+4. prove each differs from refs37/38/39 only by run_name/task_aware_fusion;
+5. verify seeds remain 42/43/44;
+6. verify full checkpoint paths/SHA values;
+7. instantiate DataModule/model/loss/callbacks;
+8. verify full and ablation trainable params both exactly `295239`;
+9. verify pseudo-cache path/SHA/counts/classes unchanged;
+10. shared-fusion forward invariants:
+    - task audio candidates exactly equal across tasks;
+    - task video candidates exactly equal across tasks;
+    - modality weights exactly equal across tasks;
+    - task fused features exactly equal across tasks;
+    - preds remain two distinct task logits from separate main heads;
+11. verify task-specific heads remain independent:
+    - deterministic perturbation of depression main-head parameters changes depression logits but not Parkinson logits on the same frozen shared representation;
+12. verify both task-query parameter rows receive finite nonzero gradients and, under the shared mean construction, their gradients are exactly equal within strict tolerance;
+13. verify both candidate norm modules and both fusion norm modules receive finite nonzero gradients;
+14. verify both main heads and all active auxiliary heads receive finite gradients;
+15. verify projections/shared gate receive finite nonzero gradients;
+16. verify observed and accepted pseudo supervision remain active at pseudo_scale=1;
+17. pseudo target/reliability tensors remain detached;
+18. controller diagnostics finite;
+19. no optimizer step;
+20. no DEV/Test iteration;
+21. `git diff --check`;
+22. verify forbidden source scopes unchanged;
+23. append firewall evidence to PROGRESS;
+24. commit and push one firewall commit.
 
-No production run before firewall is visible on origin.
+No production run before the firewall commit is visible on origin.
 
 ## Exactly three production runs
 
@@ -191,13 +236,13 @@ Run exactly in order:
 Commands:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/ablations/52_no_audio_seed42.yaml
+      --config-path configs/wsm_mm_pd_dep_v1/ablations/55_shared_fusion_seed42.yaml
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/ablations/53_no_audio_seed43.yaml
+      --config-path configs/wsm_mm_pd_dep_v1/ablations/56_shared_fusion_seed43.yaml
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/ablations/54_no_audio_seed44.yaml
+      --config-path configs/wsm_mm_pd_dep_v1/ablations/57_shared_fusion_seed44.yaml
 
 No sweep, retry for metric improvement, extra seed, or post-firewall change.
 
@@ -205,69 +250,80 @@ No sweep, retry for metric improvement, extra seed, or post-firewall change.
 
 For every run:
 
-- checkpoint selection only by maximum `dev/mean_score`;
-- freeze checkpoint before reading same-epoch Test monitoring;
+- select checkpoint only by maximum `dev/mean_score`;
+- freeze checkpoint identity before reading same-epoch Test monitoring;
 - Test cannot affect the claim or next-step decision.
 
 ## Three-seed comparison
 
-Compute no-audio D/P/Mean by seed and three-seed mean/sample std/range.
+Compute shared-fusion D/P/Mean by seed and three-seed mean/sample std/range.
 
 Compute same-seed and aggregate:
 
-    full trial012 - no-audio
+    full trial012 - shared-fusion
 
 for D/P/Mean.
-
-Contextually compare no-audio against the frozen Stage-2 V2 video reference:
-
-    D 0.6201013364
-    P 0.7930427585
-    Mean 0.7065720475
-
-This contextual comparison is not architecture-equivalent and does not replace the full-vs-ablation gate.
 
 ## Frozen claim rule
 
 Record exactly:
 
-    ONLINE AUDIO INPUT MODALITY CONTRIBUTION SUPPORTED
+    TASK-AWARE FUSION CONTRIBUTION SUPPORTED
 
 only if ALL hold:
 
-1. full DEV Mean > no-audio DEV Mean on at least 2/3 seeds;
-2. full three-seed Mean > no-audio three-seed Mean;
-3. full three-seed D is not more than `0.010000` below no-audio D;
-4. full three-seed P is not more than `0.010000` below no-audio P.
+1. full DEV Mean > shared-fusion DEV Mean on at least 2/3 seeds;
+2. full three-seed Mean > shared-fusion three-seed Mean;
+3. full three-seed D is not more than `0.010000` below shared-fusion D;
+4. full three-seed P is not more than `0.010000` below shared-fusion P.
 
 Otherwise record exactly:
 
-    ONLINE AUDIO INPUT MODALITY CONTRIBUTION NOT SUPPORTED
+    TASK-AWARE FUSION CONTRIBUTION NOT SUPPORTED
 
-This claim concerns only the online student audio branch under the frozen pseudo-training pipeline.
+This claim concerns task-conditioned fusion specialization only.
 
-No claim of total audio-information removal is authorized.
+Do not claim sparse-MTL contribution from this experiment.
 
-## Diagnostics
+## Fusion / gradient diagnostics
 
-At selected epoch record:
+At each selected checkpoint record:
 
 - pseudo scale;
 - alpha D/P;
 - progress D/P;
-- grad-norm EMA D/P;
-- grad-cosine EMA;
+- controller grad-norm EMA D/P;
+- controller grad-cosine EMA;
 - reliability EMA D/P;
-- task modality weights — must be audio=0/video=1.
+- shared audio gate mean/std on DEV;
+- maximum absolute difference between task0 and task1 modality weights — MUST be zero within numerical tolerance;
+- maximum absolute difference between task0 and task1 fused features — MUST be zero within numerical tolerance.
 
-DEV-only post-freeze audit:
+Additionally, on a deterministic TRAIN diagnostic batch with observed support for both tasks and no parameter update:
 
-- observed counts;
+- compute D-only and P-only gradient L2 norms over the shared fusion parameter set:
+  - audio_projection;
+  - video_projection;
+  - task_queries;
+  - task_candidate_norms;
+  - shared_query_gate;
+  - task_fusion_norms;
+- compute cosine similarity between D-only and P-only gradient vectors;
+- record finite values.
+
+This is diagnostic only and cannot rescue a failed DEV gate.
+
+## DEV-only calibration audit
+
+After checkpoint freeze, use DEV only.
+
+For each seed/task report:
+
+- observed count;
 - Brier;
-- ECE-15;
-- audio gate mean/std — expected exactly `0.0/0.0`;
-- video gate mean/std — expected exactly `1.0/0.0`;
-- full-minus-ablation calibration deltas.
+- ECE-15.
+
+Report three-seed means and full-minus-ablation calibration deltas.
 
 No recalibration or threshold search.
 No Test rows.
@@ -277,59 +333,64 @@ No Test rows.
 Record:
 
 - task/branch;
-- configs52/53/54 and exact equivalence proof;
-- availability implementation reused unchanged;
+- model source change and full-path backward-compatibility proof;
+- exact shared-fusion equations/invariants;
+- equal parameter count proof;
+- configs55/56/57 equivalence;
 - full checkpoint SHAs;
-- pseudo-cache identity and the explicit audio-derived-pseudo interpretation caveat;
+- pseudo-cache identity;
 - firewall evidence/SHA;
 - exact three production commands;
 - exactly three run/MLflow identities;
-- selected epochs/checkpoint SHA;
+- selected epochs/checkpoint SHAs;
 - DEV D/P UAR/MF1/Score/Mean;
 - Test monitoring after freeze only;
-- three-seed no-audio aggregate;
-- full-minus-no-audio deltas;
+- three-seed shared-fusion aggregate;
+- full-minus-ablation deltas;
 - exact frozen claim string;
-- controller/gate/calibration diagnostics;
-- contextual Stage-2 video comparison;
-- no tuning/retry/Test-driven decision;
-- no source changes.
+- fusion/controller/gradient diagnostics;
+- DEV calibration audit;
+- explicit statement that sparse MTL and separate disease heads remain;
+- no tuning/retry/Test-driven decision.
 
 ## Final scope checks
 
 Run:
 
     git diff --check
-    git diff origin/main -- src
+    git diff origin/main -- src/audio
+    git diff origin/main -- src/video
+    git diff origin/main -- src/fusion/data
+    git diff origin/main -- src/fusion/loss
+    git diff origin/main -- src/common/callbacks
     git status --short
     git diff --stat origin/main...HEAD
     git log -12 --oneline --decorate
 
-Only configs52/53/54 and PROGRESS may differ.
+Only the authorized R3 model file, configs55/56/57, and PROGRESS may differ.
 
 ## Acceptance criteria
 
-TASK-006H passes only if:
+TASK-006I passes only if:
 
-- branch exactly `codex/task-006h`;
-- no source changes;
-- configs differ only run_name/availability override;
-- availability exactly `[false,true]`;
-- architecture/parameter count unchanged;
-- pseudo path unchanged;
-- audio perturbation has no effect under unavailable mask;
+- branch exactly `codex/task-006i`;
+- default full model is tensor-identical to current origin/main behavior;
+- shared-fusion path follows the exact frozen construction;
+- trainable params remain exactly `295239`;
+- all retained parameter groups remain trainable/active;
+- configs differ only run_name/task_aware_fusion;
+- pseudo/training paths unchanged;
 - firewall pushed before production;
 - exactly three runs seeds42/43/44;
 - DEV-only selection;
 - Test monitoring only;
 - frozen claim applied exactly;
-- interpretation is explicitly limited to online audio input;
-- diagnostics recorded;
+- gradient/fusion/calibration diagnostics recorded;
 - no tuning/sweep/retry;
 - branch pushed;
 - main/master untouched.
 
-Passing TASK-006H closes the audio-removal half, and therefore completes Stage-6 modality-removal item 7. It authorizes no next task.
+Passing TASK-006I closes only the Stage-6 task-aware fusion item. Sparse-MTL contribution remains separate and is not authorized automatically.
 
 ## Required handoff
 
@@ -342,10 +403,10 @@ Respond in English using exactly:
 5. Blockers and risks
 6. Next atomic step
 
-Include branch, firewall/final SHA, pushed status, main/master untouched, source diff empty, parameter count, pseudo-path caveat, exactly three runs, per-seed/aggregate metrics, full-minus-ablation deltas, exact claim string, availability/gate/controller/calibration summary, no Test-driven decision, Stage 6 active, Stage-5 closed, Stage7/Text/Final Test locked.
+Include branch, firewall/final SHA, pushed status, main/master untouched, source scope, backward compatibility, equal parameter count, exactly three runs, per-seed/aggregate metrics, full-minus-ablation deltas, exact claim string, fusion/gradient/controller/calibration summary, explicit sparse-MTL-retained statement, no Test-driven decision, Stage 6 active, Stage-5 closed, Stage7/Text/Final Test locked.
 
 For section 6 write only:
 
-    Manager review of TASK-006H; do not start another task.
+    Manager review of TASK-006I; do not start another task.
 
 Stop.
