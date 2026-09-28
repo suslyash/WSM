@@ -4672,3 +4672,54 @@ Firewall evidence:
 - The audit emitted only an unrelated PyTorch nested-tensor warning while importing an existing registered module; no project-module warning occurred.
 
 Deviation/blocker: the 60 metric-bearing trials remain pending. After this firewall commit is pushed, execute exactly Candidate B 20, R3-B 20, then R4 RA-STCH 20. Do not run seed43/44, extra seed42 configs, Test-driven selection, or any Stage 6/7/Text/Description/Final Test work.
+
+
+### TASK-005H-TRIPLE-OPTUNA - completed production and DEV-only manager analysis
+
+Status: complete. Exactly 60 new seed-42 native Chimera Optuna trials completed in the required order: Candidate B 20, corrected R3-B 20, and corrected R4 RA-STCH 20. No seed43/44, RA-STCH outside the specified R4 family, source change, or Test-driven decision was made.
+
+Sweep artifacts and completion evidence:
+
+- Candidate B manifest: `logs/wsm_mm_pd_dep_v1/_sweeps/candidate-b-optuna-v1-260927-2014-bd81/manifest.yaml`; status `completed`; `n_trials: 20`; study `wsm-candidate-b-optuna-v1`.
+- R3-B manifest: `logs/wsm_mm_pd_dep_v1/_sweeps/r3b-optuna-v1-260927-2256-5990/manifest.yaml`; status `completed`; `n_trials: 20`; study `wsm-r3b-optuna-v1`.
+- R4 RA-STCH manifest: `logs/wsm_mm_pd_dep_v1/_sweeps/r4-ra-stch-optuna-v1-260928-0047-18c6/manifest.yaml`; status `completed`; `n_trials: 20`; study `wsm-r4-ra-stch-optuna-v1`.
+- Exact production commands were the frozen Candidate B, R3-B, and R4 commands recorded in the firewall entry, each with `--max-trials 20`; no command was rerun.
+- `rg -c '^- trial_id:'` returned 20 records per manifest; the separate `best_trial` block is not an additional trial.
+
+DEV-only family results. The objective winner is the exact highest native `dev/mean_score`; the selected DEV row is identified by the manifest `target_epoch`.
+
+| Family | Objective winner | Epoch | DEV D | DEV P | DEV Mean | Trainable params | Delta vs frozen audio Mean |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Candidate B | `candidate-b-optuna-v1-bd81-003` | 7 | 0.730860 | 0.902321 | 0.8165907903 | 360,834 | +0.0287639138 |
+| corrected R3-B | `r3b-optuna-v1-5990-018` | 13 | 0.732198 | 0.899651 | 0.8159243728 | 390,727 | +0.0280974963 |
+| corrected R4 RA-STCH | `r4-ra-stch-optuna-v1-18c6-012` | 11 | 0.759025 | 0.879259 | 0.8191424538 | 295,239 | +0.0313155773 |
+
+Frozen audio reference: D `0.7479183895`, P `0.8277353635`, Mean `0.7878268765`. Safe thresholds were Mean `>0.7878268765`, D `>=0.7379183895`, P `>=0.8177353635`; strict non-regression thresholds were D `>=0.7479183895`, P `>=0.8277353635`.
+
+| Family | Safe candidates | Safe winner | Strict non-regression count | DEV interpretation |
+|---|---:|---|---:|---|
+| Candidate B | 0/20 | none | 0/20 | Mean improved, but every candidate missed the safe D floor; objective winner D regressed by `0.0170583895`. |
+| corrected R3-B | 0/20 | none | 0/20 | Mean improved, but every candidate missed the safe D floor; objective winner D regressed by `0.0157203895`. |
+| corrected R4 RA-STCH | 4/20 | `r4-ra-stch-optuna-v1-18c6-012` | 1/20 | Objective winner is also strict-safe: D improved by `0.0111066105`, P improved by `0.0515236365`. |
+
+The R4 objective winner is the only family winner satisfying the strict audio non-regression gate. Its four safe candidates were trials `012`, `016`, `018`, and `020`; the other three exceeded the audio Mean and safe D/P floors but only `012` also met both exact audio D/P floors. This is a DEV-only calibration/negative-transfer audit, not a Test result and not a claim of generalization.
+
+Historical seed-42 comparison, retained for context only: Candidate B was `0.809324` previously, corrected R3-B was `0.794816`, and R4 RA-STCH was `0.782645`. The optimized objective-winner deltas are respectively `+0.007267`, `+0.021108`, and `+0.036497` Mean. These are search-selection gains and do not constitute an independent confirmation.
+
+Top-five records by native DEV objective:
+
+- Candidate B: `003=0.8165907903`, `013=0.8089333700`, `011=0.8073930526`, `015=0.8069734978`, `012=0.8060606789`.
+- corrected R3-B: `018=0.8159243728`, `007=0.8130057836`, `017=0.8074784562`, `020=0.8057048735`, `016=0.8032756872`.
+- corrected R4 RA-STCH: `012=0.8191424538`, `020=0.8191321961`, `018=0.8166349920`, `016=0.8160185021`, `017=0.8144453620`.
+
+All 20 trial records, including exact sampled overrides, objective values, target epochs, and run names, remain machine-readable in the three manifests above. The selected checkpoint for R4 trial `012` is under `logs/wsm_mm_pd_dep_v1/optuna_r4_ra_stch_base_seed42_2026-09-28_01-54_wsm_av_r3_disease_query_model_r4-ra-stch-optuna-v1-18c6-012_0ce9c7a4/`; the corresponding Candidate B and R3-B selected run directories are named by their manifest `run_name` fields.
+
+Verification after production:
+
+- All three manifests report `status: completed`, `n_trials: 20`, and objective monitor `dev/mean_score` in `max` mode.
+- No Test metric was inspected for selection, filtering, calibration, nomination, or family choice. Test streams were emitted by the required monitoring loop only.
+- `src/audio` remained unchanged; no source code was modified.
+- No Stage 6/7, Text/Description, or Final Test work was started.
+- The frozen firewall evidence remains valid: `TRIPLE_OPTUNA_FIREWALL_PASS`, exact checkpoint/cache hashes, parameter caps, registered forward/loss/backward smoke, and clean plugin registration.
+
+Manager conclusion: nominate corrected R4 RA-STCH trial `012` as the frozen DEV-only family representative for the next manager decision, subject to the project's existing rule that this search result is not a final Test evaluation or automatic promotion. Do not start the next PLAN stage in this task.
