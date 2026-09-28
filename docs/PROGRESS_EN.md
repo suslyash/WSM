@@ -5038,3 +5038,50 @@ Read-only firewall results:
 - No production training, sweep, DEV/Test evaluation, or optimizer step has started.
 
 The firewall commit must be pushed before running exactly the two authorized commands: seed43 once, then seed44 once. No seed42 rerun, extra restart, seed45/46, or hyperparameter change is authorized.
+
+### TASK-005I-R4-CONFIRM - true-seed confirmation evidence
+
+Status: complete. Exactly two new production invocations ran once each, seed43 then seed44. Seed42 was not rerun, no Optuna/search/tuning ran, and no extra restart occurred. No Test metrics were inspected or copied into the comparison.
+
+Configuration provenance:
+
+- Selected generated seed42 config: `logs/wsm_mm_pd_dep_v1/optuna_r4_ra_stch_base_seed42_2026-09-28_01-54_wsm_av_r3_disease_query_model_r4-ra-stch-optuna-v1-18c6-012_0ce9c7a4/r4-ra-stch-optuna-v1-18c6-012.yaml`; SHA256 `04ed5fcb2a1a1040f92c6ebd97898f20cb0658b82eb474c72b05fcfc767a2fb5`.
+- Config37 SHA256 `04ed5fcb2a1a1040f92c6ebd97898f20cb0658b82eb474c72b05fcfc767a2fb5`; byte-equality with the selected generated config passed.
+- Config38 SHA256 `9409f6e581eb2cb129593967f5bf72447ce0cf76a3891afbf417315adb593e6c`; config39 SHA256 `5f13b1c72b0d5f150ed734584910d406df5eee94a39561fc7800551be4e59587`.
+- Config38 and config39 differ from config37 only by the authorized seed and run_name substitutions; both validated.
+- Frozen pseudo cache SHA256: `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`.
+- Ten selected hyperparameters remained exact: hidden_dim=160, gate_hidden_dim=96, dropout=0.10034630487649018, aux_weight=0.41215983081110485, agreement_weight=0.48126684525457264, tau=0.0487101634503887, progress_temperature=0.7232081822527684, controller_ema=0.7848422072252504, lr=2.1217831107180076e-05, weight_decay=0.0001855295766514827.
+
+Exact production commands:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/38_r4_ra_stch_optuna_confirm_seed43.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/39_r4_ra_stch_optuna_confirm_seed44.yaml
+
+Selected DEV evidence and controller diagnostics:
+
+| Seed | Run name/path | Epoch | Checkpoint SHA256 | DEV D UAR/MF1/Score | DEV P UAR/MF1/Score | DEV Mean | D/P deltas vs audio | R4 weights D/P | progress D/P | grad-norm EMA D/P | grad-cosine EMA | reliability EMA D/P | pseudo scale |
+|---:|---|---:|---|---|---|---:|---|---|---|---|---:|---|---:|
+| 42 | `logs/wsm_mm_pd_dep_v1/optuna_r4_ra_stch_base_seed42_2026-09-28_01-54_wsm_av_r3_disease_query_model_r4-ra-stch-optuna-v1-18c6-012_0ce9c7a4` | 11 | `104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a` | 0.759197/0.758854/0.759025 | 0.873499/0.885020/0.879259 | 0.8191424538 | D +0.0111066105; P +0.0515236365; Mean +0.0313155773 | 0.378944/0.621056 | 0.164408/0.112713 | 0.378586/0.254323 | 0.042831 | 0.666639/0.766244 | 1.000000 |
+| 43 | `logs/wsm_mm_pd_dep_v1/r4_ra_stch_optuna_trial012_confirm_seed43_2026-09-28_12-01_wsm_av_r3_disease_query_model_12038580` | 10 | `6af4a4ed21040aff4db2906b0adc8aa5fd27a4b72c375fbb67f68de04ab8446e` | 0.718861/0.718193/0.718527 | 0.794893/0.813833/0.804363 | 0.7614450000 | D -0.0293913895; P -0.0233723635; Mean -0.0263818765 | 0.245720/0.754280 | 0.050214/-0.701800 | 0.354625/0.277789 | -0.005740 | 0.667222/0.781396 | 1.000000 |
+| 44 | `logs/wsm_mm_pd_dep_v1/r4_ra_stch_optuna_trial012_confirm_seed44_2026-09-28_12-07_wsm_av_r3_disease_query_model_41bc602b` | 11 | `b06fec6912b27cd19d811b72b2c3c08cd1b0a6c826b637f87a314e3976b88c17` | 0.728525/0.727910/0.728217 | 0.818979/0.845142/0.832060 | 0.7801390000 | D -0.0197013895; P +0.0043246365; Mean -0.0076878765 | 0.279078/0.720922 | 0.119063/-0.206278 | 0.342382/0.254946 | 0.008173 | 0.683096/0.780802 | 1.000000 |
+
+Selected checkpoint paths:
+- Seed42: `logs/wsm_mm_pd_dep_v1/optuna_r4_ra_stch_base_seed42_2026-09-28_01-54_wsm_av_r3_disease_query_model_r4-ra-stch-optuna-v1-18c6-012_0ce9c7a4/checkpoints/epoch=11_dev_mean_score=0.8191.pt`.
+- Seed43: `logs/wsm_mm_pd_dep_v1/r4_ra_stch_optuna_trial012_confirm_seed43_2026-09-28_12-01_wsm_av_r3_disease_query_model_12038580/checkpoints/epoch=10_dev_mean_score=0.7614.pt`.
+- Seed44: `logs/wsm_mm_pd_dep_v1/r4_ra_stch_optuna_trial012_confirm_seed44_2026-09-28_12-07_wsm_av_r3_disease_query_model_41bc602b/checkpoints/epoch=11_dev_mean_score=0.7801.pt`.
+
+Three-seed DEV aggregates (arithmetic mean; sample standard deviation; min-max):
+
+- D: mean `0.7352563333`, sample std `0.0211467766`, min-max `0.718527-0.759025`.
+- P: mean `0.8385606667`, sample std `0.0378688091`, min-max `0.804363-0.879259`.
+- Mean: mean `0.7869088179`, sample std `0.0294384420`, min-max `0.761445-0.8191424538`.
+- Seeds beating frozen audio Mean: `1/3`.
+- Relaxed-safe count: `1/3`.
+- Strict non-regression count: `1/3`.
+- Selected checkpoint SHA256 values are pairwise distinct: yes.
+
+Frozen robust gate: `ROBUST THREE-SEED CONFIRMATION FAIL`. Seed42 passes the relaxed gate; seed43 fails D/P/Mean; seed44 fails D and Mean. The three-seed aggregate fails D and Mean, while aggregate P passes. Strict diagnostic pass count is `1/3` (seed42 only). No significance test or final-method claim is made.
+
+Firewall/production integrity: firewall commit `e0f326d` was pushed before production; exactly two new runs occurred; no source or configs 31-36 diffs exist; no Test-driven decision, seed42 rerun, extra restart, Optuna, post-hoc tuning, Stage 6/7, Text/Description, or Final Test work occurred.
+
+Plan status: Stage 5 active/reopened; Stage 6 paused; Stage 7 locked; Final Test locked.
