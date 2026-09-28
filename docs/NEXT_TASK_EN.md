@@ -1,12 +1,12 @@
-# TASK-006E: Uncertainty/Reliability Ablation on Optimized R4 Trial-012
+# TASK-006F: Semantic-Evidence Contribution via Depression Pseudo Acceptance
 
 ## Authority and branch
 
-This task follows **MANAGER-DECISION-066**.
+This task follows **MANAGER-DECISION-067**.
 
 Required branch:
 
-    codex/task-006e
+    codex/task-006f
 
 Start from current manager-updated `origin/main`.
 
@@ -16,31 +16,23 @@ This is a Stage-6 component ablation. Stage-5 optimization remains closed.
 
 ## Scientific question
 
-Does the **graded uncertainty/reliability signal** contribute repeatably to the leading optimized R4 trial-012 composition?
+Does the **semantic-evidence-enabled depression pseudo pathway** contribute repeatably to the leading optimized R4 trial-012 composition?
 
-This task preserves the semantic pseudo subset and pseudo targets, but replaces accepted reliability values with uniform 1.0.
+Historical frozen evidence defines the ablation:
 
-That removes graded reliability from BOTH:
+- before semantic evidence, the audio+video reliability audit had **no deployable depression side** at the unchanged precision>=0.90/support>=10 gate;
+- the Parkinson audio+video rules were already valid and frozen;
+- semantic evidence was introduced only to recover the blocked depression side;
+- the final semantic cache has accepted D/P counts `376/1801`.
 
-1. reliability-weighted direct pseudo BCE;
-2. reliability EMA used by the RA controller.
+Therefore the no-semantic comparator must:
 
-It does NOT remove:
+- remove all 376 depression accepted pseudo entries;
+- preserve all 1801 Parkinson accepted pseudo entries exactly;
+- preserve every observed label and canonical row;
+- preserve the full optimized R4 architecture/loss/optimizer/controller/warm-up.
 
-- pseudo acceptance;
-- pseudo targets;
-- pseudo classes;
-- calibrated audio probabilities;
-- direct pseudo supervision itself;
-- semantic evidence deciding which rows are accepted;
-- architecture;
-- RA-STCH controller mechanics;
-- auxiliary/agreement losses;
-- optimizer;
-- warm-up;
-- any optimized trial-012 hyperparameter.
-
-Therefore this is the Stage-6 **uncertainty/reliability** ablation, not a semantic-evidence ablation.
+This task tests the contribution of the **semantic-enabled depression pseudo acceptance path**. It does not prove semantic-label correctness or causal disease semantics.
 
 ## Required reading
 
@@ -54,23 +46,30 @@ Read in this exact order:
 6. `docs/NEXT_TASK_EN.md`
 7. `src/fusion/data/wsm_ramps_semantic_datamodule.py`
 8. `src/fusion/loss/r4_ramps_balance_loss.py`
-9. `src/common/callbacks/wsm_r4_balance_callback.py`
-10. configs37/38/39.
+9. `scripts/common/prepare_ramps_r2_av_targets.py`
+10. `scripts/common/prepare_ramps_r2_semantic_targets.py`
+11. configs37/38/39.
+
+You MAY read the Stage-5 historical archive only to verify the frozen facts that pre-semantic depression was blocked and Parkinson rules were deployable.
 
 ## Allowed tracked files
 
 Codex may add/modify only:
 
-- `scripts/common/build_ramps_uniform_reliability_ablation.py`
-- `configs/wsm_mm_pd_dep_v1/ablations/43_uniform_reliability_seed42.yaml`
-- `configs/wsm_mm_pd_dep_v1/ablations/44_uniform_reliability_seed43.yaml`
-- `configs/wsm_mm_pd_dep_v1/ablations/45_uniform_reliability_seed44.yaml`
+- `src/fusion/data/wsm_ramps_semantic_datamodule.py`
+- `scripts/common/build_ramps_no_semantic_depression_ablation.py`
+- `configs/wsm_mm_pd_dep_v1/ablations/46_no_semantic_depression_seed42.yaml`
+- `configs/wsm_mm_pd_dep_v1/ablations/47_no_semantic_depression_seed43.yaml`
+- `configs/wsm_mm_pd_dep_v1/ablations/48_no_semantic_depression_seed44.yaml`
 - `docs/PROGRESS_EN.md`
 
-No `src/*` file may change.
-No existing config may change.
+Forbidden:
+- all model/loss/callback source changes;
+- all `src/audio/*` and `src/video/*` changes;
+- changes to existing configs;
+- changes to semantic rule/search code.
 
-## Frozen source pseudo cache
+## Frozen source cache
 
 Path:
 
@@ -80,103 +79,105 @@ SHA256:
 
     17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945
 
-Rows:
+Full accepted counts:
 
-    6325
-
-Missing D/P:
-
-    2665 / 3660
-
-Accepted D/P:
-
-    376 / 1801
-
-Accepted classes:
-
-- D positive/negative: `376 / 0`
-- P positive/negative: `212 / 1589`
+- D: `376`, classes `376/0`;
+- P: `1801`, classes `212/1589`.
 
 The source cache is immutable.
 
-## Derived uniform-reliability cache
+## Minimal DataModule generalization
 
-Create exactly one external derived cache:
+Modify `WSMRampsSemanticDataModule` only to allow explicit expected pseudo-count contracts for ablation caches.
 
-    /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_reliability_ablation/uniform_accepted_reliability_v1.pt
+Add optional constructor parameters with frozen defaults:
 
-The builder MUST fail rather than overwrite an existing path.
+    expected_accepted_counts = (376, 1801)
+    expected_positive_counts = (376, 212)
+    expected_negative_counts = (0, 1589)
 
-Required CLI:
+Requirements:
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/common/build_ramps_uniform_reliability_ablation.py       --source /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt       --output /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_reliability_ablation/uniform_accepted_reliability_v1.pt
+- omitted parameters preserve current behavior exactly;
+- validate each supplied contract as exactly two non-negative integers;
+- keep expected missing counts fixed at `2665/3660`;
+- use the resolved expected values in count/class validation and audit/context reporting;
+- do not relax any other cache invariant;
+- do not change version/teacher/CLIP/prompt-bank/observed-truth validation;
+- do not change dataset/collate semantics.
 
-## Exact derived-cache transformation
+Mandatory backward-compatibility proof:
+- instantiate full configs37/38/39 with no new parameters;
+- verify audit accepted/class counts remain exactly the frozen full values;
+- verify a canonical TRAIN batch is tensor-identical before vs after the source edit under the full cache, using a clean `origin/main` implementation comparison or an equivalent isolated reference import;
+- trainable model parameters and loss behavior must be unchanged.
 
-Load the source cache read-only.
+This source change is infrastructure-only for the ablation and must not alter full-method semantics.
 
-Copy all fields.
+## Derived no-semantic-depression cache
 
-Modify ONLY `pseudo_reliability`:
+Create exactly:
 
-- where `pseudo_accept_mask == True`, set reliability to exactly `1.0`;
-- everywhere else, set/retain reliability exactly `0.0`.
+    /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_semantic_ablation/no_semantic_depression_v1.pt
 
-Do not modify:
+Builder:
 
-- `version`;
-- `task_names`;
-- `segment_ids`;
-- `observed_mask`;
-- `observed_targets`;
-- `pseudo_accept_mask`;
-- `pseudo_targets`;
-- `pseudo_class`;
-- `calibrated_audio_probs`;
-- teacher identities;
-- CLIP identity;
-- prompt-bank identity;
-- any threshold/calibration/acceptance metadata.
+    scripts/common/build_ramps_no_semantic_depression_ablation.py
+
+Builder MUST fail rather than overwrite an existing output.
+
+Required transformation:
+
+- deep-copy the full source cache;
+- depression task index 0:
+  - set every `pseudo_accept_mask[:,0]` to False;
+  - set every `pseudo_targets[:,0]` to NaN;
+  - set every `pseudo_reliability[:,0]` to 0.0;
+  - set every `pseudo_class[:,0]` to -1;
+- Parkinson task index 1:
+  - preserve `pseudo_accept_mask[:,1]` exactly;
+  - preserve `pseudo_targets[:,1]` exactly including NaNs;
+  - preserve `pseudo_reliability[:,1]` exactly;
+  - preserve `pseudo_class[:,1]` exactly;
+- preserve `calibrated_audio_probs`, raw teacher outputs/features, observed truth, semantic fields, teacher identities, prompt-bank identity, and every other source field exactly.
 
 You MAY add one top-level metadata mapping:
 
-    reliability_ablation
+    semantic_ablation
 
-containing:
-
-- type = `uniform_accepted_reliability`;
+with:
+- type = `remove_semantic_enabled_depression_pseudo_path`;
 - source_cache_sha256;
-- accepted_value = 1.0;
-- rejected_or_observed_value = 0.0;
-- source accepted reliability summary by task;
-- derived cache SHA256 recorded externally in PROGRESS after save.
+- removed_depression_accepted_count = 376;
+- retained_parkinson_accepted_count = 1801;
+- historical_basis = `pre_semantic_depression_not_deployable_parkinson_frozen`.
 
-Do not change the canonical cache version.
+Do not change cache version.
 
-## Mandatory cache invariants
+Semantic metadata may remain in the cache for identity/audit compatibility; it must have no training effect because all depression pseudo fields are neutralized.
+
+## Derived cache invariants
 
 Before save and after reload verify:
 
-- source SHA equals frozen SHA before generation;
-- source SHA still equals frozen SHA after generation;
-- all non-reliability top-level tensor/list fields above are exactly unchanged;
-- segment IDs identical and unique;
-- observed truth identical including NaN patterns;
-- acceptance mask identical;
-- pseudo targets identical including NaN patterns;
-- pseudo classes identical;
-- calibrated audio probabilities identical;
-- accepted counts D/P `376/1801`;
-- accepted classes D `376/0`, P `212/1589`;
-- accepted reliability exactly 1.0 for every accepted entry;
-- rejected/observed reliability exactly 0.0;
-- accepted pseudo targets still equal calibrated audio probabilities;
-- no observed row is pseudo-accepted;
-- existing semantic DataModule loads the derived cache successfully.
-
-Record source reliability min/mean/max per task over accepted rows before replacement.
-
-Record the number of accepted reliability entries that changed from source to derived per task.
+- source SHA before/after equals frozen SHA;
+- rows/segment IDs exactly unchanged;
+- observed mask/targets exactly unchanged including NaNs;
+- calibrated audio probabilities exactly unchanged;
+- all non-pseudo fields exactly unchanged except allowed `semantic_ablation` metadata;
+- depression accepted count = 0;
+- depression pseudo targets all NaN;
+- depression reliability all 0;
+- depression pseudo classes all -1;
+- Parkinson accepted count = 1801;
+- Parkinson accept mask/targets/reliability/classes are tensor-identical to source;
+- Parkinson classes = `212/1589`;
+- no observed pseudo acceptance;
+- accepted P targets equal calibrated audio probabilities;
+- DataModule loads the derived cache when supplied expected contracts:
+  - accepted `[0,1801]`;
+  - positive `[0,212]`;
+  - negative `[0,1589]`.
 
 Record derived cache SHA256.
 
@@ -190,7 +191,7 @@ Full optimized trial-012:
 | 43 | 0.718527 | 0.804363 | 0.7614450000 |
 | 44 | 0.728217 | 0.832060 | 0.7801390000 |
 
-Three-seed full:
+Full three-seed:
 
 - D mean/std `0.7352563333/0.0211467766`;
 - P mean/std `0.8385606667/0.0378688091`;
@@ -202,69 +203,82 @@ Checkpoint SHA256:
 - seed43 `6af4a4ed21040aff4db2906b0adc8aa5fd27a4b72c375fbb67f68de04ab8446e`;
 - seed44 `b06fec6912b27cd19d811b72b2c3c08cd1b0a6c826b637f87a314e3976b88c17`.
 
-Verify these files/hashes before production.
+Verify checkpoint paths/SHA before production.
 
 ## Exact ablation configs
 
-Create configs43/44/45 from full configs37/38/39 respectively.
+Create configs46/47/48 from configs37/38/39 respectively.
 
 Allowed semantic differences only:
 
 1. `experiment_info.params.run_name`;
-2. `data.params.pseudo_cache_path` points to the derived uniform-reliability cache.
+2. `data.params.pseudo_cache_path`;
+3. the three explicit expected-count parameters required for the ablation cache.
+
+Required data params:
+
+    expected_accepted_counts: [0, 1801]
+    expected_positive_counts: [0, 212]
+    expected_negative_counts: [0, 1589]
 
 Required run names:
 
-- seed42: `stage6_uniform_reliability_trial012_seed42`
-- seed43: `stage6_uniform_reliability_trial012_seed43`
-- seed44: `stage6_uniform_reliability_trial012_seed44`
+- seed42 `stage6_no_semantic_depression_trial012_seed42`
+- seed43 `stage6_no_semantic_depression_trial012_seed43`
+- seed44 `stage6_no_semantic_depression_trial012_seed44`
 
-Everything else must be identical to the corresponding full reference config.
+Everything else must be identical to full refs37/38/39.
 
 ## Isolation contract
 
-The ablation must preserve the exact accepted pseudo rows and exact pseudo targets.
+This task removes only the training contribution that exists because semantic evidence recovered a depression pseudo subset.
 
-Direct pseudo supervision remains enabled with the original warm-up schedule ending at scale 1.0.
+Parkinson pseudo supervision remains exactly the source semantic-cache Parkinson path.
 
-Only reliability magnitudes are neutralized to 1.0 for accepted rows.
+Direct pseudo supervision, graded reliability, RA controller, architecture, aux/agreement losses, optimizer, and warm-up remain unchanged.
 
-Because the same reliability field also feeds the RA reliability EMA, this task tests the **combined graded reliability contribution** in the current implemented method.
+Do not describe this as:
+- no pseudo supervision;
+- no semantic metadata;
+- audio-only;
+- no reliability.
 
-Do not claim that it isolates BCE weighting separately from controller reliability. It does not.
+Describe it as:
+
+    no semantic-enabled depression pseudo path
 
 ## Mandatory pre-run firewall
 
-Before any production run:
+Before production:
 
-1. build and audit the derived cache;
-2. verify source and derived SHA values;
-3. validate configs43/44/45;
-4. prove each differs from configs37/38/39 only by run_name/cache path;
-5. prove seeds remain 42/43/44;
-6. instantiate DataModule/model/loss/callbacks;
-7. verify the DataModule resolved the derived cache path/SHA;
-8. verify trainable params match full trial-012;
-9. verify accepted masks/targets/classes/counts are unchanged;
-10. verify accepted reliability is exactly 1.0 and rejected/observed is 0.0;
-11. run TRAIN-only forward/loss/backward with accepted pseudo rows present;
-12. verify finite nonzero observed and pseudo-supervision model gradients;
-13. verify pseudo targets/reliability are detached;
-14. verify direct pseudo loss remains active when pseudo_scale > 0;
-15. verify RA reliability EMA updates to exactly 1.0 after an accepted batch for the corresponding active task(s);
-16. verify controller diagnostics finite;
+1. implement and audit the minimal DataModule generalization;
+2. prove full-cache backward compatibility as above;
+3. build/audit derived cache;
+4. verify source/derived cache SHA;
+5. validate configs46/47/48;
+6. prove config equivalence except the four allowed difference categories;
+7. verify full checkpoint SHA values;
+8. instantiate DataModule/model/loss/callbacks for all ablation configs;
+9. verify trainable params match full trial-012 (`295239`);
+10. verify D accepted count 0 and P accepted count 1801;
+11. verify P pseudo fields exactly match source;
+12. run TRAIN-only forward/loss/backward using batches that include accepted Parkinson pseudo rows;
+13. verify finite nonzero observed gradients and finite nonzero Parkinson pseudo-supervision gradients once pseudo_scale=1;
+14. verify there is no depression accepted-pseudo gradient contribution;
+15. verify pseudo targets/reliability detached;
+16. verify controller diagnostics finite; record the D reliability-EMA state/fallback semantics and P reliability EMA;
 17. no optimizer step;
 18. no DEV/Test loader iteration;
 19. `git diff --check`;
-20. `git diff origin/main -- src` empty;
+20. verify no diffs under `src/audio`, `src/video`, model/loss/callback source;
 21. append firewall evidence to PROGRESS;
 22. commit and push one firewall commit.
 
-No production run before the firewall commit exists on origin.
+No production run before firewall is visible on origin.
 
 ## Exactly three production runs
 
-Run exactly in order:
+Run exactly:
 
 1. seed42;
 2. seed43;
@@ -272,35 +286,31 @@ Run exactly in order:
 
 Commands:
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/ablations/43_uniform_reliability_seed42.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/ablations/46_no_semantic_depression_seed42.yaml
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/ablations/44_uniform_reliability_seed43.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/ablations/47_no_semantic_depression_seed43.yaml
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/ablations/45_uniform_reliability_seed44.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/ablations/48_no_semantic_depression_seed44.yaml
 
-No sweep.
-No retry for metric improvement.
-No extra seed.
-No post-firewall config/cache change.
+No sweep, retry for metric improvement, extra seed, or post-firewall config/cache change.
 
 ## Selection/Test firewall
 
-For each run:
+For every run:
 
 - select checkpoint only by max `dev/mean_score`;
-- freeze checkpoint identity before reading same-epoch Test monitoring;
-- record checkpoint SHA256;
-- Test cannot affect interpretation.
+- freeze checkpoint identity before same-epoch Test monitoring;
+- Test cannot influence interpretation or follow-up.
 
 ## Three-seed comparison
 
-Compute uniform-reliability D/P/Mean by seed and three-seed mean/sample std/range.
+Compute ablation D/P/Mean by seed and three-seed mean/sample std/range.
 
 Compute same-seed:
 
-    full trial012 - uniform-reliability
+    full trial012 - no-semantic-depression
 
-for D, P, Mean.
+for D/P/Mean.
 
 Compute aggregate full-minus-ablation D/P/Mean.
 
@@ -308,122 +318,119 @@ Compute aggregate full-minus-ablation D/P/Mean.
 
 Record exactly:
 
-    UNCERTAINTY/RELIABILITY CONTRIBUTION SUPPORTED
+    SEMANTIC-EVIDENCE CONTRIBUTION VIA DEPRESSION PSEUDO ACCEPTANCE SUPPORTED
 
-only if ALL conditions hold:
+only if ALL hold:
 
-1. full DEV Mean > uniform-reliability DEV Mean on at least 2/3 seeds;
-2. full three-seed Mean > uniform-reliability three-seed Mean;
-3. full three-seed D mean is not more than `0.010000` below uniform-reliability D mean;
-4. full three-seed P mean is not more than `0.010000` below uniform-reliability P mean.
+1. full DEV Mean > ablation DEV Mean on at least 2/3 seeds;
+2. full DEV D > ablation DEV D on at least 2/3 seeds;
+3. full three-seed Mean > ablation three-seed Mean;
+4. full three-seed D > ablation three-seed D;
+5. full three-seed P is not more than `0.010000` below ablation P.
 
 Otherwise record exactly:
 
-    UNCERTAINTY/RELIABILITY CONTRIBUTION NOT SUPPORTED
+    SEMANTIC-EVIDENCE CONTRIBUTION VIA DEPRESSION PSEUDO ACCEPTANCE NOT SUPPORTED
 
-This claim concerns the implemented graded reliability signal as a whole.
+This claim is deliberately narrow.
 
-Do not claim pseudo-label correctness, semantic acceptance correctness, missing-label recovery, comorbidity recovery, significance, or final promotion.
+Even if supported, do not claim:
+- semantic evidence is clinically correct;
+- pseudo depression labels are correct;
+- missing-label/comorbidity recovery;
+- statistical significance;
+- final promotion.
 
-## Controller diagnostics
+## Controller / coverage diagnostics
 
-At each DEV-selected epoch record:
+At selected epoch record:
 
 - pseudo scale;
 - alpha D/P;
 - progress D/P;
 - grad-norm EMA D/P;
 - grad-cosine EMA;
-- reliability EMA D/P.
+- reliability EMA D/P or uninitialized state;
+- P accepted coverage/classes;
+- D accepted count = 0.
 
-For the ablation, reliability EMA is expected to be 1.0 once updated from accepted entries. Record whether this occurs.
+Explain the D reliability fallback used by the current RA loss when its EMA has not been updated.
 
 ## DEV-only calibration/gate audit
 
-After checkpoint freeze, evaluate DEV only.
+After checkpoint freeze, use DEV only.
 
-For each seed/task report:
-
+For each seed/task:
 - observed count;
 - Brier;
 - ECE-15;
-- task-modality audio gate mean/std.
+- audio gate mean/std.
 
-Report three-seed means.
+Report three-seed means and full-minus-ablation deltas.
 
-Compare full vs uniform-reliability in `full - ablation` direction.
-
-No recalibration.
-No threshold search.
+No recalibration or threshold search.
 No Test rows.
 
 ## Required PROGRESS evidence
 
 Record:
-
 - task/branch;
+- exact historical basis for D=0/P=frozen comparator;
+- DataModule source change and backward-compatibility proof;
 - builder path;
-- source and derived cache paths/SHA;
-- cache invariant audit;
-- source accepted reliability min/mean/max;
-- changed accepted-reliability counts D/P;
-- configs43/44/45;
-- config equivalence proof;
+- source/derived cache path/SHA;
+- cache invariants;
+- configs46/47/48 and equivalence proof;
 - full checkpoint SHAs;
-- firewall evidence/SHA;
-- exact three production commands;
-- production count exactly 3;
-- run dirs / MLflow IDs / status / artifact URI;
-- selected epochs/checkpoints/SHA;
+- firewall SHA;
+- exact three commands and production count=3;
+- run/MLflow identities;
+- selected epochs/checkpoint SHA;
 - DEV D/P UAR/MF1/Score/Mean;
-- Test monitoring only after freeze;
-- three-seed ablation mean/std/range;
-- full-minus-ablation per-seed/aggregate deltas;
-- exact frozen claim string;
-- controller diagnostics;
+- Test monitoring after freeze only;
+- three-seed aggregate;
+- full-minus-ablation deltas;
+- exact claim string;
+- controller/coverage diagnostics;
 - DEV calibration/gate audit;
-- no Test decision;
-- no tuning/rerun;
-- no source changes.
+- no correctness/significance/promotion claim;
+- no tuning/rerun.
 
 ## Final scope checks
 
 Run:
 
     git diff --check
-    git diff origin/main -- src
+    git diff origin/main -- src/audio
+    git diff origin/main -- src/video
+    git diff origin/main -- src/fusion/models
+    git diff origin/main -- src/fusion/loss
+    git diff origin/main -- src/common/callbacks
     git status --short
     git diff --stat origin/main...HEAD
     git log -12 --oneline --decorate
 
-Only builder, configs43/44/45, and PROGRESS may differ from origin/main.
-
-The derived cache remains external and uncommitted.
+Only the authorized DataModule source file, builder, configs46/47/48, and PROGRESS may differ.
 
 ## Acceptance criteria
 
-TASK-006E passes only if:
-
-- branch exactly `codex/task-006e` from current manager main;
-- source cache unchanged;
-- derived cache changes only reliability plus explicit ablation metadata;
-- accepted rows/targets/classes/calibrated probabilities unchanged;
-- accepted reliability exactly 1.0;
-- rejected/observed reliability exactly 0.0;
-- DataModule accepts derived cache;
-- configs differ only run_name/cache path;
+TASK-006F passes only if:
+- branch exactly `codex/task-006f`;
+- DataModule default full behavior is proven unchanged;
+- derived cache removes exactly 376 D pseudo entries and preserves P exactly;
+- source cache remains unchanged;
+- configs differ only as authorized;
 - firewall pushed before production;
 - exactly three runs seeds42/43/44;
 - DEV-only selection;
 - Test monitoring only;
-- frozen claim applied exactly;
-- controller/calibration/gate diagnostics recorded;
+- claim gate applied exactly;
+- controller/coverage/calibration/gate diagnostics recorded;
 - no tuning/sweep/retry;
-- no source changes;
 - branch pushed;
 - main/master untouched.
 
-Passing TASK-006E closes only Stage-6 uncertainty/reliability item 4. It authorizes no next task.
+Passing TASK-006F closes only the Stage-6 semantic-evidence item. It authorizes no next task.
 
 ## Required handoff
 
@@ -436,31 +443,29 @@ Respond in English using exactly:
 5. Blockers and risks
 6. Next atomic step
 
-Explicitly include:
-
-- branch `codex/task-006e`;
-- firewall SHA;
-- final evidence SHA;
+Include:
+- branch;
+- firewall/final SHA;
 - pushed status;
 - main/master untouched;
-- source diff empty;
+- DataModule backward compatibility;
 - source/derived cache SHA;
-- accepted reliability transformation/invariants;
-- exactly three production runs;
+- D removed count and exact P preservation;
+- exactly three runs;
 - per-seed D/P/Mean;
-- three-seed mean/std;
+- aggregate mean/std;
 - full-minus-ablation deltas;
-- exact frozen claim string;
-- controller reliability EMA summary;
+- exact frozen claim;
+- controller/coverage summary;
 - calibration/gate summary;
-- no pseudo correctness/semantic correctness/comorbidity/significance/final-promotion claim;
 - no Test-driven decision;
+- no correctness/comorbidity/significance/promotion claim;
 - Stage 6 active;
-- Stage-5 optimization closed;
-- no Stage7/Text/Final Test.
+- Stage-5 closed;
+- Stage7/Text/Final Test locked.
 
 For section 6 write only:
 
-    Manager review of TASK-006E; do not start another task.
+    Manager review of TASK-006F; do not start another task.
 
 Stop.
