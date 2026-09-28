@@ -1,57 +1,30 @@
-# TASK-006A-FIX2: Bind Configs to the Verified Exact Cache and Rerun
+# TASK-006B: Frozen R4 Corpus-Identity Probe on TRAIN→DEV
 
 ## Authority and branch
 
-This task follows **MANAGER-DECISION-062**.
+This task follows **MANAGER-DECISION-063**.
 
 Required branch:
 
-    codex/task-006a
+    codex/task-006b
 
-This is the same logical TASK-006A branch. Do not create another Codex branch.
+Start from current manager-updated `origin/main`.
 
-First synchronize the existing branch:
+Create exactly one new task branch from that `origin/main`.
 
-    git fetch origin
-    git checkout codex/task-006a
-    git merge --no-edit origin/main
-
-This merge of current `origin/main` into the existing task branch is manager-authorized.
-
-Do not reset, rebase, overwrite, delete, or force-push the branch.
-
-## Why FIX2 is required
-
-FIX1 corrected the builder and generated the exact cache, but the three production configs still referenced the old rejected cache.
-
-At both FIX1 firewall commit `096b720c875b427fc6d17d1dd04b65a67614b802` and final commit `d5fbbc5b9ac0fb7136996caf4090fd5d309f5fe7`, configs31/32/33 contain:
-
-    pseudo_cache_path: /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001.pt
-
-That path is WRONG for accepted TASK-006A evidence.
-
-The required verified exact cache is:
-
-    /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001_exact_fix1.pt
-
-Required SHA256:
-
-    e4baf2a2eea9dc7703e73b7956971b0d571eedda55fc8e6984750270712cf0f9
-
-The FIX1 production metrics/checkpoint hashes exactly reproduced the earlier rejected runs and are superseded evidence only.
+This is a Stage-6 diagnostic/claims audit. It does **not** retrain the main model, does not reopen Stage-5 optimization, and does not authorize another ablation.
 
 ## Goal
 
-Perform only the cache-binding correction:
+Execute Stage-6 required item 9: **corpus probe**.
 
-1. verify the existing exact cache read-only;
-2. point configs31/32/33 to that exact cache;
-3. assign distinct FIX2 run names;
-4. firewall the resolved configs/DataModule;
-5. execute exactly three new production runs seeds42/43/44;
-6. recompute the frozen negative-control claim and calibration audit using only these FIX2 runs.
+Question:
 
-No tuning, no new cache generation, no architecture/loss/optimizer/warm-up change.
+> How linearly decodable is corpus identity (`depression` vs `parkinson`) from frozen R4 representations on DEV, and does task-conditioned fusion amplify corpus decodability relative to the equal-dimensional projected A+V representation?
+
+This is a domain/confound diagnostic only.
+
+A positive corpus probe does NOT prove that corpus identity causes disease predictions or that corpus identity “replaces disease signal.”
 
 ## Required reading
 
@@ -63,232 +36,364 @@ Read in this exact order:
 4. `docs/PROGRESS_EN.md`
 5. `docs/plan/STAGE_6.md`
 6. `docs/NEXT_TASK_EN.md`
-7. `scripts/common/build_ramps_shuffled_pseudo_negative_control.py`
-8. `src/fusion/data/wsm_ramps_semantic_datamodule.py`
-9. `configs/wsm_mm_pd_dep_v1/fusion/13_r4_equal_seed42.yaml`
-10. `configs/wsm_mm_pd_dep_v1/fusion/19_r4_equal_seed43.yaml`
-11. `configs/wsm_mm_pd_dep_v1/fusion/20_r4_equal_seed44.yaml`
-12. current configs31/32/33
+7. `src/common/data/wsm_manifest.py`
+8. `src/fusion/data/wsm_av_fusion_datamodule.py`
+9. `src/fusion/data/wsm_ramps_semantic_datamodule.py`
+10. `src/fusion/models/av_r3_disease_query.py`
+11. `configs/wsm_mm_pd_dep_v1/fusion/37_r4_ra_stch_optuna_selected_seed42.yaml`
+12. `configs/wsm_mm_pd_dep_v1/fusion/38_r4_ra_stch_optuna_confirm_seed43.yaml`
+13. `configs/wsm_mm_pd_dep_v1/fusion/39_r4_ra_stch_optuna_confirm_seed44.yaml`
 
-Do not load historical archives or unrelated closed-stage plans.
+The Stage-5 historical archive may be read only to verify the three frozen checkpoint paths/hashes listed below.
 
-## Accepted FIX1 artifact facts
+## Frozen R4 checkpoints
 
-The corrected builder already generated the exact external cache. Do NOT rebuild it and do NOT overwrite it.
+Use exactly these selected checkpoints; do not retrain or reselect.
 
-Exact cache path:
+### Seed42
 
-    /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001_exact_fix1.pt
+Config:
 
-Exact cache SHA256:
+    configs/wsm_mm_pd_dep_v1/fusion/37_r4_ra_stch_optuna_selected_seed42.yaml
 
-    e4baf2a2eea9dc7703e73b7956971b0d571eedda55fc8e6984750270712cf0f9
+Checkpoint:
 
-Frozen source SHA256:
+    logs/wsm_mm_pd_dep_v1/optuna_r4_ra_stch_base_seed42_2026-09-28_01-54_wsm_av_r3_disease_query_model_r4-ra-stch-optuna-v1-18c6-012_0ce9c7a4/checkpoints/epoch=11_dev_mean_score=0.8191.pt
 
-    17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945
+SHA256:
 
-Permutation SHA256:
+    104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a
 
-- D: `1dcfde36463f21d2d2d525d70f6642c6b599cc23534f3cb47ffc41953ec4d4b8`
-- P: `847f8e2cf156cd0d4ecb28f5269d5cc79fd5943c6605f44c57c78528ecc6d767`
+Frozen DEV Mean:
 
-Fixed points D/P:
+    0.8191424538
 
-    0 / 0
+### Seed43
 
-Acceptance-assignment Hamming D/P:
+Config:
 
-    646 / 1788
+    configs/wsm_mm_pd_dep_v1/fusion/38_r4_ra_stch_optuna_confirm_seed43.yaml
 
-Missing counts D/P:
+Checkpoint:
 
-    2665 / 3660
+    logs/wsm_mm_pd_dep_v1/r4_ra_stch_optuna_trial012_confirm_seed43_2026-09-28_12-01_wsm_av_r3_disease_query_model_12038580/checkpoints/epoch=10_dev_mean_score=0.7614.pt
 
-Accepted counts D/P:
+SHA256:
 
-    376 / 1801
+    6af4a4ed21040aff4db2906b0adc8aa5fd27a4b72c375fbb67f68de04ab8446e
 
-Accepted class counts:
+Frozen DEV Mean:
 
-- D positive/negative `376 / 0`
-- P positive/negative `212 / 1589`
+    0.7614450000
 
-Mapping:
+### Seed44
 
-    destination_order = order
-    source_order = roll(order, 1)
-    derived[field][order, task] = source[field][source_order, task]
+Config:
 
-## Read-only exact-cache revalidation
+    configs/wsm_mm_pd_dep_v1/fusion/39_r4_ra_stch_optuna_confirm_seed44.yaml
 
-Before modifying configs or running production, verify the existing exact cache without rewriting it:
+Checkpoint:
 
-- path exists;
-- SHA256 exactly `e4baf2a2eea9dc7703e73b7956971b0d571eedda55fc8e6984750270712cf0f9`;
-- metadata source SHA matches frozen source;
-- metadata mapping is `destination_order_to_roll1_source_order`;
-- recorded permutation hashes match the frozen D/P hashes above;
-- fixed points are `0/0`;
-- accepted counts/class balance match above;
-- source cache SHA remains frozen;
-- existing semantic DataModule can load this exact cache.
+    logs/wsm_mm_pd_dep_v1/r4_ra_stch_optuna_trial012_confirm_seed44_2026-09-28_12-07_wsm_av_r3_disease_query_model_41bc602b/checkpoints/epoch=11_dev_mean_score=0.7801.pt
 
-If exact-cache SHA or metadata does not match, STOP and report. Do not regenerate or overwrite it.
+SHA256:
 
-## Allowed tracked modifications in FIX2
+    b06fec6912b27cd19d811b72b2c3c08cd1b0a6c826b637f87a314e3976b88c17
 
-Modify only:
+Frozen DEV Mean:
 
-- `configs/wsm_mm_pd_dep_v1/ablations/31_shuffled_pseudo_equal_seed42.yaml`
-- `configs/wsm_mm_pd_dep_v1/ablations/32_shuffled_pseudo_equal_seed43.yaml`
-- `configs/wsm_mm_pd_dep_v1/ablations/33_shuffled_pseudo_equal_seed44.yaml`
+    0.7801390000
+
+Before any probe execution, verify all three checkpoint files exist and SHA256 matches exactly.
+
+If any checkpoint is missing or mismatched, stop and report. Do not substitute a different checkpoint.
+
+## Dataset contract
+
+Use canonical TRAIN to fit diagnostic probes and canonical DEV to evaluate them.
+
+Corpus label:
+
+- `depression` -> 0
+- `parkinson` -> 1
+
+Derive corpus only from canonical sample metadata `meta["corpus"]`.
+
+Do not derive corpus from observed masks, targets, filenames, path substrings, or disease outputs.
+
+Important structural fact to record in the report: in the canonical programme, corpus identity is coupled to which disease label is observed. Therefore high corpus decodability is a **risk diagnostic**, not causal proof of shortcut use.
+
+No Test loader may be iterated. No TEST_NONE/SOFT/HARD metric may be read or reported in this task.
+
+## Allowed tracked files
+
+Codex may add/modify only:
+
+- `scripts/common/run_r4_corpus_probe.py`
 - `docs/PROGRESS_EN.md`
 
-Do not modify the corrected builder further.
-Do not modify any `src/*` file.
+No `src/*` file may change.
+No config may change.
 
-## Exact config correction
+Generated probe results are external artifacts and MUST NOT be committed.
 
-For each config, copy the corresponding matched Equal semantics exactly.
+## External output
 
-The ONLY semantic differences from matched Equal must be:
+Write one external JSON report:
 
-1. `data.params.pseudo_cache_path` =
-   `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001_exact_fix1.pt`
-2. `experiment_info.params.run_name` as below.
+    /media/maxim/Programs/Features/WSM/stage6_corpus_probe/r4_corpus_probe_v1.json
 
-Required FIX2 run names:
+The script MUST fail rather than overwrite an existing output path.
 
-- seed42: `stage6_shuffled_pseudo_equal_seed42_exact_fix2`
-- seed43: `stage6_shuffled_pseudo_equal_seed43_exact_fix2`
-- seed44: `stage6_shuffled_pseudo_equal_seed44_exact_fix2`
+Record the report SHA256 in PROGRESS.
 
-Everything else must be identical to configs13/19/20 respectively.
+## Frozen representation set
 
-## Mandatory FIX2 firewall
+For each checkpoint, run the frozen model in `eval()` and `torch.no_grad()`.
 
-Before any new production run:
+Extract exactly these representations on TRAIN and DEV:
 
-1. verify exact cache read-only as above;
-2. validate all three corrected configs;
-3. programmatically prove each config differs from matched Equal only by cache path/run_name;
-4. instantiate DataModule/model/loss for each;
-5. verify the instantiated DataModule actually resolved the exact cache path ending in `shuffled_missing_targets_seed6001_exact_fix1.pt`;
-6. verify loaded cache SHA is `e4baf2a2...`;
-7. verify R3 trainable parameters `403079`;
-8. run TRAIN-only forward/loss/backward at `pseudo_scale=1.0` with:
-   - finite loss;
-   - nonzero observed-supervision model gradient;
-   - nonzero accepted missing-head pseudo-supervision model gradient;
-   - no pseudo-target/reliability gradients;
-   - finite heads/projections/task-query/gate gradients;
-   - no optimizer step;
-   - no DEV/Test iteration;
-9. `git diff --check`;
-10. `git diff origin/main -- src` MUST be empty;
-11. append firewall evidence to PROGRESS;
-12. commit and push one NEW firewall commit on `codex/task-006a`.
+1. `audio_projected`
+   - `ModelOutput.aux["features_audio"]`
+   - dimension 160
 
-No FIX2 production run may begin before the new firewall commit is visible on origin.
+2. `video_projected`
+   - `ModelOutput.aux["features_video"]`
+   - dimension 160
 
-## Exactly three NEW FIX2 production runs
+3. `projected_av`
+   - concatenate `features_audio` and `features_video`
+   - dimension 320
 
-Run exactly in order:
+4. `task_fused`
+   - flatten/concatenate both task vectors from `aux["task_features"]`
+   - dimension 320
 
-1. seed42;
-2. seed43;
-3. seed44.
+5. `gates`
+   - flatten `aux["task_modality_weights"]`
+   - dimension 4
 
-Commands:
+6. `logits`
+   - `ModelOutput.preds`
+   - dimension 2
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/ablations/31_shuffled_pseudo_equal_seed42.yaml
+The equal dimension of `projected_av` and `task_fused` is intentional for the fusion-amplification diagnostic.
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/ablations/32_shuffled_pseudo_equal_seed43.yaml
+Do not add other representations after seeing results.
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/ablations/33_shuffled_pseudo_equal_seed44.yaml
+## Extraction invariants
 
-The six earlier shuffled runs (initial rejected + FIX1 wrong-binding) are superseded and may not be used, averaged, selected among, or counted.
+For every seed and split:
 
-No sweep, extra seed, retry for metric improvement, or post-hoc change.
+- model is frozen and in eval mode;
+- no gradients;
+- TRAIN extraction is deterministic and not shuffled;
+- DEV extraction is deterministic and not shuffled;
+- one representation row per canonical segment;
+- segment IDs are unique;
+- corpus labels align with segment IDs;
+- TRAIN and DEV segment-ID sets are disjoint;
+- representation tensors are finite;
+- dimensions exactly match the contract above;
+- sample counts equal the DataModule canonical TRAIN/DEV counts;
+- no Test loader iteration.
 
-## Selection/Test firewall
+Sort extracted rows by canonical `segment_id` before fitting probes.
 
-For each FIX2 run:
+## Deterministic linear probe
 
-- select only maximum `dev/mean_score`;
-- freeze epoch/checkpoint before reading same-epoch Test monitoring;
-- record checkpoint SHA256;
-- Test is monitoring only.
+Implement the probe inside `scripts/common/run_r4_corpus_probe.py`; do not add a dependency.
 
-## Frozen matched reference and claim rule
+For each checkpoint and each of the six representations:
 
-Matched Equal:
+1. fit feature standardization on TRAIN only:
+   - mean per dimension;
+   - population std per dimension;
+   - replace std < `1e-8` with 1;
+2. apply TRAIN statistics to TRAIN and DEV;
+3. convert probe tensors to CPU float64;
+4. linear classifier: one affine logit;
+5. initialize weight and bias to exactly zero;
+6. use class-balanced weighted BCE:
+   - each TRAIN class contributes equal total weight;
+7. fixed L2 penalty:
+   - coefficient `1e-4`;
+   - weights only, not bias;
+8. optimizer exactly:
+   - `torch.optim.LBFGS`;
+   - `lr=1.0`;
+   - `max_iter=250`;
+   - `tolerance_grad=1e-10`;
+   - `tolerance_change=1e-12`;
+   - `history_size=50`;
+   - `line_search_fn="strong_wolfe"`;
+9. no hyperparameter search;
+10. no early stopping on DEV;
+11. DEV is evaluation only.
 
-| Seed | D | P | Mean |
-|---:|---:|---:|---:|
-| 42 | 0.712498 | 0.843342 | 0.777920 |
-| 43 | 0.703299 | 0.856043 | 0.779671 |
-| 44 | 0.707977 | 0.851878 | 0.779927 |
+Record convergence/final TRAIN objective.
 
-Matched three-seed Mean:
+## Shuffled-label sanity control
 
-    0.7791726667
+For each checkpoint use one deterministic TRAIN-label permutation:
 
-Using only matched Equal vs the three NEW FIX2 runs, compute:
+    generator seed = 9201 + checkpoint_seed
 
-- shuffled D/P/Mean each seed;
-- shuffled three-seed means/sample std;
-- same-seed `matched - FIX2` D/P/Mean;
-- aggregate `matched - FIX2` deltas.
+Use `torch.randperm` over the sorted TRAIN corpus-label vector.
 
-Support sample-specific pseudo alignment only if BOTH:
+The shuffled vector must preserve exact class counts and must not equal the original vector.
 
-1. matched Mean > FIX2 Mean on at least 2/3 seeds;
-2. matched three-seed Mean > FIX2 three-seed Mean.
+Fit the same probe procedure for every representation using shuffled TRAIN labels.
 
-If either fails, record exactly:
+Evaluate against the TRUE DEV corpus labels.
 
-    SAMPLE-SPECIFIC PSEUDO ALIGNMENT CLAIM NOT SUPPORTED BY THIS NEGATIVE CONTROL
+Do not shuffle DEV labels.
 
-If both pass, report support only for sample-specific pseudo alignment.
+This control is diagnostic only and is not used to tune the probe.
 
-No missing-label correctness, comorbidity, significance, or final-promotion claim.
+## Probe metrics
 
-## DEV-only calibration audit
+For true-label and shuffled-label probes record on DEV:
 
-On identical DEV rows/masks, for each seed/task report matched, FIX2, and `matched - FIX2` for:
+- AUROC;
+- balanced accuracy at fixed probability threshold 0.5;
+- Brier score.
 
-- Brier;
-- ECE-15.
+Implement AUROC locally/deterministically without sklearn.
 
-Record observed counts and three-seed mean `matched - FIX2` deltas for D/P Brier/ECE.
+For every representation report per-seed values and three-seed mean/sample std.
 
-No recalibration or rerun.
+Also report per-seed:
 
-## Required evidence
+    true AUROC - shuffled-label AUROC
 
-PROGRESS must explicitly record:
+## Gate-distribution audit
 
-- FIX1 production rejected because configs pointed to old cache;
-- exact old wrong path and required exact path;
-- exact cache SHA and read-only verification;
-- corrected config paths/run names;
-- resolved DataModule exact-cache path for all three configs;
-- new firewall commit SHA;
-- exactly three NEW FIX2 production commands/runs;
-- run directories and MLflow identities;
-- selected DEV epochs/checkpoints/SHA256;
-- full DEV UAR/MF1/Score/Mean;
-- Test monitoring after freeze only;
-- matched-vs-FIX2 table/deltas;
-- frozen claim result;
-- calibration table and three-seed mean deltas;
-- no tuning/rerun;
-- no source changes.
+Without fitting another model, for each R4 checkpoint and DEV corpus report task-specific audio gate weight:
+
+- mean;
+- sample std;
+- q25;
+- median;
+- q75.
+
+For each task report the difference:
+
+    mean_audio_weight(depression_corpus) - mean_audio_weight(parkinson_corpus)
+
+Do this for depression query and Parkinson query separately.
+
+This is descriptive only.
+
+## Frozen interpretation rules
+
+### A. Strong corpus-decodability flag
+
+Record exactly:
+
+    CORPUS IDENTITY IS STRONGLY LINEARLY DECODEABLE FROM R4 FUSED REPRESENTATIONS
+
+only if BOTH conditions hold for `task_fused`:
+
+1. true-label DEV corpus AUROC >= 0.90 on at least 2 of 3 R4 seeds;
+2. `true AUROC - shuffled-label AUROC >= 0.20` on at least 2 of 3 R4 seeds.
+
+Otherwise record exactly:
+
+    STRONG CORPUS-ID DECODABILITY FLAG NOT TRIGGERED
+
+### B. Fusion-amplification flag
+
+Compute same-seed:
+
+    task_fused AUROC - projected_av AUROC
+
+Record exactly:
+
+    R4 TASK-CONDITIONED FUSION AMPLIFIES LINEAR CORPUS DECODABILITY
+
+only if BOTH:
+
+1. the delta is >= +0.05 on at least 2 of 3 seeds;
+2. the three-seed mean delta is >= +0.05.
+
+Otherwise record exactly:
+
+    FUSION AMPLIFICATION OF CORPUS DECODABILITY NOT SUPPORTED
+
+### Interpretation boundary
+
+Even if either flag triggers:
+
+- do not say corpus identity causes the disease predictions;
+- do not say corpus identity replaces disease signal;
+- do not demote/promote R4;
+- do not alter configs;
+- do not propose domain mitigation as an implemented change;
+- do not use Test;
+- do not claim significance from three seeds.
+
+Manager will decide whether a later domain ablation is required.
+
+## Mandatory pre-execution firewall commit
+
+Before running the full three-checkpoint probe:
+
+1. implement the script;
+2. verify the three checkpoint paths and SHA256;
+3. instantiate each config/DataModule/model;
+4. load the correct checkpoint into the correct model;
+5. run a tiny TRAIN+DEV extraction smoke for each seed;
+6. prove all six representations exist, are finite, and have exact dimensions;
+7. prove corpus labels come from `sample_meta[*]["corpus"]`;
+8. prove no Test loader was iterated;
+9. run a tiny synthetic unit check of the local AUROC implementation:
+   - perfect ordering -> AUROC 1.0;
+   - reversed ordering -> AUROC 0.0;
+   - tied constant scores -> AUROC 0.5;
+10. run a tiny synthetic probe optimization sanity check;
+11. `git diff --check`;
+12. `git diff origin/main -- src` must be empty;
+13. append firewall evidence to PROGRESS;
+14. commit and push one firewall commit.
+
+Do not run the full probe before the firewall commit exists on origin.
+
+## Exact execution
+
+After the firewall commit, run exactly once:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/common/run_r4_corpus_probe.py       --output /media/maxim/Programs/Features/WSM/stage6_corpus_probe/r4_corpus_probe_v1.json
+
+No second run for metric improvement.
+
+If execution fails before producing a valid output, repair only a deterministic implementation/runtime defect, document it, and do not change the frozen probe method.
+
+## Required PROGRESS evidence
+
+Record:
+
+- task/branch;
+- script path;
+- exact three config/checkpoint paths and checkpoint SHA256;
+- firewall commit SHA;
+- checkpoint-load verification;
+- TRAIN/DEV counts and corpus counts;
+- representation dimensions;
+- no-Test proof;
+- probe method and frozen hyperparameters;
+- external JSON path/SHA256;
+- per-seed/per-representation true and shuffled metrics;
+- three-seed mean/std metrics;
+- task_fused true-minus-shuffled AUROC deltas;
+- task_fused-minus-projected_av AUROC deltas;
+- both exact frozen interpretation strings;
+- gate distributions/deltas by corpus;
+- explicit statement that corpus identity is structurally coupled to observed-task identity;
+- explicit no causal shortcut claim;
+- no main-model training;
+- no source/config changes;
+- no Test use.
 
 ## Final scope checks
 
@@ -298,31 +403,31 @@ Run:
     git diff origin/main -- src
     git status --short
     git diff --stat origin/main...HEAD
-    git log -15 --oneline --decorate
+    git log -12 --oneline --decorate
 
-Source diff MUST be empty.
+Only the new probe script and PROGRESS may differ from origin/main.
 
 ## Acceptance criteria
 
-FIX2 passes only if:
+TASK-006B passes only if:
 
-- branch remains `codex/task-006a`;
-- current manager main was merged before FIX2 work;
-- corrected builder/history remains preserved;
-- fresh exact cache is verified read-only with SHA `e4baf2a2...`;
-- all three configs point to `shuffled_missing_targets_seed6001_exact_fix1.pt`;
-- all three configs use distinct FIX2 run names;
-- config equivalence otherwise passes;
-- DataModule resolves the exact cache path;
-- new firewall commit precedes all FIX2 runs;
-- exactly three NEW runs occur;
-- no source changes;
-- DEV-only selection;
-- claim/calibration use only FIX2 runs;
+- branch exactly `codex/task-006b` from current manager main;
+- only script + PROGRESS change;
+- all three frozen R4 checkpoints are verified by SHA;
+- no R4/main-model retraining occurs;
+- TRAIN-only fit / DEV-only evaluation for probes;
+- no Test loader iteration;
+- all six frozen representations are audited;
+- deterministic true-label and shuffled-label probes complete for all seeds/representations;
+- AUROC implementation sanity checks pass;
+- probe method is not tuned;
+- gate distributions are reported;
+- interpretation strings are applied exactly;
+- report is external and hashed;
 - branch pushed;
 - main/master untouched.
 
-Passing FIX2 closes only Stage-6 shuffled/mismatched negative-control item 8. It authorizes no next task.
+Passing TASK-006B closes Stage-6 corpus-probe item 9 only. It authorizes no next task.
 
 ## Required handoff
 
@@ -335,10 +440,30 @@ Respond in English using exactly:
 5. Blockers and risks
 6. Next atomic step
 
-Include branch, manager-main merge, new firewall/final SHA, exact cache path/SHA, config resolved paths, run count = 3 NEW FIX2 runs, metrics/deltas, calibration, no Test decision, no tuning/rerun, no source diff.
+Explicitly include:
+
+- branch `codex/task-006b`;
+- firewall SHA;
+- final evidence SHA;
+- pushed status;
+- main/master untouched;
+- source/config diff empty;
+- checkpoint paths/SHA;
+- output JSON path/SHA;
+- no main-model training;
+- no Test loader iteration;
+- per-representation three-seed AUROC summary;
+- task_fused per-seed AUROC and shuffled-control deltas;
+- task_fused-minus-projected_av deltas;
+- both exact frozen interpretation strings;
+- gate-distribution summary;
+- no causal shortcut claim;
+- Stage 6 active;
+- Stage-5 optimization closed;
+- no Stage7/Text/Final Test.
 
 For section 6 write only:
 
-    Manager review of TASK-006A-FIX2 on codex/task-006a; do not start another task.
+    Manager review of TASK-006B; do not start another task.
 
 Stop.
