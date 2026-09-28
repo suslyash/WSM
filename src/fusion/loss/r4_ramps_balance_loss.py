@@ -41,9 +41,12 @@ class WSMR4RampsBalanceLoss(BaseLoss):
                  progress_reference_parkinson: float = 0.852104,
                  controller_ema: float = 0.8, grad_ema: float = 0.9,
                  reliability_ema: float = 0.9, weight_min: float = 0.2,
-                 weight_max: float = 0.8, eps: float = 1e-8) -> None:
+                 weight_max: float = 0.8, eps: float = 1e-8,
+                 training_task: str = "both") -> None:
         if mode not in self.MODES:
             raise ValueError(f"mode must be one of {sorted(self.MODES)}")
+        if training_task not in {"both", "depression", "parkinson"}:
+            raise ValueError("training_task must be one of ['both', 'depression', 'parkinson']")
         for name, value in (("pseudo_scale", pseudo_scale), ("aux_weight", aux_weight),
                             ("agreement_weight", agreement_weight), ("tau", tau),
                             ("progress_temperature", progress_temperature),
@@ -63,6 +66,7 @@ class WSMR4RampsBalanceLoss(BaseLoss):
         if not 0.0 <= float(weight_min) <= float(weight_max) <= 1.0:
             raise ValueError("weight bounds must satisfy 0 <= min <= max <= 1")
         self.mode = mode
+        self.training_task = training_task
         self.pseudo_scale = float(pseudo_scale)
         self.aux_weight = float(aux_weight)
         self.agreement_weight = float(agreement_weight)
@@ -132,9 +136,11 @@ class WSMR4RampsBalanceLoss(BaseLoss):
                             features_video: torch.Tensor, pseudo_mask: torch.Tensor, reliability: torch.Tensor) -> None:
         norms: list[float | None] = [None, None]
         grads: list[torch.Tensor | None] = [None, None]
-        both_active = active == [True, True]
-        if self.mode == "ra_stch" and both_active and features_audio.requires_grad and features_video.requires_grad:
-            for task, objective in enumerate(objectives):
+        task_indices = (0, 1) if self.training_task == "both" else ((0,) if self.training_task == "depression" else (1,))
+        both_active = self.training_task == "both" and active == [True, True]
+        if self.mode == "ra_stch" and (both_active or self.training_task != "both") and features_audio.requires_grad and features_video.requires_grad:
+            for position, task in enumerate(task_indices):
+                objective = objectives[position]
                 try:
                     ga, gv = torch.autograd.grad(objective, (features_audio, features_video), retain_graph=True, create_graph=False, allow_unused=True)
                     parts = [x.detach().reshape(-1) for x in (ga, gv) if x is not None]
@@ -154,8 +160,8 @@ class WSMR4RampsBalanceLoss(BaseLoss):
                 self.grad_cos_ema = self.last_batch_grad_cosine if self.grad_cos_ema is None else decay * self.grad_cos_ema + (1 - decay) * self.last_batch_grad_cosine
         else:
             self.last_batch_grad_cosine = None
-        for task in range(2):
-            if self.mode == "ra_stch" and both_active and norms[task] is not None:
+        for task in task_indices:
+            if self.mode == "ra_stch" and (both_active or self.training_task != "both") and norms[task] is not None:
                 decay = self.grad_ema
                 self.grad_norm_ema[task] = norms[task] if self.grad_norm_ema[task] is None else decay * self.grad_norm_ema[task] + (1 - decay) * norms[task]
             accepted = pseudo_mask[:, task]
@@ -182,28 +188,36 @@ class WSMR4RampsBalanceLoss(BaseLoss):
         video_aux = output.aux["video_aux_logits"]
         audio_valid = output.aux["audio_aux_valid"].to(device=logits.device, dtype=torch.bool)
         video_valid = output.aux["video_aux_valid"].to(device=logits.device, dtype=torch.bool)
-        objectives, active = [], []
-        for task in range(2):
-            objective, task_active = self._components(logits, task, targets, observed, accept, pseudo, reliability, audio_aux, video_aux, audio_valid, video_valid)
-            objectives.append(objective)
-            active.append(task_active)
-        if not any(active):
-            raise ValueError("R4 batch has neither observed nor accepted-pseudo supervision")
-        if active == [True, False]:
-            total = objectives[0]
-        elif active == [False, True]:
-            total = objectives[1]
-        else:
-            if self.mode == "equal":
-                total = 0.5 * objectives[0] + 0.5 * objectives[1]
-            elif self.mode == "stch":
-                total = self.tau * torch.logsumexp(torch.stack([0.5 * objectives[0] / self.tau, 0.5 * objectives[1] / self.tau]), dim=0)
-            elif self.mode == "progress":
-                weights = self.weights.to(device=logits.device, dtype=logits.dtype).detach()
-                total = (weights * torch.stack(objectives)).sum()
+        if self.training_task == "both":
+            objectives, active = [], []
+            for task in range(2):
+                objective, task_active = self._components(logits, task, targets, observed, accept, pseudo, reliability, audio_aux, video_aux, audio_valid, video_valid)
+                objectives.append(objective)
+                active.append(task_active)
+            if not any(active):
+                raise ValueError("R4 batch has neither observed nor accepted-pseudo supervision")
+            if active == [True, False]:
+                total = objectives[0]
+            elif active == [False, True]:
+                total = objectives[1]
             else:
-                weights = self.weights.to(device=logits.device, dtype=logits.dtype).detach()
-                total = self.tau * torch.logsumexp(weights * torch.stack(objectives) / self.tau, dim=0)
+                if self.mode == "equal":
+                    total = 0.5 * objectives[0] + 0.5 * objectives[1]
+                elif self.mode == "stch":
+                    total = self.tau * torch.logsumexp(torch.stack([0.5 * objectives[0] / self.tau, 0.5 * objectives[1] / self.tau]), dim=0)
+                elif self.mode == "progress":
+                    weights = self.weights.to(device=logits.device, dtype=logits.dtype).detach()
+                    total = (weights * torch.stack(objectives)).sum()
+                else:
+                    weights = self.weights.to(device=logits.device, dtype=logits.dtype).detach()
+                    total = self.tau * torch.logsumexp(weights * torch.stack(objectives) / self.tau, dim=0)
+        else:
+            task = 0 if self.training_task == "depression" else 1
+            objective, task_active = self._components(logits, task, targets, observed, accept, pseudo, reliability, audio_aux, video_aux, audio_valid, video_valid)
+            if not task_active:
+                raise ValueError("R4 batch has neither observed nor accepted-pseudo supervision for active task")
+            objectives, active = [objective], [task_active]
+            total = objective
         self._update_diagnostics(objectives, active, output.aux["features_audio"], output.aux["features_video"], accept & ~observed, reliability)
         return total
 
