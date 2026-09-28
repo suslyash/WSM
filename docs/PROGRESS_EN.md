@@ -4919,3 +4919,96 @@ Decision:
 
 Recommended next atomic task: TASK-005H-TRIPLE-OPTUNA-C1 — evidence-only completion and handoff correction on the existing branch.
 
+### MANAGER-DECISION-056 — Accept triple Optuna search and select R4 RA-STCH trial 012 for true-seed confirmation
+
+Status: TASK-005H-TRIPLE-OPTUNA and C1 accepted and integrated; Stage 5 remains active/reopened for confirmation.
+
+Integration:
+
+- PR #45 was manager-reviewed, conflict-resolved without changing research evidence, and merged to `main` as `5ecda5e3c0446faf017ed5d7b2748d44a28a064d`.
+- Original global firewall: `cbfdad1f1d3e8838975b716589e8d168eb677e87`.
+- Production/evidence: `9633fec7ad725abdb095e73cfc6795dec87d4103`.
+- Top-three summary: `c61a587e11318e24b59975d84f4c867582de1009`.
+- C1 complete-ledger evidence: `79e59f024bdf23f12d101d8512645952c75f0fe6`.
+- Manager conflict-resolution merge on the task branch: `6df8399e613739cec164a43b5335c82262e4d0a9`.
+- C1 ledger audit: exactly 60 rows, 20/20/20 by family, 60/60 checkpoint paths and SHA256 values recovered, zero unavailable entries, and safe/strict counts recomputed directly from ledger rows.
+
+Accepted DEV-only search result:
+
+| Family | Objective winner | D | P | Mean | Safe count | Strict non-regression count |
+|---|---|---:|---:|---:|---:|---:|
+| Candidate B | `bd81-003` | 0.730860 | 0.902321 | 0.8165907903 | 0/20 | 0/20 |
+| corrected R3-B | `5990-018` | 0.732198 | 0.899651 | 0.8159243728 | 0/20 | 0/20 |
+| corrected R4 RA-STCH | `18c6-012` | 0.759025 | 0.879259 | 0.8191424538 | 4/20 | 1/20 |
+
+Frozen audio reference:
+
+- D `0.7479183895`;
+- P `0.8277353635`;
+- Mean `0.7878268765`.
+
+Manager family-selection decision:
+
+- Candidate B and R3-B are not selected for confirmation because none of their 20 trials passed even the predeclared relaxed safe gate.
+- R4 RA-STCH is selected because it produced four relaxed-safe trials and trial `18c6-012` is both:
+  - the exact highest DEV Mean across all 60 trials;
+  - the only objective winner satisfying exact audio D/P non-regression.
+- This is a DEV-only family-selection decision, not a final-method or generalization claim.
+
+Frozen selected R4 trial `18c6-012`:
+
+- selected epoch: 11;
+- DEV D/P/Mean: `0.759025 / 0.879259 / 0.8191424538`;
+- trainable params: `295239`;
+- selected checkpoint:
+  `logs/wsm_mm_pd_dep_v1/optuna_r4_ra_stch_base_seed42_2026-09-28_01-54_wsm_av_r3_disease_query_model_r4-ra-stch-optuna-v1-18c6-012_0ce9c7a4/checkpoints/epoch=11_dev_mean_score=0.8191.pt`;
+- selected checkpoint SHA256:
+  `104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a`;
+- exact searched values:
+  - hidden_dim `160`;
+  - gate_hidden_dim `96`;
+  - dropout `0.10034630487649018`;
+  - aux_weight `0.41215983081110485`;
+  - agreement_weight `0.48126684525457264`;
+  - tau `0.0487101634503887`;
+  - progress_temperature `0.7232081822527684`;
+  - controller_ema `0.7848422072252504`;
+  - lr `2.1217831107180076e-05`;
+  - weight_decay `0.0001855295766514827`.
+- all other model/data/loss/callback semantics remain exactly those of the frozen R4 RA-STCH base and pseudo-cache contract.
+
+Next confirmation policy:
+
+- do not rerun seed42;
+- create one tracked exact-copy seed42 provenance config and true seed43/44 configs differing only by seed/run_name;
+- run seed43 once and seed44 once;
+- no Optuna, no hyperparameter edits, no extra restarts.
+
+Predeclared robust confirmation gate over seeds42/43/44:
+
+For every seed individually:
+
+- DEV Mean > `0.7878268765`;
+- D >= `0.7379183895`;
+- P >= `0.8177353635`.
+
+Aggregate:
+
+- three-seed mean DEV Mean > `0.7878268765`;
+- three-seed mean D >= `0.7379183895`;
+- three-seed mean P >= `0.8177353635`;
+- all three selected checkpoint SHA256 values pairwise distinct.
+
+Also report, as a stricter diagnostic only, whether every seed individually satisfies exact non-regression:
+
+- D >= `0.7479183895`;
+- P >= `0.8277353635`.
+
+If the robust gate passes, R4 RA-STCH becomes the provisionally confirmed Stage-5 A+V/RAMPS family for later required final-method evidence. It is still not final because PROJECT_REQUIREMENTS requires at least five seeds for final methods.
+
+If the robust gate fails, preserve the negative confirmation result and do not retune from seeds43/44.
+
+No Test metric may influence this confirmation decision.
+
+Recommended next atomic task: TASK-005I-R4-CONFIRM — freeze exact trial-012 config and run true seeds43/44 once each.
+
