@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-006H — no-audio online-input modality-removal ablation on optimized R4 trial-012**.
+Current atomic task: **TASK-006I — equal-parameter task-aware fusion ablation on optimized R4 trial-012**.
 
-Expected Codex branch: `codex/task-006h`.
+Expected Codex branch: `codex/task-006i`.
 
-`TASK-006G` is complete and merged. The video-removal half of Stage-6 modality item 7 is CLOSED as NOT SUPPORTED under the frozen gate.
+`TASK-006H` is complete and merged. Stage-6 modality-removal item 7 is CLOSED: video contribution was NOT SUPPORTED under its frozen gate, while online audio-input contribution was SUPPORTED.
 
 ## 2. Default Context Policy
 
@@ -144,28 +144,27 @@ The detailed contract is in [plan/STAGE_6.md](plan/STAGE_6.md). At high level it
 
 Each scientific claim must map to an ablation or negative control. Negative results are retained. Test protocols remain monitoring-only and cannot drive decisions.
 
-## 7. Active Task — TASK-006H
+## 7. Active Task — TASK-006I
 
-Purpose: execute the second required Stage-6 modality removal: **remove the online audio input branch from the leading optimized R4 trial-012 composition while keeping architecture, parameter count, and the frozen pseudo-training path fixed**.
+Purpose: isolate the **task-aware fusion contribution** inside the leading optimized R4 trial-012 composition without introducing a parameter-count confound.
 
-The availability override infrastructure already merged in TASK-006G is reused unchanged.
+TASK-006I adds one backward-compatible model switch:
 
-For the no-audio ablation, every TRAIN/DEV/Test-monitoring batch must expose:
+- default `task_aware_fusion: true` preserves the current full model exactly;
+- ablation `task_aware_fusion: false` keeps the same parameter tensors and trainable parameter count, but constructs a single shared A+V fused representation and a single shared modality gate for both disease tasks.
 
-- audio available = false;
-- video available = true.
+In the shared-fusion ablation:
 
-The existing model/loss then enforce:
+- the two learned task queries are averaged into one shared query so both query parameters remain trainable;
+- the two task candidate norms are both evaluated and averaged, so both norm parameter sets remain trainable while producing one shared audio candidate and one shared video candidate;
+- one shared modality gate is computed and duplicated across tasks;
+- both task fusion norms are evaluated and averaged into one shared fused representation;
+- that same fused representation is fed to the two existing task-specific main heads;
+- task-specific auxiliary heads and sparse task losses remain intact.
 
-- audio fusion weight = 0;
-- video fusion weight = 1;
-- audio projected contribution = 0;
-- audio auxiliary supervision invalid/masked;
-- audio-video agreement term absent.
+Thus sparse MTL, pseudo supervision, reliability, RA controller, architecture size, optimizer, and all trial-012 hyperparameters remain fixed. The ablation removes only task-conditioned fusion specialization.
 
-Important interpretation boundary: the frozen semantic pseudo cache remains unchanged and was originally built from audio/video teacher evidence, including calibrated audio probabilities. Therefore TASK-006H tests the contribution of the **online audio input branch under the current frozen training pipeline**. It does not remove every historical/audio-derived signal from pseudo supervision and must not be described as “no audio information anywhere.”
-
-Exactly three production runs are authorized: seeds42/43/44. No source change, config tuning, pseudo-cache change, or Stage-5 reopening is authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
+Exactly three production runs are authorized: seeds42/43/44. No tuning is authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -357,6 +356,20 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - this is a negative claim result, not evidence that video is useless in general or that a video-free model should be promoted;
 - the video-removal half of Stage-6 modality item 7 is CLOSED;
 - next sole atomic task is TASK-006H: no-audio online-input removal using the same availability mechanism with `[false,true]`, fixed architecture/parameter count, and unchanged frozen pseudo-training path.
+
+### MANAGER-DECISION-070 — Accept TASK-006H; modality removals complete; assign task-aware fusion ablation
+
+- TASK-006H passed manager review and was merged via PR #69;
+- firewall commit `2d008e367aa43468759505cc4e7ab6b424a61d02` preceded final evidence `b189173109fde6acfbda92dc4af379b0ba38fea1`;
+- exactly three no-audio runs occurred, seeds42/43/44, with no source or pseudo-cache changes;
+- availability was exactly `[false,true]`, audio features/gradients were neutralized, and audio perturbation did not affect logits/loss/non-audio gradients;
+- no-audio three-seed D/P/Mean = `0.653375/0.792030/0.722703`;
+- full-minus-no-audio D/P/Mean = `+0.081881/+0.046531/+0.064206`;
+- full DEV Mean exceeded no-audio on 3/3 seeds and all frozen claim criteria passed;
+- therefore `ONLINE AUDIO INPUT MODALITY CONTRIBUTION SUPPORTED`;
+- interpretation remains limited to the online student audio branch because the frozen pseudo cache retains historical audio-derived teacher information;
+- together with TASK-006G, Stage-6 modality-removal item 7 is CLOSED;
+- next sole atomic task is TASK-006I: an equal-parameter shared-fusion ablation that removes task-conditioned fusion specialization while preserving sparse MTL, separate disease heads, pseudo/reliability/controller paths, and the full trial-012 training protocol.
 
 ## 10. Historical Evidence
 
