@@ -215,7 +215,7 @@ class WSMR4RampsBalanceLoss(BaseLoss):
             task = 0 if self.training_task == "depression" else 1
             objective, task_active = self._components(logits, task, targets, observed, accept, pseudo, reliability, audio_aux, video_aux, audio_valid, video_valid)
             if not task_active:
-                raise ValueError("R4 batch has neither observed nor accepted-pseudo supervision for active task")
+                objective = logits[:, task].sum() * 0.0
             objectives, active = [objective], [task_active]
             total = objective
         self._update_diagnostics(objectives, active, output.aux["features_audio"], output.aux["features_video"], accept & ~observed, reliability)
