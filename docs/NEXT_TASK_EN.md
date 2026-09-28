@@ -1,49 +1,37 @@
-# TASK-005H-TRIPLE-OPTUNA: Equal-Budget Optuna Search for Candidate B, R3-B, and R4 RA-STCH
+# TASK-005H-TRIPLE-OPTUNA-C1: Complete the 60-Trial Evidence Ledger and Correct the Handoff
 
 ## Authority and branch
 
-This task is the active owner-authorized optimization bundle from OWNER/MANAGER-OVERRIDE-054.
+This is a narrow evidence-only corrective task after MANAGER-REVIEW-055.
 
-Required branch:
+Explicit manager authorization:
 
-    codex/task-005h-triple-optuna
+- reuse the existing branch:
+  `codex/task-005h-triple-optuna`;
+- do NOT create a new branch;
+- do NOT reset/rebase/force-push;
+- preserve existing commits and runtime artifacts.
 
-Start from current `origin/main`, including manager authorization commit:
+Required manager base state for this correction is current `origin/main`, containing:
 
-    c118b11dca845165659d8297d483f8d6521b509f
+- task definition `9e8dcb3ddd03b65a4b8605752a832a13c450b9ae`;
+- manager review `a18b0055dacb4a4125227cd3ebf0dc96f885c1c7`.
 
-Create exactly one task branch from that `origin/main`.
+The existing task branch already contains:
 
-This task supersedes all earlier unexecuted TASK-005H variants.
+- firewall `cbfdad1f1d3e8838975b716589e8d168eb677e87`;
+- production/evidence `9633fec7ad725abdb095e73cfc6795dec87d4103`;
+- top-three summary `c61a587e11318e24b59975d84f4c867582de1009`.
+
+Do not alter those historical commits. Append exactly one corrective evidence commit.
 
 ## Goal
 
-Run a fair, equal-budget native Chimera Optuna comparison of exactly three already-trained WSM model families:
+Make TASK-005H-TRIPLE-OPTUNA fully auditable in tracked repository evidence without rerunning any experiment.
 
-1. **Candidate B**
-   - model: `wsm_av_audio_query_temporal_video_model`
-   - strong frozen historical temporal-audio anchor + audio-query temporal-video attention + residual correction.
+Use the existing three completed sweep manifests and run artifacts to append the complete 60-trial ledger to `docs/PROGRESS_EN.md`, correct the unauthorized manager wording/status, and return the exact required handoff.
 
-2. **R3-B**
-   - model: `wsm_av_r3_disease_query_model`
-   - loss: `wsm_r3_aux_agreement_loss`
-   - corrected disease-query multimodal fusion + auxiliary unimodal agreement.
-
-3. **R4 RA-STCH**
-   - model: `wsm_av_r3_disease_query_model`
-   - data: frozen semantic pseudo cache through `wsm_ramps_semantic_datamodule`
-   - loss: `wsm_r4_ramps_balance_loss` with `mode: ra_stch`
-   - frozen pseudo warm-up + DEV-only RA-STCH controller.
-
-Run exactly 20 seed42 Optuna trials for each family.
-
-Total production training invocations for full acceptance:
-
-    60
-
-Do NOT run seed43/44 in this task.
-
-The output of this task is search evidence for a later manager family-selection decision, not final promotion.
+No training or evaluation is authorized.
 
 ## Required reading
 
@@ -53,514 +41,192 @@ Read in this exact order:
 2. docs/README.md
 3. docs/PROJECT_REQUIREMENTS.md
 4. docs/PLAN.md
-5. docs/PROGRESS_EN.md through OWNER/MANAGER-OVERRIDE-054
+5. docs/PROGRESS_EN.md through MANAGER-REVIEW-055
 6. docs/NEXT_TASK_EN.md
-7. src/fusion/models/frozen_audio_temporal_adapter.py
-8. src/fusion/models/av_audio_query_temporal_video.py
-9. src/fusion/models/av_r3_disease_query.py
-10. src/fusion/loss/r3_aux_agreement_loss.py
-11. src/fusion/loss/r4_ramps_balance_loss.py
-12. src/common/callbacks/wsm_r4_balance_callback.py
-13. src/common/callbacks/wsm_pseudo_scale_warmup_callback.py
-14. src/chimera_plugin.py
-15. configs/wsm_mm_pd_dep_v1/fusion/05_audio_query_temporal_video.yaml
-16. configs/wsm_mm_pd_dep_v1/fusion/08_r3_b_agreement_seed42.yaml
-17. configs/wsm_mm_pd_dep_v1/fusion/16_r4_ra_stch_seed42.yaml
 
-Also read installed Chimera ML Optuna support:
+Then inspect read-only:
 
-- docs/en/user-guide/sweeps.md
-- src/chimera_ml/training/sweep.py
-- src/chimera_ml/cli.py
-- src/chimera_ml/utils/sweep.py
-
-Do not modify Chimera ML.
-
-## Frozen factual baselines
-
-Historical audio reference:
-
-- D Score: `0.7479183895`
-- P Score: `0.8277353635`
-- Mean: `0.7878268765`
-- exact checkpoint SHA256:
-  `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`
-
-Previously observed family baselines:
-
-Candidate B seed42:
-- D `0.708929`
-- P `0.909719`
-- Mean `0.809324`
-
-Corrected R3-B:
-- seed42 D/P/Mean `0.695808/0.893824/0.794816`
-- seed43 `0.694349/0.841176/0.767762`
-- seed44 `0.698378/0.838989/0.768684`
-- three-seed mean `0.696178/0.857996/0.777087`
-
-Corrected R4 RA-STCH seed42:
-- D `0.700992`
-- P `0.864298`
-- Mean `0.782645`
-
-These are context only. They may not be used to modify the frozen search spaces after trial 1.
+- existing branch commits:
+  - `cbfdad1f1d3e8838975b716589e8d168eb677e87`
+  - `9633fec7ad725abdb095e73cfc6795dec87d4103`
+  - `c61a587e11318e24b59975d84f4c867582de1009`
+- the three existing local sweep manifests:
+  - `logs/wsm_mm_pd_dep_v1/_sweeps/candidate-b-optuna-v1-260927-2014-bd81/manifest.yaml`
+  - `logs/wsm_mm_pd_dep_v1/_sweeps/r3b-optuna-v1-260927-2256-5990/manifest.yaml`
+  - `logs/wsm_mm_pd_dep_v1/_sweeps/r4-ra-stch-optuna-v1-260928-0047-18c6/manifest.yaml`
+- their referenced resolved configs/checkpoints/run summaries as needed.
 
 ## Allowed tracked files
 
-Codex may add/modify only:
+Modify only:
 
-- configs/wsm_mm_pd_dep_v1/fusion/31_optuna_candidate_b_base.yaml
-- configs/wsm_mm_pd_dep_v1/fusion/32_optuna_candidate_b_sweep.yaml
-- configs/wsm_mm_pd_dep_v1/fusion/33_optuna_r3b_base.yaml
-- configs/wsm_mm_pd_dep_v1/fusion/34_optuna_r3b_sweep.yaml
-- configs/wsm_mm_pd_dep_v1/fusion/35_optuna_r4_ra_stch_base.yaml
-- configs/wsm_mm_pd_dep_v1/fusion/36_optuna_r4_ra_stch_sweep.yaml
-- scripts/common/audit_triple_optuna.py
-- docs/PROGRESS_EN.md
+- `docs/PROGRESS_EN.md`
 
-The audit script is optional.
-
-No source model/loss/callback code may change.
+No other tracked file may change.
 
 ## Forbidden actions
 
-- Do not modify `src/audio`.
-- Do not modify `src/video`.
-- Do not modify any model implementation.
-- Do not modify any loss implementation.
-- Do not modify any DataModule.
-- Do not modify any callback.
-- Do not modify `src/chimera_plugin.py`.
-- Do not modify Chimera ML.
-- Do not create a fourth family.
-- Do not add V2L, URDF, CTRL, DCSI, TACVI, CDSA, or another literature model.
-- Do not unfreeze/tune the frozen historical audio model.
-- Do not regenerate or alter the R2 semantic pseudo cache.
-- Do not alter pseudo acceptance/reliability fields.
-- Do not alter canonical data/splits/caches.
-- Do not use task/corpus/split/Test identity as model input.
-- Do not use Test metrics as an Optuna target, sampler input, search-space edit, ranking criterion, safe filter, or family-choice criterion.
+- Do not run `chimera-ml train`.
+- Do not run `chimera-ml sweep`.
+- Do not run any DEV or Test dataloader/evaluation.
+- Do not run optimizer steps.
+- Do not create new checkpoints.
+- Do not modify configs 31–36.
+- Do not modify any source file.
+- Do not modify search spaces.
+- Do not recompute or replace objective winners.
+- Do not choose a different trial.
 - Do not run seed43/44.
-- Do not run more than 20 Optuna trials per family.
-- Do not manually run extra seed42 configs.
-- Do not change any search space after the first metric-bearing trial of the whole bundle.
-- Do not start Stage 6/7, Text/Description, or Final Test.
+- Do not inspect Test metrics for comparison/selection.
+- Do not start Stage6/7, Text/Description, or Final Test.
+- Do not claim final promotion/generalization/significance.
 
-## Shared training protocol
+Read-only parsing, hashing existing files, and arithmetic consistency checks are allowed.
 
-All three base configs must preserve the accepted family-specific semantics and use:
+## 1. Correct the unauthorized wording
 
-- seed: 42
-- experiment_name: `wsm_mm_pd_dep_v1`
-- epochs: 30
-- CUDA
-- mixed precision: true
-- grad clip: 0.5
-- required four DEV/Test monitoring streams
-- checkpoint monitor: only `dev/mean_score`, mode=max
-- early stopping monitor: only `dev/mean_score`, mode=max
-- patience: 6
-- min_delta: 0.0005
-- required snapshot/summary/segment metrics/console/MLflow instrumentation
+In `docs/PROGRESS_EN.md`:
 
-Preserve each accepted family's batch size and data path unless explicitly stated below:
+- the existing Codex-authored sentence beginning with
+  `Manager conclusion: nominate corrected R4 RA-STCH trial 012...`
+  must NOT remain presented as a manager decision;
+- either relabel it explicitly as
+  `Codex observation (non-authoritative): ...`
+  or remove that sentence from the Codex evidence entry;
+- do not edit MANAGER-REVIEW-055;
+- do not rewrite historical measured metrics.
 
-- Candidate B: batch_size 8, canonical `wsm_av_fusion_datamodule`;
-- R3-B: batch_size 32, canonical `wsm_av_fusion_datamodule`;
-- R4 RA-STCH: batch_size 32, `wsm_ramps_semantic_datamodule` with the exact frozen pseudo cache.
+Also correct the task-status wording so that the authoritative plan state is:
 
-## 1. Candidate B base and sweep
+- Stage 5: active/reopened for optimization;
+- Stage 6: paused/not started;
+- Stage 7: locked;
+- Final Test: locked.
 
-Create:
+Do not falsely state that Stage 5 is complete.
 
-    configs/wsm_mm_pd_dep_v1/fusion/31_optuna_candidate_b_base.yaml
-    configs/wsm_mm_pd_dep_v1/fusion/32_optuna_candidate_b_sweep.yaml
+## 2. Append the complete 60-trial tracked ledger
 
-Base must mirror accepted config 05 except run_name and searchable base values.
+Append one new section:
 
-Model remains exactly:
+    ### TASK-005H-TRIPLE-OPTUNA-C1 — complete 60-trial evidence ledger
 
-    wsm_av_audio_query_temporal_video_model
+For every one of the 60 completed trials, record one table row.
 
-Loss remains:
-
-    wsm_masked_sparse_loss
-
-Optimizer remains:
-
-    wsm_trainable_adamw_optimizer
-
-Exact frozen audio checkpoint remains unchanged.
-
-### Candidate B search space — EXACTLY 6 variables
-
-1. `model.params.hidden_dim`
-   - categorical: [96, 128, 160, 192, 224, 256]
-
-2. `model.params.num_heads`
-   - categorical: [2, 4, 8]
-
-3. `model.params.residual_hidden_dim`
-   - categorical: [64, 96, 128, 160, 192, 256]
-
-4. `model.params.dropout`
-   - float: [0.05, 0.35]
-
-5. `optimizer.params.lr`
-   - log-float: [0.00002, 0.0004]
-
-6. `optimizer.params.weight_decay`
-   - log-float: [0.00001, 0.05]
-
-All hidden_dim choices are divisible by all num_heads choices.
-
-Every sampled Candidate B model must have:
-
-    <= 1,000,000
-
-trainable fusion parameters excluding frozen audio.
-
-Sweep required fields:
-
-    method: optuna
-    n_trials: 20
-    study_name: wsm-candidate-b-optuna-v1
-    target:
-      monitor: dev/mean_score
-      mode: max
-
-## 2. R3-B base and sweep
-
-Create:
-
-    configs/wsm_mm_pd_dep_v1/fusion/33_optuna_r3b_base.yaml
-    configs/wsm_mm_pd_dep_v1/fusion/34_optuna_r3b_sweep.yaml
-
-Base must mirror corrected accepted config 08 except run_name and searchable base values.
-
-Model remains exactly:
-
-    wsm_av_r3_disease_query_model
-
-Loss remains exactly:
-
-    wsm_r3_aux_agreement_loss
-
-No pseudo labels.
-
-### R3-B search space — EXACTLY 7 variables
-
-1. `model.params.hidden_dim`
-   - categorical: [128, 160, 192, 224, 256]
-
-2. `model.params.gate_hidden_dim`
-   - categorical: [96, 128, 160, 192, 256]
-
-3. `model.params.dropout`
-   - float: [0.05, 0.35]
-
-4. `loss.params.aux_weight`
-   - float: [0.05, 0.50]
-
-5. `loss.params.agreement_weight`
-   - log-float: [0.01, 0.50]
-
-6. `optimizer.params.lr`
-   - log-float: [0.00002, 0.0004]
-
-7. `optimizer.params.weight_decay`
-   - log-float: [0.00001, 0.05]
-
-Keep fixed:
-
-- audio_feature_dim=768
-- video_feature_dim=512
-- num_tasks=2
-- loss eps existing/default semantics
-
-Every sampled R3-B model must have:
-
-    <= 736,004
-
-trainable parameters.
-
-Sweep:
-
-    method: optuna
-    n_trials: 20
-    study_name: wsm-r3b-optuna-v1
-    target:
-      monitor: dev/mean_score
-      mode: max
-
-## 3. R4 RA-STCH base and sweep
-
-Create:
-
-    configs/wsm_mm_pd_dep_v1/fusion/35_optuna_r4_ra_stch_base.yaml
-    configs/wsm_mm_pd_dep_v1/fusion/36_optuna_r4_ra_stch_sweep.yaml
-
-Base must mirror corrected accepted config 16 except run_name and searchable base values.
-
-Data must remain:
-
-    wsm_ramps_semantic_datamodule
-
-Exact pseudo cache:
-
-    /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt
-
-Required SHA256:
-
-    17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945
-
-Model remains:
-
-    wsm_av_r3_disease_query_model
-
-Loss remains:
-
-    wsm_r4_ramps_balance_loss
-
-Mode remains:
-
-    ra_stch
-
-Pseudo warm-up remains exactly:
-
-- observed_only_epochs: 3
-- ramp_epochs: 5
-- final_scale: 1.0
-
-### R4 RA-STCH search space — EXACTLY 10 variables
-
-1. `model.params.hidden_dim`
-   - categorical: [128, 160, 192, 224, 256]
-
-2. `model.params.gate_hidden_dim`
-   - categorical: [96, 128, 160, 192, 256]
-
-3. `model.params.dropout`
-   - float: [0.05, 0.35]
-
-4. `loss.params.aux_weight`
-   - float: [0.05, 0.50]
-
-5. `loss.params.agreement_weight`
-   - log-float: [0.01, 0.50]
-
-6. `loss.params.tau`
-   - log-float: [0.03, 0.30]
-
-7. `loss.params.progress_temperature`
-   - log-float: [0.10, 0.75]
-
-8. `loss.params.controller_ema`
-   - float: [0.50, 0.95]
-
-9. `optimizer.params.lr`
-   - log-float: [0.00002, 0.0004]
-
-10. `optimizer.params.weight_decay`
-    - log-float: [0.00001, 0.05]
-
-Keep fixed exactly:
-
-- mode: `ra_stch`
-- pseudo_scale initial: 0.0
-- progress_reference_depression: 0.697035
-- progress_reference_parkinson: 0.852104
-- grad_ema: 0.9
-- reliability_ema: 0.9
-- weight_min: 0.2
-- weight_max: 0.8
-- eps: 1e-8
-- pseudo warm-up schedule above
-
-Every sampled R4 model must remain:
-
-    <= 736,004
-
-trainable model parameters.
-
-Sweep:
-
-    method: optuna
-    n_trials: 20
-    study_name: wsm-r4-ra-stch-optuna-v1
-    target:
-      monitor: dev/mean_score
-      mode: max
-
-## 4. One global pre-run firewall
-
-Before ANY metric-bearing trial of ANY family:
-
-1. create all six configs;
-2. freeze all three search spaces exactly as above;
-3. validate all three base configs;
-4. run Chimera sweep `--dry-run` for all three sweep configs;
-5. verify each target is exactly `dev/mean_score`, max;
-6. verify each sweep has exactly 20 trials;
-7. verify variable counts are exactly 6 / 7 / 10;
-8. verify Candidate B exact frozen audio checkpoint SHA;
-9. verify Candidate B frozen audio remains absent from optimizer groups;
-10. verify R4 pseudo-cache exact SHA;
-11. prove R3/R4 pseudo/unknown-label contracts remain unchanged;
-12. instantiate all necessary boundary combinations and prove:
-    - Candidate B <=1M trainable fusion params;
-    - R3-B <=736004 trainable params;
-    - R4 model <=736004 trainable params;
-13. registered TRAIN-only forward/loss/backward smoke for each base:
-    - finite outputs/loss/gradients;
-    - correct [B,2] output;
-    - unknown labels masked;
-    - Candidate B frozen audio grads None;
-    - R4 accepted pseudo fields detached and observed truth overrides pseudo;
-    - R4 controller sees DEV only;
-14. append complete firewall/search manifest to PROGRESS_EN.md;
-15. commit and push one firewall commit.
-
-All three search spaces are immutable after this firewall.
-
-No first sweep may begin until the firewall commit exists on origin.
-
-## 5. Exact production order and commands
-
-Run sequentially in this exact order.
-
-### A. Candidate B — 20 trials
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml sweep \
-      --base-config configs/wsm_mm_pd_dep_v1/fusion/31_optuna_candidate_b_base.yaml \
-      --sweep-config configs/wsm_mm_pd_dep_v1/fusion/32_optuna_candidate_b_sweep.yaml \
-      --sweep-name candidate-b-optuna-v1 \
-      --max-trials 20
-
-### B. R3-B — 20 trials
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml sweep \
-      --base-config configs/wsm_mm_pd_dep_v1/fusion/33_optuna_r3b_base.yaml \
-      --sweep-config configs/wsm_mm_pd_dep_v1/fusion/34_optuna_r3b_sweep.yaml \
-      --sweep-name r3b-optuna-v1 \
-      --max-trials 20
-
-### C. R4 RA-STCH — 20 trials
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml sweep \
-      --base-config configs/wsm_mm_pd_dep_v1/fusion/35_optuna_r4_ra_stch_base.yaml \
-      --sweep-config configs/wsm_mm_pd_dep_v1/fusion/36_optuna_r4_ra_stch_sweep.yaml \
-      --sweep-name r4-ra-stch-optuna-v1 \
-      --max-trials 20
-
-Exactly 60 completed metric-bearing trials are required for full task acceptance.
-
-Do not run extra trials to replace poor metrics.
-
-If a sweep has a genuine infrastructure/configuration blocker before its first metric-bearing trial, a narrow config-only repair is allowed only if it does not change any search-space semantics.
-
-After the first metric-bearing trial of the bundle, do not change any family search space or accepted model/loss semantics.
-
-If a later blocker prevents exact completion, preserve evidence and stop/report; do not silently substitute runs.
-
-## 6. Frozen per-family reporting rules
-
-For every family, record all 20 trials with:
-
-- Optuna trial number/id;
-- generated config path;
-- exact sampled values;
-- run name;
-- selected epoch;
-- DEV D Score;
-- DEV P Score;
-- DEV Mean;
-- trainable parameter count;
-- selected checkpoint path/SHA256 if available.
-
-Produce top-5 by DEV Mean.
-
-### Objective winner
-
-For each family:
-
-    exact highest DEV Mean trial
-
-is the objective winner.
-
-No lower trial may replace it.
-
-### Safe set
-
-A trial is in the safe set iff all are true:
-
-- DEV Mean > `0.7878268765`;
-- D >= `0.7379183895`;
-- P >= `0.8177353635`.
-
-For each family report:
-
-- safe trial count;
-- safe winner = highest DEV Mean inside the safe set;
-- if empty: `NO SAFE TRIAL`.
-
-### Strict non-regression diagnostic
-
-Also count trials satisfying:
-
-- Mean > `0.7878268765`;
-- D >= `0.7479183895`;
-- P >= `0.8277353635`.
-
-This is diagnostic only.
-
-## 7. Cross-family comparison report
-
-After all three sweeps, produce one frozen DEV-only comparison table with:
+Required columns:
 
 - family;
-- historical baseline Mean before Optuna;
-- Optuna objective-winner D/P/Mean;
-- delta D/P/Mean vs frozen audio;
-- safe-trial count;
-- safe-winner D/P/Mean if any;
-- strict non-regression trial count;
-- best trial parameter count;
-- number of completed trials.
+- Optuna trial number/id;
+- run name;
+- generated/resolved config path;
+- exact sampled parameter values;
+- selected target epoch;
+- DEV depression Score;
+- DEV Parkinson Score;
+- DEV Mean_Score;
+- trainable parameter count;
+- selected checkpoint path;
+- selected checkpoint SHA256.
 
-Also record:
+If a selected checkpoint SHA/path genuinely cannot be recovered from existing artifacts:
 
-- absolute highest DEV Mean across all 60 trials;
-- highest safe DEV Mean across all 60 trials, if any;
-- whether each family improved its own historical seed42 Mean.
+- write `UNAVAILABLE` for that exact field;
+- state the precise reason;
+- do not fabricate it;
+- report how many rows have unavailable checkpoint provenance.
 
-Do NOT choose the winning family.
+Do not omit lower-ranked trials.
 
-The manager will make the next family-selection decision after audit.
+The ledger must contain exactly:
 
-## 8. Test firewall
+- 20 Candidate B rows;
+- 20 corrected R3-B rows;
+- 20 corrected R4 RA-STCH rows;
+- 60 rows total.
 
-TEST_NONE/SOFT/HARD remain mandatory per-epoch monitoring.
+Use the existing manifest trial order/IDs exactly.
 
-They MUST NOT affect:
+## 3. Recompute only read-only audit summaries
 
-- Optuna objective;
-- sampler behavior;
-- search ranges;
-- search continuation;
-- trial ranking;
-- objective winner;
-- safe set;
-- strict diagnostic;
-- family comparison;
-- future-family recommendation.
+From the 60 recorded rows, independently verify and record:
 
-Do not use Test to explain why one family should be chosen.
+### Candidate B
 
-## 9. Scope verification
+- completed count = 20;
+- objective winner exact trial and D/P/Mean;
+- top-5 trial IDs/Means;
+- safe count using:
+  - Mean > `0.7878268765`
+  - D >= `0.7379183895`
+  - P >= `0.8177353635`
+- safe winner or none;
+- strict non-regression count using:
+  - Mean > `0.7878268765`
+  - D >= `0.7479183895`
+  - P >= `0.8277353635`.
 
-Run exactly:
+### corrected R3-B
+
+Same six checks.
+
+### corrected R4 RA-STCH
+
+Same six checks.
+
+These must reproduce the already recorded results, not redefine them.
+
+Expected frozen summary to verify:
+
+- Candidate B objective winner `bd81-003`:
+  D/P/Mean `0.730860 / 0.902321 / 0.8165907903`;
+  safe count `0/20`;
+  strict count `0/20`.
+- R3-B objective winner `5990-018`:
+  D/P/Mean `0.732198 / 0.899651 / 0.8159243728`;
+  safe count `0/20`;
+  strict count `0/20`.
+- R4 RA-STCH objective winner `18c6-012`:
+  D/P/Mean `0.759025 / 0.879259 / 0.8191424538`;
+  safe count `4/20`;
+  strict count `1/20`.
+
+If the complete manifest ledger contradicts any expected summary, STOP and report the exact discrepancy. Do not rewrite selection rules.
+
+## 4. Verify artifact identities
+
+Record read-only SHA256 values for:
+
+- frozen audio checkpoint:
+  `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`;
+- R4 pseudo cache:
+  `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`.
+
+For the 60 selected checkpoints, hash existing checkpoint files when available.
+
+Do not load Test metrics.
+
+## 5. Verify frozen search provenance
+
+Record that the search spaces remain exactly:
+
+- Candidate B: 6 variables;
+- R3-B: 7 variables;
+- R4 RA-STCH: 10 variables.
+
+Record:
+
+- firewall commit:
+  `cbfdad1f1d3e8838975b716589e8d168eb677e87`;
+- production evidence commit:
+  `9633fec7ad725abdb095e73cfc6795dec87d4103`;
+- prior summary commit:
+  `c61a587e11318e24b59975d84f4c867582de1009`.
+
+Verify by read-only git history that firewall precedes production.
+
+## 6. Scope verification
+
+Run:
 
     git diff --check
     git diff origin/main -- src/audio
@@ -570,39 +236,54 @@ Run exactly:
     git diff origin/main -- src/fusion/data
     git diff origin/main -- src/common
     git diff origin/main -- src/chimera_plugin.py
+    git diff origin/main -- configs/wsm_mm_pd_dep_v1/fusion/31_optuna_candidate_b_base.yaml
+    git diff origin/main -- configs/wsm_mm_pd_dep_v1/fusion/32_optuna_candidate_b_sweep.yaml
+    git diff origin/main -- configs/wsm_mm_pd_dep_v1/fusion/33_optuna_r3b_base.yaml
+    git diff origin/main -- configs/wsm_mm_pd_dep_v1/fusion/34_optuna_r3b_sweep.yaml
+    git diff origin/main -- configs/wsm_mm_pd_dep_v1/fusion/35_optuna_r4_ra_stch_base.yaml
+    git diff origin/main -- configs/wsm_mm_pd_dep_v1/fusion/36_optuna_r4_ra_stch_sweep.yaml
     git status --short
     git diff --stat origin/main...HEAD
     git log -12 --oneline --decorate
 
-All source diffs above must be empty.
+Expected:
 
-Only the six new configs, optional audit script, and PROGRESS_EN.md may differ.
+- no source changes beyond the already existing authorized branch history;
+- C1 itself changes only `docs/PROGRESS_EN.md`;
+- configs 31–36 remain byte-identical to the existing firewall commit;
+- no uncommitted tracked changes at handoff.
+
+## 7. Commit and push
+
+Create exactly one new corrective commit on the same branch.
+
+Commit message:
+
+    TASK-005H-TRIPLE-OPTUNA-C1: complete trial evidence ledger
+
+Push normally to:
+
+    origin/codex/task-005h-triple-optuna
+
+No force push.
 
 ## Acceptance criteria
 
-TASK-005H-TRIPLE-OPTUNA passes only if:
+C1 passes only if:
 
-- branch exactly `codex/task-005h-triple-optuna`;
-- all three families are unchanged existing implementations;
-- all six configs are frozen before trial 1;
-- one global firewall commit is pushed before production;
-- Candidate B search has exactly 6 frozen variables;
-- R3-B search has exactly 7 frozen variables;
-- R4 RA-STCH search has exactly 10 frozen variables;
-- native Chimera Optuna is used;
-- exactly 20 completed seed42 trials per family;
-- exactly 60 production training invocations total;
-- no seed43/44;
-- objective only `dev/mean_score`, max;
-- no Test-driven decision;
-- parameter caps hold;
-- frozen audio invariant holds;
-- R4 pseudo cache and semantic reliability contract remain exact;
-- objective winner and safe winner are reported separately;
-- no family is promoted/selected by Codex;
-- no source file changed;
-- no Stage6/7/Text/Final Test;
-- complete evidence is committed and branch pushed.
+- no training/evaluation/sweep ran;
+- only PROGRESS_EN.md changed in the C1 commit;
+- complete 60-row ledger is tracked;
+- exact 20/20/20 counts are visible in tracked evidence;
+- all available selected checkpoint paths/SHA256 values are recorded;
+- missing checkpoint provenance, if any, is explicitly counted and explained;
+- objective/safe/strict summaries independently reproduce the frozen results;
+- unauthorized Codex `Manager conclusion` wording is corrected;
+- Stage 5 status is corrected to active/reopened;
+- source/config/search-space semantics remain unchanged;
+- exact required six-section handoff is complete;
+- branch is pushed;
+- main/master remain untouched by Codex.
 
 ## Required handoff
 
@@ -618,31 +299,34 @@ Respond in English using exactly:
 Explicitly include:
 
 - branch `codex/task-005h-triple-optuna`;
-- firewall commit SHA;
-- final evidence commit SHA;
-- pushed-to-origin status;
+- original firewall SHA `cbfdad1f1d3e8838975b716589e8d168eb677e87`;
+- production SHA `9633fec7ad725abdb095e73cfc6795dec87d4103`;
+- previous summary SHA `c61a587e11318e24b59975d84f4c867582de1009`;
+- new C1 evidence commit SHA;
+- pushed status;
 - main/master untouched;
-- all source diffs empty;
+- C1 changed only PROGRESS_EN.md;
+- source diffs empty;
+- config 31–36 unchanged;
+- exact 20/20/20 and 60 total ledger counts;
+- number of checkpoint paths/SHA256 recovered vs unavailable;
 - frozen audio SHA;
-- R4 pseudo-cache SHA;
-- exact 6/7/10 search spaces;
-- exact three sweep commands;
-- sweep directories/manifests/study names;
-- 20/20/20 completed counts and 60 total;
-- every family's top-5;
-- every family's objective winner D/P/Mean;
-- every family's safe count and safe winner or none;
-- every family's strict non-regression count;
-- historical-baseline-versus-Optuna deltas;
-- cross-family DEV-only table;
-- absolute highest Mean among all 60;
-- absolute highest safe Mean among all 60 if any;
-- parameter-count proof/results;
-- no Test-driven decision;
-- no post-hoc search-space change;
+- pseudo-cache SHA;
+- exact 6/7/10 search-space counts;
+- objective winners with D/P/Mean;
+- safe counts/winners;
+- strict counts;
+- top-5 IDs/Means per family;
+- no Test inspection;
+- no training/sweep/evaluation;
 - no seed43/44;
-- no new family/model;
-- no Stage6/7/Text/Final Test;
-- current Stage-5 optimization status.
+- no post-hoc search-space/model/loss changes;
+- Stage 5 active/reopened;
+- Stage 6 paused/not started;
+- Stage 7 and Final Test locked.
 
-Stop after TASK-005H-TRIPLE-OPTUNA.
+For Next atomic step write only:
+
+    Manager review of TASK-005H-TRIPLE-OPTUNA-C1; do not start another task.
+
+Stop after C1.
