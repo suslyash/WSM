@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-006A-BUNDLE — Stage-6 shuffled pseudo-target negative control on the Equal composition**.
+Current atomic task: **TASK-006A-FIX1 — exact shuffled-pseudo derangement correction and rerun**.
 
-Expected Codex branch: `codex/task-006a`.
+Expected Codex branch: `codex/task-006a` (explicitly authorized reuse for this corrective pass).
 
-`TASK-006-PRE-AUDIO-CONFIRM` is complete and merged. The previously paused `TASK-006A-BUNDLE` is now **RESUMED** as the sole active task.
+`codex/task-006a` was reviewed and **NOT MERGED** because its cache builder did not implement the frozen circular-shift mapping exactly. The same branch is explicitly authorized for correction; TASK-006A remains scientifically unresolved until FIX1 passes.
 
 ## 2. Default Context Policy
 
@@ -144,13 +144,25 @@ The detailed contract is in [plan/STAGE_6.md](plan/STAGE_6.md). At high level it
 
 Each scientific claim must map to an ablation or negative control. Negative results are retained. Test protocols remain monitoring-only and cannot drive decisions.
 
-## 7. Active Task — TASK-006A-BUNDLE
+## 7. Active Task — TASK-006A-FIX1
 
-The previously paused Stage-6 shuffled/mismatched pseudo-target negative control is resumed.
+Purpose: correct the exact permutation semantics of the shuffled-pseudo negative control and rerun the same three-seed Equal control without tuning.
 
-Purpose: test the **sample-specific pseudo alignment** claim without changing coverage, class balance, pseudo-value/reliability distributions, architecture, loss, optimizer, or warm-up.
+The existing `codex/task-006a` branch is **not merged** and is explicitly reused for this correction. Its first three shuffled runs are **superseded diagnostic evidence only** and do not close the claim gate. Codex must first merge the current `origin/main` into this existing branch; reset/rebase/force-push are not authorized.
 
-Frozen matched reference remains the three-seed **Equal** composition:
+Required exact mapping for each task:
+
+1. form the canonical missing-row tensor `missing`;
+2. create `order = missing[randperm(...)]` with D seed6001 and P seed6002;
+3. create `source_order = roll(order, 1)`;
+4. assign every permuted pseudo field as `derived[field][order, task] = source[field][source_order, task]`;
+5. do not perform any fixed-point repair or other mapping modification.
+
+Because `order` contains unique row IDs and is shifted by one, `order[k] != source_order[k]` by construction.
+
+A fresh external cache path and distinct FIX1 run names are required so the rejected artifact/runs remain auditable. Exactly three corrective production runs are authorized: seeds42/43/44.
+
+The frozen matched Equal reference remains:
 
 | Seed | D Score | P Score | Mean |
 |---:|---:|---:|---:|
@@ -158,7 +170,7 @@ Frozen matched reference remains the three-seed **Equal** composition:
 | 43 | 0.703299 | 0.856043 | 0.779671 |
 | 44 | 0.707977 | 0.851878 | 0.779927 |
 
-Exactly three shuffled-control production runs are authorized: seeds42/43/44. This is claims audit, not tuning. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
+Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -217,6 +229,29 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - therefore the prior Stage-5 negative robustness interpretation against seed42-only audio is superseded;
 - Stage-5 optimization remains closed; R4 trial 012 is retained as the leading matched-seed candidate pending Stage-6 claim/mechanism audit;
 - TASK-006A-BUNDLE is resumed as the only next atomic task.
+
+### MANAGER-DECISION-060 — Reject TASK-006A implementation; exact derangement FIX1 required
+
+- branch `codex/task-006a` starts from the correct manager base and changes only the authorized five paths;
+- firewall commit `70e5eec9d3710ac7bd0bd05cae6848f32107d190` correctly precedes final commit `c34bb6a20a42c59c7d3aa0c0413ab1c70ba7f7dc`;
+- config equivalence to matched Equal passes and no `src` file changed;
+- the reported shuffled results show a large matched-over-shuffled DEV Mean gap, but the result is **not accepted** because the derived cache did not follow the frozen permutation mapping literally;
+- rejected builder used `source_rows = roll(random_order, 1)` but assigned `derived[field][missing] = source[field][source_rows]`; the frozen contract requires destinations to be `random_order`, i.e. `derived[field][random_order] = source[field][roll(random_order, 1)]`;
+- rejected builder also included an unauthorized conditional fixed-point repair; exact circular shift requires no repair;
+- calibration reporting used `shuffled - matched` per seed and omitted the required three-seed mean `matched - shuffled` calibration deltas;
+- the existing `codex/task-006a` must not be merged until FIX1 passes; its cache SHA `678571febcf6ce85f2bf7aedb4770b255a138a0cdaff5ea3f04a92606afbd814` and first three runs are superseded diagnostic evidence only;
+- assign exactly one corrective pass, `TASK-006A-FIX1`, on the **same** `codex/task-006a` branch;
+- FIX1 is a reproducibility correction, not tuning. It authorizes exactly three new corrective shuffled Equal runs on seeds42/43/44.
+
+### MANAGER-OVERRIDE-061 — Reuse codex/task-006a for FIX1
+
+- owner explicitly prefers one branch per logical task; no new `codex/task-006a-fix1` branch;
+- reuse of existing `codex/task-006a` is explicitly authorized despite the normal no-reuse rule;
+- Codex must fetch and merge current `origin/main` into `codex/task-006a` before corrective implementation so MANAGER-DECISION-060/OVERRIDE-061 are in branch history;
+- this one merge from `origin/main` into the task branch is explicitly manager-authorized;
+- do not reset, rebase, overwrite, or force-push the branch;
+- preserve the original rejected commits/runs as superseded evidence, then append a new corrective firewall commit and final evidence commit;
+- exactly three new corrective production runs remain authorized.
 
 ## 10. Historical Evidence
 
