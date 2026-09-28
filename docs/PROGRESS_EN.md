@@ -637,3 +637,28 @@ Three-seed true AUROC mean/sample std: audio `0.791292/0.020300`, video `0.70550
 Gate audit audio-weight mean depression-minus-parkinson: seed42 depression query `-0.123735`, Parkinson query `-0.125313`; seed43 `-0.090391`, `-0.091659`; seed44 `-0.037737`, `-0.046210`. Full mean/q25/median/q75/sample-std distributions are in the external report.
 
 Frozen interpretation strings: `STRONG CORPUS-ID DECODABILITY FLAG NOT TRIGGERED`; `FUSION AMPLIFICATION OF CORPUS DECODABILITY NOT SUPPORTED`. Corpus identity is structurally coupled to which disease label is observed, so this remains a risk diagnostic; no causal shortcut, disease-signal replacement, R4 promotion/demotion, mitigation, or significance claim is made. Stage-5 optimization remains closed; Stage 6 remains active; Stage 7, Text/Description, and Final Test remain locked.
+
+
+### TASK-006C — RA-STCH firewall
+
+Status: firewall complete; production runs not started. Branch: `codex/task-006c`, based on manager `origin/main` `b228191`. Only `docs/PROGRESS_EN.md` is authorized to change.
+
+Validated exactly:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config --config-path configs/wsm_mm_pd_dep_v1/fusion/16_r4_ra_stch_seed42.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config --config-path configs/wsm_mm_pd_dep_v1/fusion/17_r4_ra_stch_seed43.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml validate-config --config-path configs/wsm_mm_pd_dep_v1/fusion/18_r4_ra_stch_seed44.yaml
+
+All three configs were valid. Programmatic equivalence passed: configs17/18 differ from config16 only by top-level seed and run_name; seeds are exactly `42/43/44`. Retained seed42 checkpoint exists with SHA256 `53397e3bbcbfc95abd30bdf63fec018a28f0effc2d92d66231061fb2d051254a`; semantic cache exists with SHA256 `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`.
+
+Firewall smoke passed for configs17/18 using TRAIN-only canonical mixed-corpus rows, with no optimizer step and no DEV/Test iteration:
+
+- trainable parameters: `403079` for both;
+- semantic accepted pseudo counts: D/P `376/1801`;
+- finite loss: seed43 `0.5106716156`, seed44 `0.5835766196`;
+- finite nonzero model gradients;
+- detached pseudo target/reliability tensors;
+- finite RA diagnostics; seed43 grad-norm EMA D/P `0.094643/0.079261`, grad-cosine EMA `0.0`, reliability EMA D/P `0.650805/0.876119`; seed44 `0.141683/0.091648`, `0.0`, `0.650805/0.876119`;
+- controller weights remained within frozen `[0.2,0.8]` bounds.
+
+`git diff --check`, `git diff origin/main -- src`, and `git diff origin/main -- configs` passed. No source/config/script changes occurred. The mandatory firewall commit must be pushed before exactly two production runs in order: seed43, then seed44.
