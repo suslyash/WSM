@@ -303,3 +303,32 @@ R4-vs-audio three-seed variability comparison:
 Interpretation boundary: R4 exceeds matched audio DEV Mean on 3/3 seeds, but this is a robustness comparator audit only. No significance test, promotion, demotion, Stage-6 ablation choice, or final-method claim is made. Test remains monitoring-only.
 
 Final integrity: production invocation count exactly 2; `src/audio` and all `src/*` unchanged; no Test-driven decision; no post-hoc tuning/rerun; no Stage 6 shuffled-pseudo work, Stage 7, Text/Description, or Final Test work started. Stage 6 is active at the plan level but this task does not start it.
+
+
+### TASK-006A-BUNDLE   pre-training negative-control firewall
+
+Status: firewall complete; production has not started. The exact three shuffled-control configs are frozen before the first production invocation.
+
+Changed paths before firewall commit:
+
+- `scripts/common/build_ramps_shuffled_pseudo_negative_control.py`;
+- `configs/wsm_mm_pd_dep_v1/ablations/31_shuffled_pseudo_equal_seed42.yaml`;
+- `configs/wsm_mm_pd_dep_v1/ablations/32_shuffled_pseudo_equal_seed43.yaml`;
+- `configs/wsm_mm_pd_dep_v1/ablations/33_shuffled_pseudo_equal_seed44.yaml`;
+- `docs/PROGRESS_EN.md`.
+
+Cache build command:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python scripts/common/build_ramps_shuffled_pseudo_negative_control.py --source /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt --output /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001.pt --shuffle-seed 6001
+```
+
+Builder result: `RAMPS_SHUFFLED_NEGATIVE_CONTROL_PASS`. Source SHA256 is `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`; derived cache SHA256 is `678571febcf6ce85f2bf7aedb4770b255a138a0cdaff5ea3f04a92606afbd814`. Rows are `6325`; missing D/P are `2665/3660`; accepted D/P are `376/1801`; accepted class counts are D positive/negative `376/0` and P positive/negative `212/1589`. Acceptance-assignment Hamming differences are D/P `646/1774`. Within-task permutation fixed points are D/P `0/0`; permutation SHA256 values are D `1a3853bb4ad61c627d320be9f1c90fa7f6493a3ea922613f08be458c0e963f6b` and P `82df2450281b6cb1bbc5ecdfcc9c733b707dd53553c5ecdf0979032b836d6af1`. Source segment IDs, observed masks, observed targets, and the complete missing-row tuple multisets are unchanged; source cache was not modified.
+
+Config validation result: all three configs are valid under `chimera-ml validate-config`. Each is a matched Equal copy differing only in pseudo-cache path and run name; seeds remain `42/43/44`, and the model, loss, optimizer, warm-up, callbacks, logging, and training parameters are unchanged.
+
+TRAIN-only registry/data/model/loss smoke passed with the derived cache and no optimizer step. It selected one TRAIN batch containing accepted shuffled pseudo rows and ran forward/loss/backward at pseudo_scale=1.0. Result: `FROZEN_DATAMODULE_MODEL_LOSS_FIREWALL_PASS`; TRAIN rows `6325`; accepted pseudo rows in smoke batch `17`; trainable parameters `403079`; finite loss `0.7944685221`; pseudo-target and reliability gradients are `None`; model gradients are finite. Plugin registration imported without a project-module warning. No DEV/Test loader was iterated and no optimizer step was executed.
+
+Required frozen hashes checked: audio checkpoint `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`; source pseudo cache `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`. `git diff --check` passed and `git diff -- src/audio` is empty.
+
+The firewall commit must precede exactly these production commands, in order: config31 seed42, config32 seed43, config33 seed44. No sweep, tuning, Test-driven selection, or other Stage-6 work is authorized.
