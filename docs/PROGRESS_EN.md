@@ -812,3 +812,34 @@ Uniform-reliability three-seed means: D Brier/ECE `0.1799669747/0.0772831558`, P
 Same-epoch Test monitoring was read only after checkpoint freeze: seed42 TEST_NONE/SOFT/HARD `0.801394/0.811302/0.808134`; seed43 `0.820499/0.828142/0.841820`; seed44 `0.822560/0.833204/0.850724`. Test did not affect selection, interpretation, or follow-up, and no Test rows entered the post-hoc audit. No pseudo-label correctness, semantic acceptance correctness, missing-label recovery, comorbidity recovery, significance, or final-promotion claim is made. Stage-5 optimization remains closed; Stage 6 remains active; Stage 7, Text/Description, and Final Test remain locked.
 
 Final scope checks: source cache remained SHA `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`; derived cache remains external at SHA `713b5a3d963c8759e4b2c12f148be12818e72c135b6d1420207cf5aa150bcc40`; `git diff --check` passed; `git diff origin/main -- src` was empty; only the builder, configs43/44/45, and this ledger are tracked changes.
+
+
+### TASK-006F — no semantic-enabled depression pseudo path firewall
+
+Status: firewall complete; production runs not started. Branch: `codex/task-006f`, based on manager `origin/main` `6fd035c`.
+
+Authorized source change: [`src/fusion/data/wsm_ramps_semantic_datamodule.py`](../src/fusion/data/wsm_ramps_semantic_datamodule.py) now accepts optional expected accepted/positive/negative count contracts, defaulting exactly to `(376,1801)`, `(376,212)`, `(0,1589)`. Supplied contracts require exactly two non-negative integers; expected missing counts remain fixed at `(2665,3660)` and all other cache invariants are unchanged.
+
+Full backward compatibility passed for configs37/38/39 with omitted parameters: full counts remained D/P `376/1801`, classes D `376/0`, P `212/1589`, and a canonical TRAIN batch was tensor-identical against an isolated clean `origin/main` DataModule implementation.
+
+Builder: [`scripts/common/build_ramps_no_semantic_depression_ablation.py`](../scripts/common/build_ramps_no_semantic_depression_ablation.py). Source SHA before/after: `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`. Derived cache: `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_semantic_ablation/no_semantic_depression_v1.pt`, SHA `aae9d250c5030eab1e68e07ee8af43fe8ebb7286eca621f9fa5c6dd7af283fe6`. Exactly 376 D accepted rows were removed; all 1801 P accepted rows, targets, reliability, and classes were preserved exactly. D fields are neutralized to accept false, NaN targets, zero reliability, and class `-1`.
+
+Configs46/47/48 validated and differ from refs37/38/39 only by run_name, cache path, and the three explicit expected-count contracts. Frozen full checkpoint paths/SHA values were verified. TRAIN-only firewall passed for all three ablation configs: trainable parameters `295239`; D accepted `0`; P accepted `1801`, classes `212/1589`; P pseudo gradients finite/nonzero at pseudo scale `1.0`; D pseudo contribution absent; pseudo tensors detached; P reliability EMA finite (`0.738575935` in the deterministic smoke batch); D reliability EMA uninitialized with controller fallback `0.5`; controller weights/diagnostics finite. No optimizer step and no DEV/Test loader iteration occurred. `git diff --check` passed; all forbidden source scopes (`src/audio`, `src/video`, `src/fusion/models`, `src/fusion/loss`, `src/common/callbacks`) were empty.
+
+Mandatory firewall commit/push precedes exactly three production runs in order seed42, seed43, seed44.
+
+
+
+### TASK-006F final semantic-evidence ablation evidence
+
+Status: complete. Branch codex/task-006f. Historical basis: D 0 and P 376 accepted rows. Firewall commit 1c8b56977f9731fcefd4bf8df98149faa1915c28 was pushed before production. Exactly three runs were executed in order, with no retry, sweep, tuning, or extra seed.
+
+Derived cache: /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_semantic_ablation/no_semantic_depression_v1.pt. Derived SHA aae9d250c5030eab1e68e07ee8af43fe8ebb7286eca621f9fa5c6dd7af283fe6. Source SHA 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945. Exactly 376 D rows were removed and all 1801 P rows were preserved exactly. Configs46/47/48 validated against refs37/38/39 with only run name, cache path, and expected-count contracts changed.
+
+Finished MLflow runs: seed42 49be8f3bc9d747bba9de19b82aab363b, seed43 e9bd2ba394c643dc862e99922c198b76, seed44 4d33b0088fd44cbbacd4fcf42a2b3f2e; all FINISHED. DEV-only selected results: seed42 epoch15 D/P/Mean 0.733193/0.893824/0.813509, checkpoint 0a361e8ce634f74ef1f544716f2c1bee2fef6910ee2610666f4742e7d956745d; seed43 epoch10 0.692111/0.804363/0.748237, checkpoint 666ed0785adf21e67cffe122f53641ad5ea5926e94ef63c8eeeccf08e08be20a; seed44 epoch28 0.718037/0.906919/0.812478, checkpoint a536b6c07c0fecb49768cc11410b0df052254a1abf28535686895e71aa34fe6c.
+
+Ablation three-seed means/std/ranges: D 0.714447/0.020775/0.041082, P 0.868369/0.055816/0.102556, Mean 0.791408/0.037391/0.065272. Full-minus-ablation deltas: D +0.020809, P -0.029808, Mean -0.004499. Per-seed D/P/Mean deltas: seed42 +0.025832/-0.014565/+0.005633, seed43 +0.026416/0.000000/+0.013208, seed44 +0.010180/-0.074859/-0.032339. Frozen result: SEMANTIC-EVIDENCE CONTRIBUTION VIA DEPRESSION PSEUDO ACCEPTANCE NOT SUPPORTED.
+
+DEV-only audit observed D/P counts 621/312. Ablation means D Brier/ECE 0.189869/0.105671 and gate mean/std 0.369660/0.144342; P 0.078377/0.060888 and gate 0.448038/0.134718. Full-minus-ablation deltas: D Brier/ECE -0.010944/-0.035667 and gate +0.032136/+0.004420; P +0.011571/+0.028951 and gate +0.042792/-0.004565. Controller diagnostics were finite; selected alpha D/P: seed42 0.418806/0.581194, seed43 0.265542/0.734458, seed44 0.365922/0.634078. Reliability EMA D/P: 0.500000/0.769233, 0.500000/0.781396, 0.500000/0.779168. D accepted count was zero with fallback 0.5; P accepted count 1801 with classes 212/1589; pseudo scale was 1.0.
+
+Same-epoch Test monitoring was read only after freeze: seed42 0.796484/0.803648/0.815369, seed43 0.815810/0.820375/0.837140, seed44 0.775684/0.778415/0.789896 for NONE/SOFT/HARD. Test affected no decision and no Test rows entered the audit. No correctness, missing-label, comorbidity, significance, causality, or final-promotion claim is made. git diff --check passed; forbidden source scopes and src/audio were unchanged; only authorized paths differ from origin/main.
