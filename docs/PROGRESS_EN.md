@@ -752,3 +752,18 @@ Three-seed no-direct calibration/gate means: D Brier/ECE `0.2209647345/0.1745065
 Same-epoch Test monitoring was read only after each DEV checkpoint was frozen: seed42 TEST_NONE/SOFT/HARD `0.803498/0.812067/0.803166`, seed43 `0.805364/0.801955/0.811135`, seed44 `0.796826/0.802473/0.793822`. Test did not affect selection, audit, comparison, or claim; no Test row was used in post-hoc diagnostics. No pseudo-label correctness, missing-label recovery, comorbidity recovery, significance, domain mitigation, promotion, or demotion claim is made. Stage-5 optimization remains closed; Stage 6 remains active; Stage 7, Text/Description, and Final Test remain locked.
 
 Final scope checks: `git diff --check` passed; `git diff origin/main -- src` and `git diff origin/main -- configs` are empty; only configs40/41/42 and this ledger differ from origin/main.
+
+
+### TASK-006E — uniform accepted-reliability firewall
+
+Status: firewall complete; production runs not started. Branch: `codex/task-006e`, based on manager `origin/main` `919a5a7`.
+
+Added [`scripts/common/build_ramps_uniform_reliability_ablation.py`](../scripts/common/build_ramps_uniform_reliability_ablation.py) and configs43/44/45. The builder command was:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python scripts/common/build_ramps_uniform_reliability_ablation.py --source /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt --output /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_reliability_ablation/uniform_accepted_reliability_v1.pt
+
+Source SHA before/after: `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`. Derived SHA: `713b5a3d963c8759e4b2c12f148be12818e72c135b6d1420207cf5aa150bcc40`. The builder refuses overwrite, preserves canonical version and all non-reliability fields, and records only explicit `reliability_ablation` metadata. Accepted counts D/P `376/1801`; classes D `376/0`, P `212/1589`; accepted reliability is exactly `1.0`; rejected/observed reliability exactly `0.0`. Source accepted reliability min/mean/max: D `0.6104820873/0.6726164732/0.7853315456`, P `0.5000977972/0.7718680412/0.9037118705`. Changed accepted reliability entries D/P: `376/1801`.
+
+All configs validated successfully. Programmatic equivalence against refs37/38/39 passed: only run_name and pseudo_cache_path differ; seeds remain 42/43/44. Frozen full checkpoint files and all three required SHA256 values verified. TRAIN-only firewall smoke passed for every config: derived cache loaded through the existing DataModule; trainable parameters `295239`; accepted pseudo rows present; pseudo targets/reliability detached; direct pseudo supervision at scale `1.0` produced finite nonzero model gradients; RA reliability EMA updated exactly to `[1.0, 1.0]`; controller diagnostics were finite. No optimizer step and no DEV/Test iteration occurred. `git diff --check` passed and `git diff origin/main -- src` was empty.
+
+Mandatory firewall commit/push precedes exactly three production runs in order seed42, seed43, seed44.
