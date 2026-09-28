@@ -3,7 +3,7 @@ seed: 44
 experiment_info:
   params:
     experiment_name: wsm_mm_pd_dep_v1
-    run_name: stage6_shuffled_pseudo_equal_seed44_exact_fix1
+    run_name: stage6_shuffled_pseudo_equal_seed44_exact_fix2
 
 data:
   name: wsm_ramps_semantic_datamodule
@@ -11,7 +11,7 @@ data:
     data_root: /media/maxim/Databases/WSM_NEW
     audio_feature_cache_root: /media/maxim/Databases/WSM_NEW/features
     video_cache_root: /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache
-    pseudo_cache_path: /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001.pt
+    pseudo_cache_path: /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001_exact_fix1.pt
     batch_size: 32
     num_workers: 4
     pin_memory: true

@@ -499,3 +499,38 @@ Three-seed mean matched-minus-FIX1 calibration deltas: D Brier `+0.0171788832`; 
 Same-epoch Test monitoring, read only after checkpoint freeze and never used for selection or interpretation: seed42 TEST_NONE/SOFT/HARD Mean `0.820707/0.837643/0.836956`; seed43 `0.745789/0.745173/0.726297`; seed44 `0.780918/0.783803/0.780038`.
 
 Frozen claim result: `SAMPLE-SPECIFIC PSEUDO ALIGNMENT CLAIM SUPPORTED BY THIS NEGATIVE CONTROL`. This is narrow sample-specific pseudo-alignment evidence only. No claim is made about missing-label correctness, comorbidity recovery, significance, or final promotion. No tuning, sweep, retry for metric improvement, post-hoc config change, source change, or additional run occurred.
+
+
+### TASK-006A-FIX2 — cache-binding firewall
+
+Status: firewall complete; FIX2 production has not started. FIX1 production is rejected/superseded because configs31/32/33 were bound to the old rejected cache path `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001.pt`. The accepted exact cache is `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001_exact_fix1.pt`.
+
+The existing `codex/task-006a` branch was reused after merging current manager `origin/main` `4722fca3464ca60f8840b0f67efc2ff927d24c41`. The corrected FIX1 builder and exact cache were not modified or regenerated.
+
+Read-only exact-cache verification passed:
+
+- cache SHA256: `e4baf2a2eea9dc7703e73b7956971b0d571eedda55fc8e6984750270712cf0f9`;
+- source SHA256 remains `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`;
+- mapping: `destination_order = order`, `source_order = roll(order, 1)`, and `derived[field][order, task] = source[field][source_order, task]`;
+- permutation SHA256: D `1dcfde36463f21d2d2d525d70f6642c6b599cc23534f3cb47ffc41953ec4d4b8`, P `847f8e2cf156cd0d4ecb28f5269d5cc79fd5943c6605f44c57c78528ecc6d767`;
+- fixed points D/P `0/0`; acceptance Hamming D/P `646/1788`;
+- missing D/P `2665/3660`; accepted D/P `376/1801`; class counts D `376/0`, P `212/1589`;
+- semantic DataModule loaded the exact cache and resolved its exact path/SHA.
+
+Corrected configs:
+
+- `31_shuffled_pseudo_equal_seed42.yaml` -> run name `stage6_shuffled_pseudo_equal_seed42_exact_fix2`;
+- `32_shuffled_pseudo_equal_seed43.yaml` -> run name `stage6_shuffled_pseudo_equal_seed43_exact_fix2`;
+- `33_shuffled_pseudo_equal_seed44.yaml` -> run name `stage6_shuffled_pseudo_equal_seed44_exact_fix2`.
+
+All three passed config validation and programmatic equivalence against matched Equal configs13/19/20: only the exact cache path and run name differ.
+
+FIX2 firewall smoke passed for all three configs with exact DataModule resolution, R3 trainable parameters `403079`, finite loss, nonzero observed/pseudo model gradients, finite main-head/projection/query/gate gradients, and no pseudo-target/reliability gradients:
+
+- seed42 loss `0.7388503551`;
+- seed43 loss `0.7636069059`;
+- seed44 loss `0.7564906478`.
+
+No optimizer step and no DEV/Test loader iteration occurred. `git diff --check` passed and `git diff origin/main -- src` was empty.
+
+The firewall commit must precede exactly three FIX2 production commands in order: seeds42, 43, 44. No sweep, tuning, retry, or post-hoc config change is authorized.
