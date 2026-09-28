@@ -9,7 +9,7 @@ Load only the detailed stage plan needed by the active task:
 - [STAGE_2.md](STAGE_2.md) — video — COMPLETE
 - [STAGE_3.md](STAGE_3.md) — text/description — DEFERRED
 - [STAGE_4.md](STAGE_4.md) — fusion baselines — COMPLETE
-- [STAGE_5.md](STAGE_5.md) — RAMPS — CLOSED NEGATIVE
+- [STAGE_5.md](STAGE_5.md) — RAMPS — CLOSED TO OPTIMIZATION; prior negative robustness interpretation superseded
 - [STAGE_6.md](STAGE_6.md) — ablations and claims audit — ACTIVE
 - [STAGE_7.md](STAGE_7.md) — final evaluation — LOCKED
 
