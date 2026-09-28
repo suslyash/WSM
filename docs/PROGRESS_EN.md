@@ -6,17 +6,17 @@ Plan initialized: 2026-09-23.
 
 Current stage: **Stage 6 — ACTIVE (ablations and claims audit)**.
 
-Stage 5: **CLOSED NEGATIVE**.
+Stage 5: **CLOSED TO OPTIMIZATION — R4 RETAINED AS LEADING MATCHED-SEED CANDIDATE**.
 
 Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-006-PRE-AUDIO-CONFIRM — frozen temporal-audio robustness confirmation on seeds43/44**.
+Current atomic task: **TASK-006A-BUNDLE — Stage-6 shuffled pseudo-target negative control on the Equal composition**.
 
-Expected Codex branch: `codex/task-006-pre-audio-confirm`.
+Expected Codex branch: `codex/task-006a`.
 
-The previously assigned `TASK-006A-BUNDLE` shuffled-pseudo negative control is **PAUSED / UNSTARTED** until this matched-seed audio comparator audit is reviewed.
+`TASK-006-PRE-AUDIO-CONFIRM` is complete and merged. The previously paused `TASK-006A-BUNDLE` is now **RESUMED** as the sole active task.
 
 ## 2. Default Context Policy
 
@@ -48,23 +48,45 @@ Optional historical evidence:
 | 2. Video | COMPLETE | Compare the bounded video families and establish the accepted V2 video reference. | [plan/STAGE_2.md](plan/STAGE_2.md) |
 | 3. Text / description | DEFERRED | Bounded text/description study after the core Stage-6 research cycle. | [plan/STAGE_3.md](plan/STAGE_3.md) |
 | 4. Fusion baselines | COMPLETE | Honest A+V baselines and strong-audio fusion search; no safe robust winner. | [plan/STAGE_4.md](plan/STAGE_4.md) |
-| 5. RAMPS | CLOSED NEGATIVE | Reliability/pseudo-label, disease-query, balancing, Optuna, and true-seed confirmation cycle. No robust promoted multimodal method. | [plan/STAGE_5.md](plan/STAGE_5.md) |
+| 5. RAMPS | CLOSED TO OPTIMIZATION | Optimization/search is complete. Matched-seed audio confirmation superseded the prior negative robustness interpretation; R4 is retained as the leading Stage-6 candidate, not yet a final promoted method. | [plan/STAGE_5.md](plan/STAGE_5.md) |
 | 6. Ablations / claims audit | ACTIVE | Determine which component/causal claims are supported; retain negative controls. | [plan/STAGE_6.md](plan/STAGE_6.md) |
 | 7. Final evaluation | LOCKED | Final multi-seed evaluation only after configuration/claim freeze and manager authorization. | [plan/STAGE_7.md](plan/STAGE_7.md) |
 
 ## 4. Frozen Scientific References
 
-### Frozen temporal-audio seed42 reference — multi-seed robustness confirmation pending
+### Matched-seed audio and R4 references
 
-- run: `wsm_audio_models-e0ce-006`;
-- seed: `42`;
-- selected epoch: 4;
-- checkpoint SHA256: `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`;
-- DEV depression Score: `0.7479183895`;
-- DEV Parkinson Score: `0.8277353635`;
-- DEV Mean_Score: `0.7878268765`.
+Frozen temporal audio is now confirmed on seeds42/43/44 without any method change:
 
-This remains the frozen seed42 audio reference. Its **three-seed robustness is not yet established**; TASK-006-PRE-AUDIO-CONFIRM adds seeds43/44 without changing the audio method.
+| Seed | Audio D | Audio P | Audio Mean |
+|---:|---:|---:|---:|
+| 42 | 0.7479183895 | 0.8277353635 | 0.7878268765 |
+| 43 | 0.708699 | 0.811771 | 0.760235 |
+| 44 | 0.734396 | 0.809382 | 0.771889 |
+
+Audio three-seed DEV aggregate:
+
+- D mean/std: `0.7303377965 / 0.0199221457`;
+- P mean/std: `0.8162961212 / 0.0099784282`;
+- Mean mean/std: `0.7733169588 / 0.0138512531`;
+- Mean range: `0.0275918765`.
+
+Frozen R4 RA-STCH trial `18c6-012` on the same seeds:
+
+- D mean/std: `0.7352563333 / 0.0211467766`;
+- P mean/std: `0.8385606667 / 0.0378688091`;
+- Mean mean/std: `0.7869088179 / 0.0294384420`;
+- Mean range: `0.0576974538`.
+
+Matched-seed R4 minus audio DEV Mean:
+
+- seed42: `+0.0313155773`;
+- seed43: `+0.0012100000`;
+- seed44: `+0.0082500000`;
+- R4 Mean > audio Mean on `3/3` seeds;
+- R4 three-seed Mean advantage: `+0.0135918591`.
+
+Interpretation: audio is **more seed-stable** by Mean std/range, but R4 has the higher matched-seed DEV Mean on every tested seed and higher three-seed mean. Therefore the former phrase “strongest robust audio reference” is retired. This does not by itself establish final promotion or significance.
 
 `src/audio` remains frozen.
 
@@ -85,39 +107,23 @@ This remains the frozen seed42 audio reference. Its **three-seed robustness is n
 - observed truth always overrides pseudo supervision;
 - no missing-label correctness or comorbidity claim is authorized.
 
-## 5. Stage-5 Closure — Authoritative Summary
+## 5. Stage-5 Closure — Revised Scientific Interpretation
 
-Stage 5 is closed negative by **MANAGER-DECISION-057**.
+Stage-5 optimization/search remains **closed**. No further tuning against seeds43/44 is authorized.
 
-The final optimized R4 RA-STCH trial `18c6-012` was selected by DEV only and then frozen for true-seed confirmation.
+Historical **MANAGER-DECISION-057** closed Stage 5 negative because R4 three-seed Mean `0.7869088179` was compared against the seed42-only audio value `0.7878268765`. The owner-authorized matched-seed audio audit showed that this was not a valid robustness comparator.
 
-| Seed | DEV D | DEV P | DEV Mean | Relaxed safe | Exact D/P non-regression |
-|---:|---:|---:|---:|---|---|
-| 42 | 0.759025 | 0.879259 | 0.8191424538 | yes | yes |
-| 43 | 0.718527 | 0.804363 | 0.7614450000 | no | no |
-| 44 | 0.728217 | 0.832060 | 0.7801390000 | no | no |
+With audio seeds43/44 added under the exact frozen method:
 
-Three-seed aggregates:
+- R4 beats matched audio DEV Mean on `3/3` seeds;
+- R4 three-seed Mean is `0.7869088179` vs audio `0.7733169588`;
+- R4 mean advantage is `+0.0135918591`;
+- audio is more stable by Mean sample std (`0.0138512531` vs R4 `0.0294384420`) and Mean range (`0.0275918765` vs R4 `0.0576974538`);
+- task-specific R4-audio regressions occur only on P at seed43 (`-0.007408`) and D at seed44 (`-0.006179`), both smaller than the PLAN's initial 1.0 percentage-point unacceptable-drop recommendation.
 
-- D mean/std: `0.7352563333 / 0.0211467766`;
-- P mean/std: `0.8385606667 / 0.0378688091`;
-- Mean mean/std: `0.7869088179 / 0.0294384420`;
-- seeds beating frozen audio Mean: `1/3`;
-- relaxed-safe seeds: `1/3`;
-- exact D/P non-regression seeds: `1/3`;
-- checkpoint SHA256 values: pairwise distinct.
+Manager interpretation: the **negative robustness verdict is superseded**, but Stage-5 optimization stays closed. R4 RA-STCH trial 012 is retained as the **leading matched-seed multimodal candidate for Stage-6 audit**, not a final promoted method. Promotion still requires mechanism/diagnostic support, and final methods require at least five seeds under PROJECT_REQUIREMENTS.
 
-Frozen decision: **ROBUST THREE-SEED CONFIRMATION FAIL**.
-
-Consequences:
-
-- under the original Stage-5 gate, no multimodal/RAMPS family robustly exceeded the frozen seed42 audio reference;
-- Candidate B and corrected R3-B are not substitutes: their 20-trial Optuna searches produced zero relaxed-safe trials;
-- Stage 5 must not be reopened by tuning against seeds43/44;
-- seeds43/44 are confirmation evidence, not future tuning targets;
-- the broader claim that audio is the strongest **robust** reference is now explicitly pending matched-seed audio confirmation on seeds43/44.
-
-Full Stage-5 chronology, Optuna ledger, corrective reviews, and checkpoint provenance are preserved in the optional historical archive.
+Candidate B and corrected R3-B remain non-substitutes under their frozen Stage-5 evidence. Seeds43/44 remain confirmation evidence, not tuning targets.
 
 ## 6. Stage-6 General Plan
 
@@ -138,58 +144,26 @@ The detailed contract is in [plan/STAGE_6.md](plan/STAGE_6.md). At high level it
 
 Each scientific claim must map to an ablation or negative control. Negative results are retained. Test protocols remain monitoring-only and cannot drive decisions.
 
-## 7. Active Task — TASK-006-PRE-AUDIO-CONFIRM
+## 7. Active Task — TASK-006A-BUNDLE
 
-Purpose: establish a matched-seed robustness baseline for the **unchanged frozen temporal-audio method** before continuing Stage-6 claims audit.
+The previously paused Stage-6 shuffled/mismatched pseudo-target negative control is resumed.
 
-Run exactly two new production trainings:
+Purpose: test the **sample-specific pseudo alignment** claim without changing coverage, class balance, pseudo-value/reliability distributions, architecture, loss, optimizer, or warm-up.
 
-- seed43;
-- seed44.
-
-Reference config:
-
-- `configs/wsm_mm_pd_dep_v1/audio/00_frozen_baseline.yaml` (seed42 semantics).
-
-New configs may differ from the reference **only** in:
-
-1. top-level `seed`;
-2. `experiment_info.params.run_name`.
-
-No source code, data contract, architecture, loss, optimizer, scheduler/training settings, callbacks, metric definitions, or selection rule may change.
-
-Historical seed42 DEV reference:
+Frozen matched reference remains the three-seed **Equal** composition:
 
 | Seed | D Score | P Score | Mean |
 |---:|---:|---:|---:|
-| 42 | 0.7479183895 | 0.8277353635 | 0.7878268765 |
+| 42 | 0.712498 | 0.843342 | 0.777920 |
+| 43 | 0.703299 | 0.856043 | 0.779671 |
+| 44 | 0.707977 | 0.851878 | 0.779927 |
 
-Frozen R4 confirmation comparator:
-
-| Seed | D Score | P Score | Mean |
-|---:|---:|---:|---:|
-| 42 | 0.759025 | 0.879259 | 0.8191424538 |
-| 43 | 0.718527 | 0.804363 | 0.7614450000 |
-| 44 | 0.728217 | 0.832060 | 0.7801390000 |
-
-After the two runs, report:
-
-- audio D/P/Mean for seeds42/43/44;
-- audio three-seed mean/sample std and range;
-- same-seed `R4 - audio` deltas for D/P/Mean;
-- R4 three-seed mean/sample std beside audio;
-- count of seeds where R4 DEV Mean exceeds matched-seed audio DEV Mean.
-
-This task is **baseline robustness confirmation, not tuning**. It does not automatically reopen Stage 5, promote R4, or authorize another Stage-6 task. Manager review decides the interpretation.
-
-The previously assigned shuffled-pseudo `TASK-006A-BUNDLE` remains paused/unstarted.
-
-Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
+Exactly three shuffled-control production runs are authorized: seeds42/43/44. This is claims audit, not tuning. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
 ## 8. Non-Negotiable Current Boundaries
 
 - Do not tune or modify `src/audio`.
-- Do not reopen Stage 5.
+- Do not reopen Stage-5 optimization or tune against confirmation seeds.
 - Seeds43/44 from R4 confirmation are not tuning targets.
 - Unknown labels remain masked, never converted to negative.
 - Observed ground truth overrides pseudo labels.
@@ -220,8 +194,8 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 
 ### MANAGER ASSIGNMENT — TASK-006A-BUNDLE
 
-- shuffled/mismatched pseudo-target negative control on matched Equal was assigned but not started;
-- it is now PAUSED / UNSTARTED pending the audio matched-seed robustness check.
+- shuffled/mismatched pseudo-target negative control on matched Equal was assigned, then paused before execution for the owner-requested audio matched-seed check;
+- after TASK-006-PRE-AUDIO-CONFIRM, it is RESUMED unchanged as the sole active Stage-6 task.
 
 ### MANAGER-OVERRIDE-058 — Confirm frozen audio on seeds43/44 before Stage-6 negative controls
 
@@ -231,6 +205,18 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - only seed and run_name may differ from the canonical frozen seed42 config;
 - compare audio and frozen R4 on matched seeds42/43/44 using DEV metrics only;
 - TASK-006A-BUNDLE is paused until manager review of this evidence.
+
+### MANAGER-DECISION-059 — Accept matched-seed audio confirmation; supersede negative robustness interpretation; resume TASK-006A
+
+- TASK-006-PRE-AUDIO-CONFIRM passed manager review and was merged via PR #49;
+- firewall commit `71a5d54375928387392e6dadfda182842515748b` correctly precedes final evidence commit `daec15685fb618161bf68f6b32e5df4b566b1875`;
+- configs43/44 are semantically identical to the frozen seed42 config except seed/run_name; no `src` changes occurred;
+- exact two production runs occurred, seed43 then seed44, with DEV-only checkpoint selection and no tuning/rerun;
+- the Codex handoff statement that audio is “less stable than R4” is rejected: audio has lower Mean std/range;
+- however, R4 exceeds matched audio DEV Mean on 3/3 seeds and by `+0.0135918591` in three-seed mean;
+- therefore the prior Stage-5 negative robustness interpretation against seed42-only audio is superseded;
+- Stage-5 optimization remains closed; R4 trial 012 is retained as the leading matched-seed candidate pending Stage-6 claim/mechanism audit;
+- TASK-006A-BUNDLE is resumed as the only next atomic task.
 
 ## 10. Historical Evidence
 
