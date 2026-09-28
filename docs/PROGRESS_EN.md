@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-006E — uncertainty/reliability ablation on the leading optimized R4 composition**.
+Current atomic task: **TASK-006F — semantic-evidence contribution via the depression pseudo-acceptance path**.
 
-Expected Codex branch: `codex/task-006e`.
+Expected Codex branch: `codex/task-006f`.
 
-`TASK-006D` is complete and merged. Stage-6 direct pseudo-supervision contribution is CLOSED as supported under the predeclared three-seed gate.
+`TASK-006E` is complete and merged. Stage-6 uncertainty/reliability contribution is CLOSED as supported under the predeclared three-seed gate, with a small aggregate DEV Mean effect.
 
 ## 2. Default Context Policy
 
@@ -144,25 +144,22 @@ The detailed contract is in [plan/STAGE_6.md](plan/STAGE_6.md). At high level it
 
 Each scientific claim must map to an ablation or negative control. Negative results are retained. Test protocols remain monitoring-only and cannot drive decisions.
 
-## 7. Active Task — TASK-006E
+## 7. Active Task — TASK-006F
 
-Purpose: isolate the **uncertainty/reliability contribution** inside the leading optimized R4 trial-012 composition.
+Purpose: isolate the **semantic-evidence-enabled depression pseudo-acceptance contribution** inside the leading optimized R4 trial-012 composition.
 
-Full reference remains configs37/38/39.
+Historical Stage-5 evidence is structurally important:
 
-TASK-006E builds one deterministic derived pseudo cache in which:
+- pre-semantic audio+video reliability could not deploy any depression side at the unchanged precision/support gate;
+- Parkinson audio+video rules were already valid and frozen;
+- fixed CLIP semantic evidence was introduced only to recover the blocked depression pseudo path;
+- the accepted semantic cache therefore contains D/P pseudo counts `376/1801`, where the 376 depression pseudo entries are the semantic-enabled addition.
 
-- `pseudo_accept_mask` is unchanged;
-- `pseudo_targets` is unchanged;
-- `pseudo_class` is unchanged;
-- `calibrated_audio_probs` is unchanged;
-- observed truth and canonical row identity are unchanged;
-- accepted `pseudo_reliability` values are replaced by exactly `1.0`;
-- rejected/observed reliability remains exactly `0.0`.
+TASK-006F derives a no-semantic-depression cache by neutralizing exactly those 376 depression pseudo entries while preserving the Parkinson column exactly.
 
-This preserves **which pseudo examples are accepted and what their targets are**, while removing the graded uncertainty/reliability signal. It therefore tests the combined contribution of reliability weighting in the direct pseudo BCE and reliability input to the RA controller.
+Because the current semantic DataModule hardcodes the full cache class/count contract, TASK-006F may make one narrow source change: parameterize the expected accepted/positive/negative counts with defaults equal to the current frozen values. Existing full-method configs must behave identically when those optional parameters are omitted.
 
-Exactly three production runs are authorized: seeds42/43/44. No source changes or tuning are authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
+Exactly three production runs are authorized: seeds42/43/44. No model/loss/callback/audio/video change and no tuning are authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -312,6 +309,19 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - interpretation is limited to the direct pseudo BCE term; pseudo-label correctness, missing-label recovery, comorbidity recovery, significance, and final promotion remain unauthorized;
 - Stage-6 direct pseudo-supervision claim is CLOSED as supported;
 - next sole atomic task is TASK-006E: remove graded reliability while preserving pseudo acceptance and targets, then compare three seeds against full trial-012.
+
+### MANAGER-DECISION-067 — Accept TASK-006E; reliability contribution supported; assign semantic-evidence ablation
+
+- TASK-006E passed manager review and was merged via PR #62;
+- firewall commit `699115362466518b7a9a02ef6f2aec89c5b70a62` preceded final evidence `cda75f32d1915d9e71cd029a5ba45feee501731b`;
+- derived uniform-reliability cache SHA256: `713b5a3d963c8759e4b2c12f148be12818e72c135b6d1420207cf5aa150bcc40`;
+- accepted rows/targets/classes/calibrated probabilities were unchanged and accepted reliability was exactly 1.0;
+- uniform-reliability three-seed D/P/Mean = `0.7352583333/0.8345853333/0.7849220000`;
+- full-minus-ablation aggregate D/P/Mean = `-0.0000020000/+0.0039753333/+0.0019868179`;
+- full Mean exceeded the ablation on 2/3 seeds and in aggregate, so `UNCERTAINTY/RELIABILITY CONTRIBUTION SUPPORTED`;
+- the effect is small and the claim is limited to the combined implemented graded-reliability signal; BCE weighting and controller reliability are not separately identified;
+- Stage-6 uncertainty/reliability item is CLOSED as supported;
+- next sole atomic task is TASK-006F: remove the semantic-enabled depression pseudo-acceptance path while preserving the frozen Parkinson pseudo path and all full trial-012 training semantics.
 
 ## 10. Historical Evidence
 
