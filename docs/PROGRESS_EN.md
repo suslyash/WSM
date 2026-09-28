@@ -977,3 +977,29 @@ Config validation passed for configs55/56/57. Programmatic equivalence against r
 TRAIN-only firewall passed: semantic pseudo cache SHA 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945, accepted D/P 376/1801, accepted positive D/P 376/212, accepted negative D/P 0/1589; shared audio/video candidates, modality weights, and fused features were exactly equal across task rows; separate-head perturbation was isolated in deterministic eval mode. Both query rows received equal finite nonzero gradients; candidate norms, fusion norms, projections, shared gate, main heads, and all active auxiliary heads had finite gradients. Pseudo targets/reliability were detached; observed and accepted pseudo supervision were active at pseudo_scale=1.0; RA grad/reliability/controller diagnostics were finite. No optimizer step and no DEV/Test loader iteration occurred.
 
 Firewall checks also passed git diff --check, and forbidden source scopes remained unchanged. Mandatory firewall commit must be pushed before exactly three production commands, seed42 then seed43 then seed44; no sweep, tuning, retry, or post-firewall change is authorized.
+
+
+### TASK-006I — final shared-fusion ablation evidence
+
+Status: complete; Stage-6 task-aware-fusion item closed negative. Firewall commit cf4f9c4 was pushed before production. Exactly three production commands were executed once and in order: configs55 seed42, 56 seed43, 57 seed44. No sweep, tuning, retry, extra seed, or post-firewall change occurred. MLflow/run identities were stage6_shared_fusion_trial012_seed42_2026-09-28_22-44_wsm_av_r3_disease_query_model_5db549e8, stage6_shared_fusion_trial012_seed43_2026-09-28_22-51_wsm_av_r3_disease_query_model_454bf80b, and stage6_shared_fusion_trial012_seed44_2026-09-28_22-57_wsm_av_r3_disease_query_model_a398d7d8.
+
+DEV-only maximum mean_score selected checkpoints:
+- seed42 epoch11, DEV D UAR/MF1/Score 0.765546/0.765102/0.765324; P 0.875983/0.891228/0.883606; Mean 0.824465; SHA256 21504702976a960ffea02a68778ebc3bf7e6cc15ea8c9866f182ff04cbd30785.
+- seed43 epoch10, DEV D UAR/MF1/Score 0.725070/0.723922/0.724496; P 0.809179/0.827126/0.818152; Mean 0.771324; SHA256 ec746e519e551d69d59954dffff0a73968fb4ab555d43020b7722e635cc477ee.
+- seed44 epoch11, DEV D UAR/MF1/Score 0.731746/0.731149/0.731448; P 0.826087/0.850658/0.838372; Mean 0.784910; SHA256 215e3a61c5dcb8ff7dd92ed5ca9336d66405c3f1ba6cc045841f08ec990d10a8.
+
+Shared-fusion three-seed DEV mean/sample-std/range: D 0.7407873333/0.0216999061/0.040476; P 0.8467100000/0.0335141494/0.065454; Mean 0.7935663333/0.0276077987/0.053141. Frozen full-minus-shared deltas are D -0.0055310000, P -0.0081493333, Mean -0.0066575154. Full exceeds shared on 0/3 seeds and shared aggregate Mean is higher. Exact frozen claim: TASK-AWARE FUSION CONTRIBUTION NOT SUPPORTED. This tests task-conditioned fusion specialization only and does not claim sparse-MTL contribution.
+
+Selected controller diagnostics alpha D/P; progress D/P; grad-norm EMA D/P; grad-cosine EMA; reliability EMA D/P; pseudo scale:
+- seed42 0.374351/0.625649; 0.190553/0.092954; 0.382847/0.272144; +0.057377; 0.666639/0.766244; 1.0.
+- seed43 0.247172/0.752828; 0.029190/-0.668857; 0.348745/0.325148; -0.017432; 0.667222/0.781396; 1.0.
+- seed44 0.301713/0.698287; 0.107800/-0.112563; 0.347162/0.255129; +0.015960; 0.683096/0.780802; 1.0.
+All controller values were finite. DEV shared task-row maximum differences for modality weights and fused features were zero.
+
+TRAIN-only D/P shared-fusion gradient diagnostics over audio projection, video projection, task queries, both candidate norms, shared gate, and both fusion norms: seed42 L2 4.110034/1.888330 cosine +0.054242; seed43 3.139425/2.456655 cosine +0.221981; seed44 3.704894/4.017676 cosine +0.089523. All were finite. Sparse MTL, separate disease heads, semantic pseudo cache, direct pseudo supervision, reliability, and RA controller remained present.
+
+DEV-only post-freeze calibration used observed counts D/P 621/312 for every seed. Shared per-seed Brier/ECE-15: seed42 D 0.171636/0.064297 and P 0.070815/0.074090; seed43 D 0.187495/0.105519 and P 0.105897/0.087201; seed44 D 0.174902/0.076025 and P 0.085497/0.108315. Shared three-seed means: D 0.178011/0.081947 and P 0.087403/0.089869. Full three-seed means: D 0.178925/0.070004 and P 0.089948/0.089839. Full-minus-shared calibration deltas: D Brier +0.000914/ECE -0.011943; P Brier +0.002545/ECE -0.000030. Shared DEV audio gate mean/std: seed42 0.464828/0.206305, seed43 0.384742/0.124929, seed44 0.452735/0.132959; three-seed mean 0.434102/0.154731. No recalibration or threshold search occurred.
+
+Same-epoch Test monitoring was read only after each checkpoint was frozen: NONE/SOFT/HARD means seed42 0.801124/0.811002/0.815546, seed43 0.819130/0.826236/0.839551, seed44 0.808215/0.818077/0.831848. Test did not affect selection, calibration, claim, or next-step decision; no Test row entered post-hoc diagnostics.
+
+Final scope checks passed: git diff --check; forbidden src/audio, src/video, src/fusion/data, src/fusion/loss, and src/common/callbacks diffs are empty; only the authorized model file, configs55/56/57, and this ledger differ from origin/main. No Test-driven decision, sparse-MTL claim, significance claim, disease-content claim, missing-label/comorbidity claim, promotion, or demotion claim is made. Stage-5 optimization remains closed; Stage 6 remains active; Stage 7, Text/Description, and Final Test remain locked.
