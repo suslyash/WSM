@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-006F — semantic-evidence contribution via the depression pseudo-acceptance path**.
+Current atomic task: **TASK-006G — no-video modality-removal ablation on optimized R4 trial-012**.
 
-Expected Codex branch: `codex/task-006f`.
+Expected Codex branch: `codex/task-006g`.
 
-`TASK-006E` is complete and merged. Stage-6 uncertainty/reliability contribution is CLOSED as supported under the predeclared three-seed gate, with a small aggregate DEV Mean effect.
+`TASK-006F` is complete and merged. Stage-6 semantic-evidence contribution via depression pseudo acceptance is CLOSED as NOT SUPPORTED under the frozen three-seed gate.
 
 ## 2. Default Context Policy
 
@@ -144,22 +144,28 @@ The detailed contract is in [plan/STAGE_6.md](plan/STAGE_6.md). At high level it
 
 Each scientific claim must map to an ablation or negative control. Negative results are retained. Test protocols remain monitoring-only and cannot drive decisions.
 
-## 7. Active Task — TASK-006F
+## 7. Active Task — TASK-006G
 
-Purpose: isolate the **semantic-evidence-enabled depression pseudo-acceptance contribution** inside the leading optimized R4 trial-012 composition.
+Purpose: execute the first required Stage-6 modality removal: **remove video from the leading optimized R4 trial-012 composition while keeping the architecture and parameter count fixed**.
 
-Historical Stage-5 evidence is structurally important:
+The existing R3 model already supports per-sample modality availability. TASK-006G may make one narrow DataModule/collate generalization so configs can force a fixed availability vector. Full-method default behavior must remain bit/tensor-identical.
 
-- pre-semantic audio+video reliability could not deploy any depression side at the unchanged precision/support gate;
-- Parkinson audio+video rules were already valid and frozen;
-- fixed CLIP semantic evidence was introduced only to recover the blocked depression pseudo path;
-- the accepted semantic cache therefore contains D/P pseudo counts `376/1801`, where the 376 depression pseudo entries are the semantic-enabled addition.
+For the no-video ablation, every TRAIN/DEV/Test-monitoring batch must expose:
 
-TASK-006F derives a no-semantic-depression cache by neutralizing exactly those 376 depression pseudo entries while preserving the Parkinson column exactly.
+- audio available = true;
+- video available = false.
 
-Because the current semantic DataModule hardcodes the full cache class/count contract, TASK-006F may make one narrow source change: parameterize the expected accepted/positive/negative counts with defaults equal to the current frozen values. Existing full-method configs must behave identically when those optional parameters are omitted.
+The model/loss then naturally enforce:
 
-Exactly three production runs are authorized: seeds42/43/44. No model/loss/callback/audio/video change and no tuning are authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
+- video fusion weight = 0;
+- audio fusion weight = 1;
+- video auxiliary supervision invalid/masked;
+- audio-video agreement term absent;
+- video projected/fused contribution zeroed through the existing availability-aware path.
+
+The same model architecture, trainable parameter count, semantic pseudo cache, pseudo supervision, reliability, RA controller, optimizer, warm-up, and trial-012 hyperparameters remain intact. This avoids a model-size confound.
+
+Exactly three production runs are authorized: seeds42/43/44. No tuning is authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -322,6 +328,20 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - the effect is small and the claim is limited to the combined implemented graded-reliability signal; BCE weighting and controller reliability are not separately identified;
 - Stage-6 uncertainty/reliability item is CLOSED as supported;
 - next sole atomic task is TASK-006F: remove the semantic-enabled depression pseudo-acceptance path while preserving the frozen Parkinson pseudo path and all full trial-012 training semantics.
+
+### MANAGER-DECISION-068 — Accept TASK-006F; semantic contribution not supported; assign no-video modality removal
+
+- TASK-006F passed manager review and was merged via PR #64;
+- firewall commit `1c8b56977f9731fcefd4bf8df98149faa1915c28` preceded final evidence `bbd23dd9b9c64b4e738f2bca1b21840e9a61465a`;
+- derived cache SHA256: `aae9d250c5030eab1e68e07ee8af43fe8ebb7286eca621f9fa5c6dd7af283fe6`;
+- exactly 376 depression pseudo rows were removed and all 1801 Parkinson pseudo rows were preserved exactly;
+- ablation three-seed D/P/Mean = `0.714447/0.868369/0.791408`;
+- full-minus-ablation D/P/Mean = `+0.020809/-0.029808/-0.004499`;
+- full D exceeded the ablation on 3/3 seeds, but the ablation had higher aggregate Mean and much higher P, so `SEMANTIC-EVIDENCE CONTRIBUTION VIA DEPRESSION PSEUDO ACCEPTANCE NOT SUPPORTED`;
+- no semantic correctness, missing-label recovery, comorbidity, significance, or promotion claim is authorized;
+- the final TASK-006F ledger typo “P 376” is manager-corrected to “P accepted 1801”; all runtime/cache evidence already used 1801;
+- Stage-6 semantic-evidence item is CLOSED as negative;
+- next sole atomic task is TASK-006G: train the same optimized trial-012 composition with video declared unavailable on every sample, using the existing availability-aware model path and preserving parameter count.
 
 ## 10. Historical Evidence
 
@@ -832,7 +852,7 @@ Mandatory firewall commit/push precedes exactly three production runs in order s
 
 ### TASK-006F final semantic-evidence ablation evidence
 
-Status: complete. Branch codex/task-006f. Historical basis: D 0 and P 376 accepted rows. Firewall commit 1c8b56977f9731fcefd4bf8df98149faa1915c28 was pushed before production. Exactly three runs were executed in order, with no retry, sweep, tuning, or extra seed.
+Status: complete. Branch codex/task-006f. Historical basis: D accepted 0 and P accepted 1801 rows. Firewall commit 1c8b56977f9731fcefd4bf8df98149faa1915c28 was pushed before production. Exactly three runs were executed in order, with no retry, sweep, tuning, or extra seed.
 
 Derived cache: /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_semantic_ablation/no_semantic_depression_v1.pt. Derived SHA aae9d250c5030eab1e68e07ee8af43fe8ebb7286eca621f9fa5c6dd7af283fe6. Source SHA 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945. Exactly 376 D rows were removed and all 1801 P rows were preserved exactly. Configs46/47/48 validated against refs37/38/39 with only run name, cache path, and expected-count contracts changed.
 
