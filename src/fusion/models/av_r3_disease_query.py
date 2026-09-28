@@ -11,7 +11,8 @@ class WSMAVR3DiseaseQueryModel(BaseModel):
     """Two independent learned disease queries with masked modality gates."""
     def __init__(self, audio_feature_dim: int = 768, video_feature_dim: int = 512,
                  hidden_dim: int = 192, gate_hidden_dim: int = 192,
-                 dropout: float = 0.2, num_tasks: int = 2) -> None:
+                 dropout: float = 0.2, num_tasks: int = 2,
+                 task_aware_fusion: bool = True) -> None:
         super().__init__()
         if min(audio_feature_dim, video_feature_dim, hidden_dim, gate_hidden_dim) <= 0:
             raise ValueError("R3 dimensions must be positive")
@@ -19,11 +20,14 @@ class WSMAVR3DiseaseQueryModel(BaseModel):
             raise ValueError("wsm_av_r3_disease_query_model requires num_tasks=2")
         if not 0.0 <= dropout < 1.0:
             raise ValueError("dropout must satisfy 0 <= dropout < 1")
+        if not isinstance(task_aware_fusion, bool):
+            raise ValueError("task_aware_fusion must be boolean")
         self.audio_feature_dim = int(audio_feature_dim)
         self.video_feature_dim = int(video_feature_dim)
         self.hidden_dim = int(hidden_dim)
         self.gate_hidden_dim = int(gate_hidden_dim)
         self.num_tasks = int(num_tasks)
+        self.task_aware_fusion = task_aware_fusion
         self.audio_projection = nn.Sequential(
             nn.LayerNorm(self.audio_feature_dim), nn.Linear(self.audio_feature_dim, self.hidden_dim),
             nn.GELU(), nn.Dropout(dropout))
@@ -82,23 +86,50 @@ class WSMAVR3DiseaseQueryModel(BaseModel):
         features_video = self.video_projection(effective_video_input) * video_available
         task_audio_features, task_video_features, task_features = [], [], []
         task_weights, audio_aux_logits, video_aux_logits = [], [], []
-        for task, query in enumerate(self.task_queries):
-            query_batch = query.unsqueeze(0).expand(audio_cls.shape[0], -1)
-            audio_task = self.task_candidate_norms[task](features_audio + query_batch)
-            video_task = self.task_candidate_norms[task](features_video + query_batch)
+        if self.task_aware_fusion:
+            for task, query in enumerate(self.task_queries):
+                query_batch = query.unsqueeze(0).expand(audio_cls.shape[0], -1)
+                audio_task = self.task_candidate_norms[task](features_audio + query_batch)
+                video_task = self.task_candidate_norms[task](features_video + query_batch)
+                audio_score = self.shared_query_gate(torch.cat([query_batch, audio_task], dim=1)).squeeze(1)
+                video_score = self.shared_query_gate(torch.cat([query_batch, video_task], dim=1)).squeeze(1)
+                scores = torch.stack([audio_score, video_score], dim=1)
+                scores = scores.masked_fill(~available, torch.finfo(scores.dtype).min)
+                weights = torch.softmax(scores, dim=1)
+                fused = self.task_fusion_norms[task](
+                    query_batch + weights[:, 0:1] * audio_task + weights[:, 1:2] * video_task)
+                task_audio_features.append(audio_task)
+                task_video_features.append(video_task)
+                task_features.append(fused)
+                task_weights.append(weights)
+                audio_aux_logits.append(self.audio_aux_heads[task](audio_task))
+                video_aux_logits.append(self.video_aux_heads[task](video_task))
+        else:
+            q_shared = self.task_queries.mean(dim=0)
+            query_batch = q_shared.unsqueeze(0).expand(audio_cls.shape[0], -1)
+            audio_task = 0.5 * (
+                self.task_candidate_norms[0](features_audio + query_batch)
+                + self.task_candidate_norms[1](features_audio + query_batch))
+            video_task = 0.5 * (
+                self.task_candidate_norms[0](features_video + query_batch)
+                + self.task_candidate_norms[1](features_video + query_batch))
             audio_score = self.shared_query_gate(torch.cat([query_batch, audio_task], dim=1)).squeeze(1)
             video_score = self.shared_query_gate(torch.cat([query_batch, video_task], dim=1)).squeeze(1)
             scores = torch.stack([audio_score, video_score], dim=1)
             scores = scores.masked_fill(~available, torch.finfo(scores.dtype).min)
             weights = torch.softmax(scores, dim=1)
-            fused = self.task_fusion_norms[task](
-                query_batch + weights[:, 0:1] * audio_task + weights[:, 1:2] * video_task)
-            task_audio_features.append(audio_task)
-            task_video_features.append(video_task)
-            task_features.append(fused)
-            task_weights.append(weights)
-            audio_aux_logits.append(self.audio_aux_heads[task](audio_task))
-            video_aux_logits.append(self.video_aux_heads[task](video_task))
+            fused_pre = query_batch + weights[:, 0:1] * audio_task + weights[:, 1:2] * video_task
+            fused = 0.5 * (
+                self.task_fusion_norms[0](fused_pre)
+                + self.task_fusion_norms[1](fused_pre))
+            task_audio_features.extend([audio_task, audio_task])
+            task_video_features.extend([video_task, video_task])
+            task_features.extend([fused, fused])
+            task_weights.extend([weights, weights])
+            audio_aux_logits.extend([
+                self.audio_aux_heads[0](audio_task), self.audio_aux_heads[1](audio_task)])
+            video_aux_logits.extend([
+                self.video_aux_heads[0](video_task), self.video_aux_heads[1](video_task)])
         task_audio = torch.stack(task_audio_features, dim=1)
         task_video = torch.stack(task_video_features, dim=1)
         task_fused = torch.stack(task_features, dim=1)

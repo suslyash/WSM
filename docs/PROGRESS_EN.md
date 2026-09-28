@@ -964,3 +964,16 @@ DEV-only post-freeze calibration observed counts were D/P 621/312. Per-seed D Br
 Contextual Stage-2 V2 video reference: D/P/Mean 0.6201013364/0.7930427585/0.7065720475. No-audio minus Stage-2 video per seed: seed42 +0.042947/-0.010413/+0.016267; seed43 +0.001542/+0.003151/+0.002347; seed44 +0.055333/+0.004223/+0.029778. This is contextual and not architecture-equivalent.
 
 Final scope checks: config validation, exact equivalence, frozen full checkpoint SHA verification, and firewall all passed; git diff --check passed; git diff origin/main -- src was empty; only configs52/53/54 and this ledger differ. No source, existing config, or pseudo-cache changes occurred. No significance, total audio-information removal, missing-label, comorbidity, causality, or final-promotion claim is made. Stage 6 modality-removal item 7 is complete; Stage 5 remains closed; Stage 7, Text/Description, and Final Test remain locked.
+
+
+### TASK-006I — equal-parameter task-aware fusion firewall
+
+Status: firewall complete; production runs not started. Branch: codex/task-006i, based on manager origin/main 0aa4e5a. Authorized changes are limited to the R3 model switch, configs55/56/57, and this ledger.
+
+Implemented optional boolean model.params.task_aware_fusion, default true; the clean origin/main class and modified default path produced bitwise-identical preds and all relevant auxiliary tensors on the same deterministic TRAIN batch. The false path uses the frozen shared query mean, averaged candidate norms, one shared gate/weight vector, averaged fusion norms, duplicated task features/candidates/weights, and retains separate disease and auxiliary heads. Full and shared models each have exactly 295239 trainable parameters.
+
+Config validation passed for configs55/56/57. Programmatic equivalence against refs37/38/39 passed: only run_name and task_aware_fusion=false differ; seeds remain 42/43/44. Frozen full checkpoint SHA256 values verified: seed42 104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a, seed43 6af4a4ed21040aff4db2906b0adc8aa5fd27a4b72c375fbb67f68de04ab8446e, seed44 b06fec6912b27cd19d811b72b2c3c08cd1b0a6c826b637f87a314e3976b88c17.
+
+TRAIN-only firewall passed: semantic pseudo cache SHA 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945, accepted D/P 376/1801, accepted positive D/P 376/212, accepted negative D/P 0/1589; shared audio/video candidates, modality weights, and fused features were exactly equal across task rows; separate-head perturbation was isolated in deterministic eval mode. Both query rows received equal finite nonzero gradients; candidate norms, fusion norms, projections, shared gate, main heads, and all active auxiliary heads had finite gradients. Pseudo targets/reliability were detached; observed and accepted pseudo supervision were active at pseudo_scale=1.0; RA grad/reliability/controller diagnostics were finite. No optimizer step and no DEV/Test loader iteration occurred.
+
+Firewall checks also passed git diff --check, and forbidden source scopes remained unchanged. Mandatory firewall commit must be pushed before exactly three production commands, seed42 then seed43 then seed44; no sweep, tuning, retry, or post-firewall change is authorized.
