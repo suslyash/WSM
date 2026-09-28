@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-006B — frozen R4 corpus-identity probe on TRAIN→DEV**.
+Current atomic task: **TASK-006C — isolated three-seed RA-STCH balancing contribution audit**.
 
-Expected Codex branch: `codex/task-006b`.
+Expected Codex branch: `codex/task-006c`.
 
-`TASK-006A` is complete and merged. Stage-6 shuffled/mismatched pseudo-target negative-control item 8 is CLOSED with narrow support for sample-specific pseudo alignment.
+`TASK-006B` is complete and merged. Stage-6 corpus-probe item 9 is CLOSED: the frozen strong corpus-decodability flag was not triggered and fusion amplification of corpus decodability was not supported.
 
 ## 2. Default Context Policy
 
@@ -144,23 +144,30 @@ The detailed contract is in [plan/STAGE_6.md](plan/STAGE_6.md). At high level it
 
 Each scientific claim must map to an ablation or negative control. Negative results are retained. Test protocols remain monitoring-only and cannot drive decisions.
 
-## 7. Active Task — TASK-006B
+## 7. Active Task — TASK-006C
 
-Purpose: execute the PLAN-required **corpus probe** on the frozen R4 RA-STCH candidate without retraining the main model.
+Purpose: complete the detailed Stage-6 **RA-STCH balancing contribution** ablation on the original fixed R4 composition.
 
-Use the three frozen R4 checkpoints:
+Retain the already-valid corrected RA-STCH seed42 result:
 
-| Seed | Config | Selected epoch | Checkpoint SHA256 | DEV Mean |
-|---:|---|---:|---|---:|
-| 42 | `fusion/37_r4_ra_stch_optuna_selected_seed42.yaml` | 11 | `104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a` | 0.8191424538 |
-| 43 | `fusion/38_r4_ra_stch_optuna_confirm_seed43.yaml` | 10 | `6af4a4ed21040aff4db2906b0adc8aa5fd27a4b72c375fbb67f68de04ab8446e` | 0.7614450000 |
-| 44 | `fusion/39_r4_ra_stch_optuna_confirm_seed44.yaml` | 11 | `b06fec6912b27cd19d811b72b2c3c08cd1b0a6c826b637f87a314e3976b88c17` | 0.7801390000 |
+- config `fusion/16_r4_ra_stch_seed42.yaml`;
+- DEV D/P/Mean `0.700992/0.864298/0.782645`;
+- selected epoch 13;
+- checkpoint SHA256 `53397e3bbcbfc95abd30bdf63fec018a28f0effc2d92d66231061fb2d051254a`.
 
-The probe fits deterministic diagnostic linear classifiers on TRAIN and evaluates **DEV only** for corpus identity (`depression` vs `parkinson`) from frozen internal representations. It also records gate distributions by corpus and a shuffled-TRAIN-label sanity control.
+Run exactly the two previously unrun frozen configs:
 
-This audit may establish that corpus identity is linearly decodable, and whether task-conditioned fusion amplifies that decodability relative to the equal-dimensional projected A+V representation. It **cannot** by itself establish that corpus identity causes the disease scores, replaces disease signal, or invalidates R4.
+- `fusion/17_r4_ra_stch_seed43.yaml`;
+- `fusion/18_r4_ra_stch_seed44.yaml`.
 
-No main-model training, no Test loader iteration, no hyperparameter tuning, and no Stage-5 reopening are authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
+These use the same fixed R3 architecture, semantic pseudo cache, warm-up, auxiliary/agreement terms, optimizer, and RA-STCH controller constants as seed42. No tuning or config edits are authorized.
+
+The resulting three-seed RA-STCH evidence will be compared pairwise against the already-frozen Equal, Static-STCH, and corrected Progress controls on seeds42/43/44. The audit asks two separate questions:
+
+1. does RA-STCH improve over Equal weighting repeatably?
+2. does RA-STCH add value beyond the simpler Static/Progress balancing controls?
+
+No optimized trial-012 hyperparameters are used for this isolation test. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -267,6 +274,20 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - calibration is mixed by task/metric and is diagnostic only;
 - Stage-6 item 8 is CLOSED;
 - next sole atomic task is TASK-006B, the frozen R4 corpus-identity probe required by Stage-6 item 9.
+
+### MANAGER-DECISION-064 — Accept TASK-006B; close corpus probe; assign isolated RA-STCH audit
+
+- TASK-006B passed manager review and was merged via PR #56;
+- firewall commit `3ba0fcce68550eccf61a34d4e20e55a4111212f4` preceded final evidence `ec258e16373f38adabc03213bde8b4d65f14d30b`;
+- probe report SHA256: `3361de90e0cb26f14e15f639bb54ef4f7d29d54232b72fb39f154d7f7105a4dc`;
+- no main-model retraining, Test-loader iteration, source change, config change, or probe tuning occurred;
+- three-seed true corpus AUROC means: audio `0.791292`, video `0.705505`, projected A+V `0.750650`, task-fused `0.759832`, gates `0.551605`, logits `0.575197`;
+- task-fused minus projected-A+V AUROC deltas were `+0.024588/-0.000165/+0.003123`, mean `+0.009182`;
+- frozen interpretations are `STRONG CORPUS-ID DECODABILITY FLAG NOT TRIGGERED` and `FUSION AMPLIFICATION OF CORPUS DECODABILITY NOT SUPPORTED`;
+- corpus identity remains structurally coupled to observed-task identity; no causal shortcut or disease-signal replacement claim is authorized;
+- no separate domain-mitigation experiment is triggered by this probe;
+- Stage-6 corpus-probe item 9 is CLOSED;
+- next sole atomic task is TASK-006C: complete the original fixed-composition RA-STCH ablation on true seeds43/44 and compare three-seed evidence against Equal/Static/Progress.
 
 ## 10. Historical Evidence
 
