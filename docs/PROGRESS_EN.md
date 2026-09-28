@@ -14,9 +14,9 @@ Final Test authorized: **no**.
 
 Current atomic task: **TASK-006A-FIX1 — exact shuffled-pseudo derangement correction and rerun**.
 
-Expected Codex branch: `codex/task-006a-fix1`.
+Expected Codex branch: `codex/task-006a` (explicitly authorized reuse for this corrective pass).
 
-`codex/task-006a` was reviewed and **REJECTED / NOT MERGED** because its cache builder did not implement the frozen circular-shift mapping exactly. TASK-006A remains scientifically unresolved until FIX1 passes.
+`codex/task-006a` was reviewed and **NOT MERGED** because its cache builder did not implement the frozen circular-shift mapping exactly. The same branch is explicitly authorized for correction; TASK-006A remains scientifically unresolved until FIX1 passes.
 
 ## 2. Default Context Policy
 
@@ -148,7 +148,7 @@ Each scientific claim must map to an ablation or negative control. Negative resu
 
 Purpose: correct the exact permutation semantics of the shuffled-pseudo negative control and rerun the same three-seed Equal control without tuning.
 
-The rejected `codex/task-006a` branch is not merged and its three shuffled runs are **superseded diagnostic evidence only**. They do not close the claim gate.
+The existing `codex/task-006a` branch is **not merged** and is explicitly reused for this correction. Its first three shuffled runs are **superseded diagnostic evidence only** and do not close the claim gate. Codex must first merge the current `origin/main` into this existing branch; reset/rebase/force-push are not authorized.
 
 Required exact mapping for each task:
 
@@ -239,9 +239,19 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - rejected builder used `source_rows = roll(random_order, 1)` but assigned `derived[field][missing] = source[field][source_rows]`; the frozen contract requires destinations to be `random_order`, i.e. `derived[field][random_order] = source[field][roll(random_order, 1)]`;
 - rejected builder also included an unauthorized conditional fixed-point repair; exact circular shift requires no repair;
 - calibration reporting used `shuffled - matched` per seed and omitted the required three-seed mean `matched - shuffled` calibration deltas;
-- PR/merge for `codex/task-006a` is forbidden; its cache SHA `678571febcf6ce85f2bf7aedb4770b255a138a0cdaff5ea3f04a92606afbd814` and three runs are superseded diagnostic evidence only;
-- assign exactly one corrective task, `TASK-006A-FIX1`, on a fresh branch from current manager-updated main;
+- the existing `codex/task-006a` must not be merged until FIX1 passes; its cache SHA `678571febcf6ce85f2bf7aedb4770b255a138a0cdaff5ea3f04a92606afbd814` and first three runs are superseded diagnostic evidence only;
+- assign exactly one corrective pass, `TASK-006A-FIX1`, on the **same** `codex/task-006a` branch;
 - FIX1 is a reproducibility correction, not tuning. It authorizes exactly three new corrective shuffled Equal runs on seeds42/43/44.
+
+### MANAGER-OVERRIDE-061 — Reuse codex/task-006a for FIX1
+
+- owner explicitly prefers one branch per logical task; no new `codex/task-006a-fix1` branch;
+- reuse of existing `codex/task-006a` is explicitly authorized despite the normal no-reuse rule;
+- Codex must fetch and merge current `origin/main` into `codex/task-006a` before corrective implementation so MANAGER-DECISION-060/OVERRIDE-061 are in branch history;
+- this one merge from `origin/main` into the task branch is explicitly manager-authorized;
+- do not reset, rebase, overwrite, or force-push the branch;
+- preserve the original rejected commits/runs as superseded evidence, then append a new corrective firewall commit and final evidence commit;
+- exactly three new corrective production runs remain authorized.
 
 ## 10. Historical Evidence
 
