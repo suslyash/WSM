@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-006A-FIX2 — bind the corrected configs to the verified exact cache and rerun**.
+Current atomic task: **TASK-006B — frozen R4 corpus-identity probe on TRAIN→DEV**.
 
-Expected Codex branch: `codex/task-006a` (same logical task branch; reuse remains authorized).
+Expected Codex branch: `codex/task-006b`.
 
-FIX1 corrected the builder and produced the verified exact cache, but its three production configs still referenced the old rejected cache. Therefore FIX1 production evidence is **NOT ACCEPTED**. TASK-006A remains scientifically unresolved until FIX2 runs use the exact cache path.
+`TASK-006A` is complete and merged. Stage-6 shuffled/mismatched pseudo-target negative-control item 8 is CLOSED with narrow support for sample-specific pseudo alignment.
 
 ## 2. Default Context Policy
 
@@ -144,40 +144,23 @@ The detailed contract is in [plan/STAGE_6.md](plan/STAGE_6.md). At high level it
 
 Each scientific claim must map to an ablation or negative control. Negative results are retained. Test protocols remain monitoring-only and cannot drive decisions.
 
-## 7. Active Task — TASK-006A-FIX2
+## 7. Active Task — TASK-006B
 
-Purpose: correct the **cache binding only** and rerun the same three-seed shuffled Equal negative control.
+Purpose: execute the PLAN-required **corpus probe** on the frozen R4 RA-STCH candidate without retraining the main model.
 
-Manager review of FIX1 accepted these pieces:
+Use the three frozen R4 checkpoints:
 
-- corrected exact builder mapping: `destination_order = order`, `source_order = roll(order, 1)`;
-- no fixed-point repair;
-- fresh exact cache path:
-  `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001_exact_fix1.pt`;
-- fresh exact cache SHA256:
-  `e4baf2a2eea9dc7703e73b7956971b0d571eedda55fc8e6984750270712cf0f9`;
-- source SHA before/after:
-  `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`;
-- permutation SHA256 D/P:
-  `1dcfde36463f21d2d2d525d70f6642c6b599cc23534f3cb47ffc41953ec4d4b8` /
-  `847f8e2cf156cd0d4ecb28f5269d5cc79fd5943c6605f44c57c78528ecc6d767`;
-- fixed points D/P `0/0`;
-- acceptance Hamming D/P `646/1788`;
-- preserved coverage/class balance and tuple multisets.
+| Seed | Config | Selected epoch | Checkpoint SHA256 | DEV Mean |
+|---:|---|---:|---|---:|
+| 42 | `fusion/37_r4_ra_stch_optuna_selected_seed42.yaml` | 11 | `104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a` | 0.8191424538 |
+| 43 | `fusion/38_r4_ra_stch_optuna_confirm_seed43.yaml` | 10 | `6af4a4ed21040aff4db2906b0adc8aa5fd27a4b72c375fbb67f68de04ab8446e` | 0.7614450000 |
+| 44 | `fusion/39_r4_ra_stch_optuna_confirm_seed44.yaml` | 11 | `b06fec6912b27cd19d811b72b2c3c08cd1b0a6c826b637f87a314e3976b88c17` | 0.7801390000 |
 
-FIX1 production is rejected because configs31/32/33 at both firewall commit `096b720` and final commit `d5fbbc5` still pointed to:
+The probe fits deterministic diagnostic linear classifiers on TRAIN and evaluates **DEV only** for corpus identity (`depression` vs `parkinson`) from frozen internal representations. It also records gate distributions by corpus and a shuffled-TRAIN-label sanity control.
 
-`.../shuffled_missing_targets_seed6001.pt`
+This audit may establish that corpus identity is linearly decodable, and whether task-conditioned fusion amplifies that decodability relative to the equal-dimensional projected A+V representation. It **cannot** by itself establish that corpus identity causes the disease scores, replaces disease signal, or invalidates R4.
 
-instead of the verified exact cache:
-
-`.../shuffled_missing_targets_seed6001_exact_fix1.pt`.
-
-The FIX1 DEV metrics/checkpoint SHA values exactly reproduced the first rejected runs, consistent with this wrong cache binding.
-
-FIX2 changes no research semantics beyond binding all three configs to the verified exact cache and assigning distinct FIX2 run names. Exactly three new production runs are authorized: seeds42/43/44.
-
-The same `codex/task-006a` branch is reused. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
+No main-model training, no Test loader iteration, no hyperparameter tuning, and no Stage-5 reopening are authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -270,6 +253,20 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - do not rebuild or overwrite the verified exact cache; verify it read-only by path/SHA/metadata/invariants before production;
 - assign exactly one narrow correction: update the three configs to the exact cache, use distinct FIX2 run names, firewall, then run exactly seeds42/43/44 again;
 - reuse `codex/task-006a`; no new Codex branch; no tuning.
+
+### MANAGER-DECISION-063 — Accept TASK-006A-FIX2; close negative-control item 8; assign corpus probe
+
+- TASK-006A-FIX2 passed manager review and was merged via PR #54;
+- accepted exact negative-control cache SHA256: `e4baf2a2eea9dc7703e73b7956971b0d571eedda55fc8e6984750270712cf0f9`;
+- FIX2 firewall `24fd49ba614514b462422b46baf8ae1c5d0b3c98` preceded final evidence `07c149d4661a4a8afd11f53fcc557e57b5239126`;
+- exactly three accepted FIX2 runs used the exact cache and seeds42/43/44;
+- shuffled three-seed DEV Mean `0.7371180000` vs matched Equal `0.7791726667`;
+- matched-minus-shuffled Mean delta `+0.0420546667`; matched exceeds shuffled on `3/3` seeds;
+- therefore `SAMPLE-SPECIFIC PSEUDO ALIGNMENT CLAIM SUPPORTED BY THIS NEGATIVE CONTROL`;
+- interpretation remains narrow: no missing-label correctness, comorbidity, significance, or final-promotion claim;
+- calibration is mixed by task/metric and is diagnostic only;
+- Stage-6 item 8 is CLOSED;
+- next sole atomic task is TASK-006B, the frozen R4 corpus-identity probe required by Stage-6 item 9.
 
 ## 10. Historical Evidence
 
