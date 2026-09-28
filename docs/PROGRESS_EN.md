@@ -662,3 +662,25 @@ Firewall smoke passed for configs17/18 using TRAIN-only canonical mixed-corpus r
 - controller weights remained within frozen `[0.2,0.8]` bounds.
 
 `git diff --check`, `git diff origin/main -- src`, and `git diff origin/main -- configs` passed. No source/config/script changes occurred. The mandatory firewall commit must be pushed before exactly two production runs in order: seed43, then seed44.
+
+
+### TASK-006C — isolated RA-STCH balancing audit
+
+Status: complete. Branch: `codex/task-006c`. Firewall commit `45b17ebb6d54acb602ba9698677a37b47292e38d` was pushed before production. Only the two authorized production runs occurred, in order, with no seed42 rerun, sweep, retry, config change, or optimized trial-012 run:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/17_r4_ra_stch_seed43.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/fusion/18_r4_ra_stch_seed44.yaml
+
+Retained seed42 was not rerun: selected epoch 13, DEV D/P/Mean `0.700992/0.864298/0.782645`, checkpoint SHA256 `53397e3bbcbfc95abd30bdf63fec018a28f0effc2d92d66231061fb2d051254a`. New production identities: seed43 run `r4_ra_stch_seed43_c1_2026-09-28_16-07_wsm_av_r3_disease_query_model_39bc2679`, MLflow ID `25b36566c88046cd98614595fa682523`, FINISHED, selected epoch 4, DEV D/P/Mean `0.698839/0.864829/0.781834`, checkpoint SHA256 `aa75298c6b557eda3d7e8594a77b0c55661abd9c67cd4ed6b4f1687b8eba4262`; seed44 run `r4_ra_stch_seed44_c1_2026-09-28_16-12_wsm_av_r3_disease_query_model_49a0dea2`, MLflow ID `3d3ade0154b64f73817c6d5dc2685411`, FINISHED, selected epoch 4, DEV D/P/Mean `0.679620/0.826765/0.753193`, checkpoint SHA256 `7d9510cfef6f4a871e5447c7142aa30e4ef23798576d735f45efc7ff4774f916`. Selection used DEV/mean_score only.
+
+Three-seed RA DEV evidence (seed42/43/44): D mean/std/range `0.6931503333/0.0117669580/0.021372`; P `0.8519640000/0.0218245890/0.038064`; Mean `0.7725573333/0.0167749060/0.029452`. Same-seed RA minus Equal D/P/Mean: seed42 `-0.011506/+0.020956/+0.004725`; seed43 `-0.004460/+0.008786/+0.002163`; seed44 `-0.028357/-0.025113/-0.026734`. Three-seed RA minus Equal means: D/P/Mean `-0.0147743333/+0.0015430000/-0.0066153333`.
+
+Same-seed RA minus Static-STCH D/P/Mean: seed42 `-0.024085/+0.014813/-0.004636`; seed43 `-0.000106/+0.011645/+0.005770`; seed44 `-0.022452/-0.026857/-0.024654`. Same-seed RA minus corrected Progress D/P/Mean: seed42 `-0.000253/-0.009056/-0.004654`; seed43 `-0.022758/+0.001698/-0.010530`; seed44 `-0.022351/-0.020443/-0.021397`. Best-simple (`max(Static,Progress)`) RA Mean deltas: seed42 `-0.004654`; seed43 `-0.010530`; seed44 `-0.024654`; mean `-0.0132793333`. RA minus contextual corrected R3-B means (D/P/Mean `0.696178/0.857996/0.777087`) is `-0.0030276667/-0.0060320000/-0.0045296667`.
+
+Frozen claims: `RA-STCH BALANCING CONTRIBUTION OVER EQUAL NOT SUPPORTED`; `RA-STCH ADVANTAGE OVER SIMPLER BALANCING NOT SUPPORTED`. Rule A fails because RA three-seed Mean is below Equal despite exceeding Equal on 2/3 seeds; Rule B fails all same-seed best-simple Mean comparisons and both simpler three-seed Mean comparisons.
+
+Selected-epoch controller diagnostics (alpha D/P; progress D/P; grad-norm EMA D/P; grad-cosine EMA; reliability EMA D/P; pseudo scale): seed42 `0.269192/0.730808; +0.020070/-0.151804; 0.248995/0.121096; +0.009814; 0.671974/0.773563; 1.0`; seed43 `0.353600/0.646400; +0.001794/-0.366308; 0.451421/0.248391; -0.030544; 0.672728/0.770895; 0.2`; seed44 `0.362685/0.637315; -0.051906/-0.264870; 0.280293/0.130971; +0.014310; 0.671132/0.781050; 0.2`. All diagnostics are finite; alpha is within `[0.2,0.8]`, seed-specific rather than identical, grad-cosine range is `-0.030544` to `+0.014310`, reliability D range `0.671132–0.672728`, P range `0.770895–0.781050`.
+
+Post-freeze DEV-only calibration/gate audit used observed counts D/P `621/312` for every seed and no Test rows. RA three-seed means: D Brier/ECE-15 `0.2505394063/0.2257061193`, P `0.0952518079/0.0757453021`; task audio-gate mean/sample-std D `0.3630868495/0.1935827980`, P `0.3701813122/0.1922030300`. RA minus frozen Equal calibration means: D Brier/ECE `-0.0015246377/-0.0058562747`, P `+0.0046632639/+0.0142875391`. RA minus corrected Progress: D `+0.0025287953/+0.0075696203`, P `+0.0100845399/+0.0059937391`.
+
+Same-epoch Test monitoring was read only after each selected checkpoint was frozen and did not affect selection, calibration, comparison, or claims: seed42 TEST_NONE/SOFT/HARD `0.777133/0.767804/0.760071`; seed43 `0.746138/0.739737/0.729451`; seed44 `0.797072/0.798145/0.805330`. No Test row was used in post-hoc diagnostics. Frozen pseudo coverage remains D/P `376/1801`, with class counts D `376/0` and P `212/1589`. Stage-5 optimization remains closed; Stage 6 remains active; Stage 7, Text/Description, and Final Test remain locked.
