@@ -593,3 +593,26 @@ Firewall passed for all three frozen configurations/checkpoints: checkpoint file
 Local AUROC synthetic checks passed for perfect `1.0`, reversed `0.0`, and tied constant `0.5`; the deterministic zero-initialized float64 LBFGS probe sanity check passed. Frozen probe settings are encoded in the script: TRAIN-only population standardization, class-balanced weighted BCE, weight-only L2 `1e-4`, and LBFGS `lr=1.0`, `max_iter=250`, `tolerance_grad=1e-10`, `tolerance_change=1e-12`, `history_size=50`, `strong_wolfe`. `git diff --check` passed and `git diff origin/main -- src` was empty. No main-model training occurred.
 
 Mandatory firewall commit and push must precede the single full-probe command.
+
+
+### TASK-006B — frozen R4 corpus probe
+
+Status: complete; Stage-6 corpus-probe item 9 evidence produced. Full command executed exactly once after firewall push:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python scripts/common/run_r4_corpus_probe.py --output /media/maxim/Programs/Features/WSM/stage6_corpus_probe/r4_corpus_probe_v1.json
+
+External report: `/media/maxim/Programs/Features/WSM/stage6_corpus_probe/r4_corpus_probe_v1.json`; SHA256 `3361de90e0cb26f14e15f639bb54ef4f7d29d54232b72fb39f154d7f7105a4dc`. Firewall commit: `3ba0fcce68550eccf61a34d4e20e55a4111212f4`; final evidence commit follows. Frozen checkpoint paths/SHA: seed42 `logs/wsm_mm_pd_dep_v1/optuna_r4_ra_stch_base_seed42_2026-09-28_01-54_wsm_av_r3_disease_query_model_r4-ra-stch-optuna-v1-18c6-012_0ce9c7a4/checkpoints/epoch=11_dev_mean_score=0.8191.pt` / `104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a`; seed43 `logs/wsm_mm_pd_dep_v1/r4_ra_stch_optuna_trial012_confirm_seed43_2026-09-28_12-01_wsm_av_r3_disease_query_model_12038580/checkpoints/epoch=10_dev_mean_score=0.7614.pt` / `6af4a4ed21040aff4db2906b0adc8aa5fd27a4b72c375fbb67f68de04ab8446e`; seed44 `logs/wsm_mm_pd_dep_v1/r4_ra_stch_optuna_trial012_confirm_seed44_2026-09-28_12-07_wsm_av_r3_disease_query_model_41bc602b/checkpoints/epoch=11_dev_mean_score=0.7801.pt` / `b06fec6912b27cd19d811b72b2c3c08cd1b0a6c826b637f87a314e3976b88c17`.
+
+Canonical counts were TRAIN `6325` (depression `2665`, parkinson `3660`) and DEV `933` (depression `312`, parkinson `621`) for each seed. All six representations completed with dimensions `audio_projected=160`, `video_projected=160`, `projected_av=320`, `task_fused=320`, `gates=4`, `logits=2`. Probes used TRAIN-only standardization, CPU float64 zero initialization, class-balanced weighted BCE, weight-only L2 `1e-4`, and exact LBFGS settings from NEXT_TASK. No Test loader was iterated or inspected; no main-model training or re-selection occurred; no source/config changes occurred.
+
+Per-seed DEV AUROC (true / shuffled; true-minus-shuffled):
+
+- seed42: audio `0.774320 / 0.559834; +0.214486`, video `0.708318 / 0.460408; +0.247910`, projected_av `0.746470 / 0.510075; +0.236395`, task_fused `0.771058 / 0.609119; +0.161939`, gates `0.674398 / 0.670047; +0.004351`, logits `0.619214 / 0.637986; -0.018771`.
+- seed43: audio `0.785747 / 0.608938; +0.176808`, video `0.715998 / 0.511288; +0.204710`, projected_av `0.740028 / 0.577640; +0.162388`, task_fused `0.739863 / 0.476501; +0.263362`, gates `0.711853 / 0.707002; +0.004852`, logits `0.616097 / 0.629000; -0.012903`.
+- seed44: audio `0.813808 / 0.613521; +0.200287`, video `0.692199 / 0.483515; +0.208684`, projected_av `0.765453 / 0.530611; +0.234841`, task_fused `0.768575 / 0.541605; +0.226971`, gates `0.268565 / 0.278382; -0.009817`, logits `0.490281 / 0.646946; -0.156664`.
+
+Three-seed true AUROC mean/sample std: audio `0.791292/0.020300`, video `0.705505/0.011934`, projected_av `0.750650/0.013012`, task_fused `0.759832/0.017222`, gates `0.551605/0.244405`, logits `0.575197/0.073718`. Shuffled true-control means: audio `0.594098`, video `0.485070`, projected_av `0.539442`, task_fused `0.542408`, gates `0.551810`, logits `0.637977`. Task-fused minus projected_av AUROC deltas by seed: `+0.024588`, `-0.000165`, `+0.003123`; mean `+0.009182`, below the frozen amplification gate.
+
+Gate audit audio-weight mean depression-minus-parkinson: seed42 depression query `-0.123735`, Parkinson query `-0.125313`; seed43 `-0.090391`, `-0.091659`; seed44 `-0.037737`, `-0.046210`. Full mean/q25/median/q75/sample-std distributions are in the external report.
+
+Frozen interpretation strings: `STRONG CORPUS-ID DECODABILITY FLAG NOT TRIGGERED`; `FUSION AMPLIFICATION OF CORPUS DECODABILITY NOT SUPPORTED`. Corpus identity is structurally coupled to which disease label is observed, so this remains a risk diagnostic; no causal shortcut, disease-signal replacement, R4 promotion/demotion, mitigation, or significance claim is made. Stage-5 optimization remains closed; Stage 6 remains active; Stage 7, Text/Description, and Final Test remain locked.
