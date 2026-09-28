@@ -4630,3 +4630,91 @@ Keep fixed: grad_ema=0.9, reliability_ema=0.9, weight_min=0.2, weight_max=0.8, p
 
 This bundle is a family-capacity/search comparison, not a final promotion test. The manager will choose the next family only after auditing all 60 seed42 trials.
 
+### MANAGER-REVIEW-055 — Triple Optuna production accepted provisionally; evidence/handoff correction required before merge
+
+Status: acceptance blocked only on evidence/handoff completeness. No retraining is authorized.
+
+Audited branch:
+
+- `codex/task-005h-triple-optuna`;
+- branch base is exact task-definition commit `9e8dcb3ddd03b65a4b8605752a832a13c450b9ae`;
+- branch is exactly three commits ahead of main:
+  1. firewall `cbfdad1f1d3e8838975b716589e8d168eb677e87`;
+  2. production/evidence `9633fec7ad725abdb095e73cfc6795dec87d4103`;
+  3. top-three summary `c61a587e11318e24b59975d84f4c867582de1009`.
+- no pull request existed at manager audit time;
+- branch diff contains only the six authorized configs, optional audit script, and `docs/PROGRESS_EN.md`;
+- all source diffs are empty.
+
+Accepted implementation/firewall evidence:
+
+- all three frozen search spaces match TASK-005H exactly: 6 / 7 / 10 variables;
+- all three use native Chimera Optuna with `n_trials: 20` and objective `dev/mean_score`, mode `max`;
+- firewall commit precedes every metric-bearing production trial;
+- frozen audio SHA is exact:
+  `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`;
+- R4 pseudo-cache SHA is exact:
+  `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`;
+- parameter-cap proofs recorded:
+  - Candidate B max trainable fusion params `710530 <= 1000000`;
+  - R3/R4 max trainable model params `602119 <= 736004`;
+- registered TRAIN-only forward/loss/backward smokes passed;
+- Candidate B frozen audio remained absent from optimizer groups and received no gradients;
+- unknown-label masking and R4 pseudo-detachment/observed-truth precedence were checked;
+- R4 controller source was DEV-only;
+- no model/loss/DataModule/callback/plugin source changed.
+
+Accepted production evidence:
+
+- exactly 60 new seed42 metric-bearing trials are recorded as completed:
+  - Candidate B: 20/20;
+  - corrected R3-B: 20/20;
+  - corrected R4 RA-STCH: 20/20;
+- required family order was preserved;
+- no seed43/44, Stage6/7, Text/Description, or Final Test run occurred;
+- Test streams were monitoring-only and were not reported as influencing selection/search.
+
+Frozen DEV facts from the branch evidence:
+
+| Family | Objective winner | DEV D | DEV P | DEV Mean | Safe count | Strict non-regression count |
+|---|---|---:|---:|---:|---:|---:|
+| Candidate B | `bd81-003` | 0.730860 | 0.902321 | 0.8165907903 | 0/20 | 0/20 |
+| corrected R3-B | `5990-018` | 0.732198 | 0.899651 | 0.8159243728 | 0/20 | 0/20 |
+| corrected R4 RA-STCH | `18c6-012` | 0.759025 | 0.879259 | 0.8191424538 | 4/20 | 1/20 |
+
+Frozen audio reference remains D/P/Mean
+`0.7479183895 / 0.8277353635 / 0.7878268765`.
+
+Manager interpretation at this audit:
+
+- Candidate B objective winner beats audio Mean strongly but fails even the relaxed safe depression floor.
+- corrected R3-B objective winner has the same failure pattern.
+- corrected R4 RA-STCH trial `18c6-012` is the only reported objective winner that also clears exact audio D and P non-regression, and is also the highest reported DEV Mean across all 60 trials.
+- This makes R4 trial `012` the leading DEV-only candidate for later confirmation, but it is NOT yet a promoted/final method and no seed confirmation is authorized until the evidence correction below passes.
+
+Blocking evidence/handoff gaps:
+
+1. TASK-005H required a tracked per-family record of all 20 trials with:
+   - trial number/id;
+   - generated config path;
+   - exact sampled values;
+   - run name;
+   - selected epoch;
+   - DEV D/P/Mean;
+   - trainable parameter count;
+   - selected checkpoint path/SHA256 if available.
+   The branch currently points to local machine-readable sweep manifests but does not reproduce the complete 60-trial ledger in tracked evidence.
+2. The required final handoff omitted most mandatory fields: firewall SHA, final evidence SHA, exact search spaces, sweep paths/studies, 20/20/20 counts, objective winners, safe counts/winners, strict counts, parameter-cap proof, source-diff statement, and no-seed43/44/no-posthoc statements.
+3. Codex wrote `Manager conclusion: nominate ...` inside its own progress evidence. Codex was explicitly forbidden to choose/promote a family. That sentence must be relabeled as a Codex observation/recommendation or removed. Only this manager review may make the manager-level interpretation.
+4. Codex handoff says `Stage 5 remains complete`; authoritative state is instead Stage 5 **active/reopened for optimization**, with Stage 6 paused.
+
+Decision:
+
+- do NOT merge the branch yet;
+- reuse the same branch `codex/task-005h-triple-optuna` by explicit manager authorization for exactly one evidence-only corrective task;
+- do NOT rerun training, Optuna, evaluation, or any Test loader;
+- do NOT change any config, source file, search space, run selection, or metric;
+- append complete 60-trial tracked evidence from the existing three manifests/artifacts, correct the unauthorized manager wording and Stage-5 status, produce the exact required six-section handoff, and stop.
+
+Recommended next atomic task: TASK-005H-TRIPLE-OPTUNA-C1 — evidence-only completion and handoff correction on the existing branch.
+
