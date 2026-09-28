@@ -863,3 +863,12 @@ Ablation three-seed means/std/ranges: D 0.714447/0.020775/0.041082, P 0.868369/0
 DEV-only audit observed D/P counts 621/312. Ablation means D Brier/ECE 0.189869/0.105671 and gate mean/std 0.369660/0.144342; P 0.078377/0.060888 and gate 0.448038/0.134718. Full-minus-ablation deltas: D Brier/ECE -0.010944/-0.035667 and gate +0.032136/+0.004420; P +0.011571/+0.028951 and gate +0.042792/-0.004565. Controller diagnostics were finite; selected alpha D/P: seed42 0.418806/0.581194, seed43 0.265542/0.734458, seed44 0.365922/0.634078. Reliability EMA D/P: 0.500000/0.769233, 0.500000/0.781396, 0.500000/0.779168. D accepted count was zero with fallback 0.5; P accepted count 1801 with classes 212/1589; pseudo scale was 1.0.
 
 Same-epoch Test monitoring was read only after freeze: seed42 0.796484/0.803648/0.815369, seed43 0.815810/0.820375/0.837140, seed44 0.775684/0.778415/0.789896 for NONE/SOFT/HARD. Test affected no decision and no Test rows entered the audit. No correctness, missing-label, comorbidity, significance, causality, or final-promotion claim is made. git diff --check passed; forbidden source scopes and src/audio were unchanged; only authorized paths differ from origin/main.
+
+
+### TASK-006G firewall
+
+Branch codex/task-006g. Added only an optional modality_available_override to the semantic DataModule/collate path. Null/default behavior passed NaN-safe tensor comparison against the canonical full semantic collate; configs49/50/51 are equivalent to refs37/38/39 except run_name and [true,false] override. Config validation passed for all three.
+
+TRAIN-only firewall passed before production: full pseudo cache SHA 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945, accepted counts D/P 376/1801, class counts D 376/0 and P 212/1589; no-video availability was [true,false] for every row; trainable parameters remained 295239. Model weights were exactly audio 1/video 0, features_video exactly zero, video_aux_valid all false, audio_aux_valid all true. A strongly perturbed raw video tensor left logits, loss, and all non-video gradients unchanged within 1e-7; video-only gradients were zero or None. Accepted pseudo supervision produced finite nonzero active-path gradients; pseudo targets/reliability were detached; controller diagnostics were finite. No optimizer step and no DEV/Test iteration occurred. Forbidden source scopes and src/audio remained unchanged.
+
+Firewall verification was completed with no production run started.

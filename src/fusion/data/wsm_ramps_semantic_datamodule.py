@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+from functools import partial
 from numbers import Integral
 from pathlib import Path
 from typing import Any
@@ -70,8 +71,10 @@ class _PseudoDataset(Dataset):
         return sample
 
 
-def collate_wsm_ramps_semantic(samples: list[dict[str, Any]]) -> Batch:
+def collate_wsm_ramps_semantic(samples: list[dict[str, Any]], modality_available_override: tuple[bool, bool] | None = None) -> Batch:
     batch = collate_wsm_av_fusion(samples)
+    if modality_available_override is not None:
+        batch.masks["modality_available"] = torch.tensor(modality_available_override, dtype=torch.bool).expand(len(samples), -1).clone()
     batch.masks["pseudo_accept_mask"] = torch.stack([s["pseudo_accept_mask"].bool() for s in samples])
     batch.inputs["pseudo_targets"] = torch.stack([s["pseudo_targets"].float() for s in samples])
     batch.inputs["pseudo_reliability"] = torch.stack([s["pseudo_reliability"].float() for s in samples])
@@ -83,11 +86,19 @@ class WSMRampsSemanticDataModule(WSMAVFusionDataModule):
     """Base A+V datasets with immutable accepted RAMPS pseudo fields on TRAIN."""
 
     def __init__(self, pseudo_cache_path: str,
+                 modality_available_override: Any = None,
                  expected_accepted_counts: Any = EXPECTED_ACCEPTED,
                  expected_positive_counts: Any = EXPECTED_POSITIVE,
                  expected_negative_counts: Any = EXPECTED_NEGATIVE,
                  **kwargs: Any) -> None:
+        if modality_available_override is not None:
+            if (not isinstance(modality_available_override, (list, tuple)) or len(modality_available_override) != 2
+                    or any(not isinstance(value, bool) for value in modality_available_override)
+                    or not any(modality_available_override)):
+                raise WSMAVFusionDataError("modality_available_override must be exactly two booleans with at least one true value")
+            modality_available_override = (modality_available_override[0], modality_available_override[1])
         super().__init__(**kwargs)
+        self.modality_available_override = modality_available_override
         def contract(value: Any, name: str) -> tuple[int, int]:
             if not isinstance(value, (list, tuple)) or len(value) != 2:
                 raise WSMAVFusionDataError(f"{name} must contain exactly two non-negative integers")
@@ -178,7 +189,7 @@ class WSMRampsSemanticDataModule(WSMAVFusionDataModule):
         }, train=True)
         self.val_dataset = _PseudoDataset(self.val_dataset, {}, train=False)
         self.test_dataset = {name: _PseudoDataset(dataset, {}, train=False) for name, dataset in self.test_dataset.items()}
-        self.collate_fn = collate_wsm_ramps_semantic
+        self.collate_fn = partial(collate_wsm_ramps_semantic, modality_available_override=self.modality_available_override)
 
     def describe_context(self, context: Any) -> None:
         super().describe_context(context)
