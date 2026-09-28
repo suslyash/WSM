@@ -164,110 +164,23 @@ Start with a transparent normalized formula and class-specific thresholds. Learn
 
 Train an analysis-only corpus probe. If representations nearly identify corpus, test balanced sampling, train-only corpus normalization, domain-adversarial ablation, metadata restrictions, or stricter OOD filtering. Accept an intervention only if DEV/Mean_Score and negative transfer improve.
 
-## 5. Stages
+## 5. Stage Index
 
-### Stage 0 — Reproducible base
+The active high-level roadmap and current status live in [PROGRESS_EN.md](PROGRESS_EN.md).
+Detailed stage contracts are split so agents load only the stage relevant to the current task.
 
-Tasks:
+| Stage | Status | Detailed plan |
+|---|---|---|
+| 0. Reproducible base | COMPLETE | [plan/STAGE_0.md](plan/STAGE_0.md) |
+| 1. Manifest and partial-label contract | COMPLETE | [plan/STAGE_1.md](plan/STAGE_1.md) |
+| 2. Video | COMPLETE | [plan/STAGE_2.md](plan/STAGE_2.md) |
+| 3. Text/description | DEFERRED | [plan/STAGE_3.md](plan/STAGE_3.md) |
+| 4. Fusion baselines | COMPLETE | [plan/STAGE_4.md](plan/STAGE_4.md) |
+| 5. RAMPS | CLOSED NEGATIVE | [plan/STAGE_5.md](plan/STAGE_5.md) |
+| 6. Ablations and claims audit | ACTIVE | [plan/STAGE_6.md](plan/STAGE_6.md) |
+| 7. Final evaluation | LOCKED | [plan/STAGE_7.md](plan/STAGE_7.md) |
 
-1. restore the provider required by audio without editing src/audio;
-2. create configs/wsm_mm_pd_dep_v1/audio/00_frozen_baseline.yaml from the best run;
-3. verify plugin/registry;
-4. verify required instrumentation and dev/mean_score monitor;
-5. keep new helper scripts under scripts/<modality>;
-6. prove src/audio is unchanged.
-
-Gate: clean plugin import, audio model registered, canonical config valid/self-contained, shared experiment_name present, and empty audio diff.
-
-### Stage 1 — Manifest and partial-label contract
-
-Create one manifest with:
-
-    segment_id, video_id, speaker_id, corpus, split,
-    y_depression, y_parkinson,
-    observed_depression, observed_parkinson,
-    audio_available, video_available,
-    text_available, description_available
-
-Add audit reports, cache fingerprints, unified split identity, and separate DEV/Test dataloaders.
-
-Gate: no video split leakage; current train/dev/test speaker independence is accepted from the dataset-owner split contract despite unavailable speaker_id and must be recorded as an assumption rather than a measured identity audit; unknown never maps to zero; counts/missing streams saved machine-readably; Test absent from fit validation.
-
-### Stage 2 — At most two video families
-
-V1: DEPART-like uniform temporal sequence, YOLOv8 single-class human-body ROI detection/cropping per sampled frame, frozen CLIP frame encoding, projection, temporal Transformer, masked pooling, two sigmoid heads.
-
-V2: V1 plus task-specific class prototypes, classwise prototype/MLP gating, and controlled contrastive ablation.
-
-Gate: reproducible preprocessing/cache, extraction failure report, one DEV winner selected without Test.
-
-### Stage 3 — At most two text/description families [DEFERRED UNTIL AFTER STAGES 4-6]
-
-T1: audited-language transcript encoder with mask-aware pooling and two heads.
-
-T2: T1 plus cached observable description/semantic feature and simple T/D gating. Include prompt/model revision in the fingerprint and manually audit a stratified sample.
-
-Gate: at most two configs, diagnosis-free prompt, one DEV-selected representation.
-
-### Stage 4 — Honest multimodal baselines [COMPLETE — NO SAFE STRONG-AUDIO FUSION WINNER]
-
-- F0: simple masked late/gated fusion.
-- F1: sparse masked two-head MTL with no pseudo-labeling.
-- F2: TACME-like task-aware relation bank with observed loss; add PAGB comparator only if budget permits.
-- Owner-authorized pre-RAMPS strong-audio ablation: replace the pooled `audio_cls` fusion branch with the frozen DEV-selected historical temporal-audio checkpoint through a fusion-side adapter; do not edit `src/audio`.
-- The first strong-audio residual run produced a valid negative result, but its randomly initialized residual path did not start from the exact frozen-audio function. The owner therefore authorizes one bounded audio-first temporal-fusion research sprint before RAMPS rather than continuing one hand-designed model at a time.
-- The sprint may implement/train up to three seed-42 candidate fusion models in one manager task. All candidates MUST keep the exact historical temporal audio checkpoint frozen, MUST start with final logits exactly equal to the frozen audio base logits, and MUST use video only through a zero-initialized additive correction path.
-- Candidate architectures are chosen by Codex from a manager-bounded design space emphasizing the stronger audio modality: zero-init residual fusion, task-specific audio-query temporal-video attention, audio-confidence/gated video correction, and/or one F2-like directed temporal relation variant. Exact internal details may vary within the fixed parameter/compute caps, but the candidate manifest MUST be frozen before the first training run.
-- All candidates use the same canonical data, seed=42 screening protocol, trainable-only AdamW, DEV-only selector, and four evaluation streams every epoch. TEST_NONE/SOFT/HARD remain monitoring-only and MUST NOT influence candidate design/ranking.
-- The screening goal is to exceed frozen audio DEV Mean_Score=0.7878268765 while avoiding a >1.0 absolute percentage-point DEV Score drop on either task. A single-seed screen may nominate a candidate only; promotion still requires later multi-seed confirmation.
-- RAMPS Stage 5 is deferred until this bounded audio-first temporal-fusion sprint is completed or explicitly stopped by the manager.
-
-Gate: same canonical splits/metric and DEV-only selector; exact frozen-audio reproduction at initialization for every candidate; no Test-driven search; at most three screened candidate models; preserve all negative results; nominate at most one DEV winner for later multi-seed confirmation.
-
-### Stage 5 — RAMPS [ACTIVE]
-
-- R1: disease teachers calibrated only on the corresponding observed-task DEV data; soft cross-corpus targets, warm-up, separate thresholds, stop-gradient teacher.
-- R2: uncertainty, multimodal agreement, OOD distance, coverage curves; semantic agreement only after the base reliability mechanism.
-- R3: disease-query fusion, task-conditioned modality gates, availability masks, auxiliary unimodal agreement heads.
-- R4: equal weights, static STCH, PAGB/progress comparator, and RA-STCH.
-
-R-full includes only components that improve DEV and do not worsen calibration/negative transfer.
-
-Gate: missing head receives a non-zero direct gradient on the other corpus; observed truth wins; accepted class balance/coverage logged; gradients finite; gains not explained only by parameter count; final composition frozen before Test.
-
-### Stage 6 — Ablations and claims audit
-
-Required:
-
-1. F1 sparse MTL;
-2. + task-aware fusion;
-3. + direct pseudo-supervision;
-4. + uncertainty/reliability;
-5. + semantic evidence;
-6. + RA-STCH;
-7. remove each modality;
-8. shuffled/mismatched pseudo-target negative control;
-9. corpus probe;
-10. equal-parameter control if size grows materially.
-
-Log DEV scores, UAR/MF1, ECE/Brier, pseudo coverage by class, task gradient norms/cosines, negative-transfer deltas, and gate distributions. Use 3 seeds for ablations.
-
-If a dual-annotated audit subset exists, measure missing-label precision/recall/calibration but do not use it for ordinary training.
-
-Gate: each claim maps to an ablation; negative results are retained; final config/thresholds are immutable.
-
-### Stage 7 — Final evaluation
-
-After freeze:
-
-1. train final compared methods on at least 5 seeds;
-2. choose every checkpoint only by DEV/Mean_Score;
-3. run separate TEST_NONE/SOFT/HARD evaluation once;
-4. report per-task UAR/MF1/Score and Mean_Score;
-5. report mean, standard deviation, confidence interval, and paired comparison where applicable;
-6. trace every table entry to config, commit, checkpoint, and MLflow run.
-
-Gate: no Test-driven revision; complete traceability; claims match annotation evidence.
+Closed-stage files and the historical progress archive are **optional context**. Do not load them unless the active task or manager explicitly requires historical evidence.
 
 ## 6. Experiment Matrix
 
