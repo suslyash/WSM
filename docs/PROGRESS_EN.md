@@ -708,3 +708,36 @@ Validated all three configs with `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv
 Firewall command completed with TRAIN-only forward/loss/backward checks for all three configs: frozen semantic cache SHA `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`; accepted counts D/P `376/1801`, classes D `376/0`, P `212/1589`; accepted rows present; trainable parameters `403079`; pseudo targets/reliability detached; controller diagnostics finite and reliability EMA updated from accepted reliability. Deterministic pseudo-target perturbation left total loss and model gradients unchanged within strict `1e-12` tolerance because pseudo scale is zero. No optimizer step and no DEV/Test iteration occurred. `git diff origin/main -- src` and `git diff origin/main -- configs` were empty; `git diff --check` passed.
 
 Mandatory firewall commit/push precedes exactly three production runs in order seed42, seed43, seed44.
+
+
+### TASK-006D — three-seed no direct pseudo-supervision ablation
+
+Status: complete; Stage-6 direct pseudo-supervision ablation evidence produced. Firewall commit `5a5a657` was pushed before production. Exactly three production runs occurred, in order, with no retries, sweep, extra seed, optimized-trial rerun, or post-firewall config change:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/ablations/40_no_direct_pseudo_seed42.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/ablations/41_no_direct_pseudo_seed43.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/ablations/42_no_direct_pseudo_seed44.yaml
+
+Runs were FINISHED in MLflow: seed42 `06355f9a57154ccf8201595ff3982098`, seed43 `8b2eeb1879a840bbbeaf72d7e081999e`, seed44 `289fd655d74e4e75a89a50af7df32b49`. DEV/mean_score-only selected checkpoints:
+
+| Seed | Epoch | DEV D/P/Mean | Checkpoint SHA256 |
+|---:|---:|---|---|
+| 42 | 7 | `0.750015/0.849786/0.799900` | `d0991ddf92b8fd556d1c57dfa3c17b3b083e5b16a1e21d04592cece804b57669` |
+| 43 | 19 | `0.683769/0.770704/0.727236` | `f5958bd638b021836e9ead892815c17822579fb796d7e074ad61c6a86fc96892` |
+| 44 | 12 | `0.706529/0.858468/0.782498` | `d67232b2ba3395ced7a1ac95e95aacfbdaa354ce68ee5e507f37954f54fd968c` |
+
+No-direct three-seed DEV means/sample SDs: D `0.7134376667/0.0336590313`, P `0.8263193333/0.0483595209`, Mean `0.7698780000/0.0379402494`. Frozen full trial-012 means are D/P/Mean `0.7352563333/0.8385606667/0.7869088179`; full-minus-ablation mean deltas are `+0.0218186667/+0.0122413333/+0.0170308179`. Full minus ablation per-seed Mean deltas are seed42 `+0.0192424538`, seed43 `+0.0342090000`, seed44 `-0.0023590000`. The predeclared gate passes (`2/3` per-seed DEV Mean wins, higher three-seed Mean, and task means no more than `0.010` lower), so the exact frozen claim is: `DIRECT PSEUDO-SUPERVISION CONTRIBUTION SUPPORTED`. This concerns only the direct pseudo BCE term.
+
+Selected-epoch controller diagnostics (alpha D/P; progress D/P; grad-norm EMA D/P; grad-cosine EMA; reliability EMA D/P; pseudo scale): seed42 `0.312667/0.687333; +0.190917/-0.493318; 0.279859/0.266622; 0.000000; 0.674348/0.757363; 0.000000`; seed43 `0.212604/0.787396; -0.137111/-0.608890; 0.437248/0.243887; 0.000000; 0.673802/0.779818; 0.000000`; seed44 `0.256048/0.743952; +0.094125/-0.245362; 0.386038/0.230013; 0.000000; 0.663937/0.782318; 0.000000`. All finite; alpha remains within `[0.2,0.8]`. Accepted pseudo coverage remained D/P `376/1801`, classes D `376/0` and P `212/1589`; reliability/controller paths remained active.
+
+Post-freeze DEV-only calibration/gate audit iterated only `dm.val_dataset`, with observed counts D/P `621/312` per seed and no Test row. Per-seed `(D Brier, D ECE-15, D audio-gate mean/std; P Brier, P ECE-15, P audio-gate mean/std)`:
+
+- seed42: `0.180180/0.110249/0.433490/0.195184; 0.084544/0.045940/0.559094/0.182210`
+- seed43: `0.264118/0.231195/0.376595/0.144412; 0.160619/0.153661/0.437323/0.140837`
+- seed44: `0.218597/0.182075/0.430556/0.156280; 0.087115/0.079878/0.490820/0.121299`
+
+Three-seed no-direct calibration/gate means: D Brier/ECE `0.2209647345/0.1745065810`, P `0.1107593512/0.0931596507`, audio gate D mean/std `0.4135470291/0.1652921041`, P `0.4957457086/0.1481153195`. Frozen full means were D Brier/ECE `0.1789253730/0.0700041175`, P `0.0899480473/0.0898388979`, gate D `0.4017960926/0.1487621441`, P `0.4908300142/0.1301527048`; full-minus-ablation deltas respectively `-0.0420393616/-0.1045024635`, `-0.0208113039/-0.0033207529`, `-0.0117509365/-0.0165299600`, `-0.0049156944/-0.0179626147`. No recalibration or threshold tuning occurred.
+
+Same-epoch Test monitoring was read only after each DEV checkpoint was frozen: seed42 TEST_NONE/SOFT/HARD `0.803498/0.812067/0.803166`, seed43 `0.805364/0.801955/0.811135`, seed44 `0.796826/0.802473/0.793822`. Test did not affect selection, audit, comparison, or claim; no Test row was used in post-hoc diagnostics. No pseudo-label correctness, missing-label recovery, comorbidity recovery, significance, domain mitigation, promotion, or demotion claim is made. Stage-5 optimization remains closed; Stage 6 remains active; Stage 7, Text/Description, and Final Test remain locked.
+
+Final scope checks: `git diff --check` passed; `git diff origin/main -- src` and `git diff origin/main -- configs` are empty; only configs40/41/42 and this ledger differ from origin/main.
