@@ -5085,3 +5085,79 @@ Frozen robust gate: `ROBUST THREE-SEED CONFIRMATION FAIL`. Seed42 passes the rel
 Firewall/production integrity: firewall commit `e0f326d` was pushed before production; exactly two new runs occurred; no source or configs 31-36 diffs exist; no Test-driven decision, seed42 rerun, extra restart, Optuna, post-hoc tuning, Stage 6/7, Text/Description, or Final Test work occurred.
 
 Plan status: Stage 5 active/reopened; Stage 6 paused; Stage 7 locked; Final Test locked.
+
+### MANAGER-DECISION-057 — Accept R4 confirmation failure, close Stage 5 negative, activate Stage 6
+
+Status: TASK-005I-R4-CONFIRM accepted and integrated; Stage 5 is closed with a negative robust-confirmation result. Stage 6 is now active.
+
+Integration:
+
+- PR #46 merged to `main` as `4021122150aa67072869fc90bf644e18bf8b1a2e`.
+- confirmation firewall commit:
+  `e0f326dbfc0d62759218dbf8869f3530a8e78476`;
+- final confirmation evidence:
+  `bddf32a7e008a4fdeff831e479fba7d352ca6b0d`;
+- exactly two new production runs occurred:
+  seed43 once and seed44 once;
+- seed42 was not rerun;
+- no Optuna, extra restart, post-hoc hyperparameter change, source change, or Test-driven decision occurred.
+
+Frozen three-seed confirmation evidence for R4 RA-STCH trial `18c6-012`:
+
+| Seed | DEV D | DEV P | DEV Mean | Relaxed safe | Strict D/P non-regression |
+|---:|---:|---:|---:|---|---|
+| 42 | 0.759025 | 0.879259 | 0.8191424538 | yes | yes |
+| 43 | 0.718527 | 0.804363 | 0.7614450000 | no | no |
+| 44 | 0.728217 | 0.832060 | 0.7801390000 | no | no |
+
+Three-seed aggregates:
+
+- D mean/std: `0.7352563333 / 0.0211467766`;
+- P mean/std: `0.8385606667 / 0.0378688091`;
+- Mean mean/std: `0.7869088179 / 0.0294384420`;
+- seeds beating frozen audio Mean: `1/3`;
+- relaxed-safe seeds: `1/3`;
+- strict non-regression seeds: `1/3`;
+- checkpoint SHA256 values pairwise distinct: yes.
+
+Frozen audio reference remains:
+
+- D `0.7479183895`;
+- P `0.8277353635`;
+- Mean `0.7878268765`.
+
+Three-seed deltas vs frozen audio:
+
+- D mean delta: `-0.0126620562`;
+- P mean delta: `+0.0108253032`;
+- Mean delta: `-0.0009180586`.
+
+Manager conclusion:
+
+- `ROBUST THREE-SEED CONFIRMATION FAIL` is accepted as the final Stage-5 confirmation outcome.
+- The Optuna-selected seed42 gain was not stable across true seeds43/44.
+- Candidate B and corrected R3-B had already produced zero relaxed-safe trials in their 20-trial searches; therefore they are not credible substitutes for a robust promotion path.
+- No currently trained multimodal/RAMPS family robustly exceeds the frozen audio reference across the required three-seed confirmation.
+- Do not reopen Stage 5 by tuning against seed43/44. Those confirmation outcomes are now part of the frozen evidence and must not become new search targets.
+
+Scientific interpretation:
+
+- RAMPS/R4 still provides a meaningful positive Parkinson signal on average, but depression negative transfer remains the limiting failure mode.
+- The Stage-5 result therefore supports a negative-transfer/reliability analysis rather than a final superiority claim.
+- Frozen audio remains the strongest robust reference at this point.
+- This does not invalidate the RAMPS mechanisms as research objects; Stage 6 must now determine which claimed components have causal support and which do not.
+
+PLAN transition:
+
+- Stage 5 — CLOSED NEGATIVE;
+- Stage 6 — ACTIVE;
+- Stage 7 — locked;
+- deferred Stage 3 Text/Description — still deferred until the core Stage-6 research cycle is complete;
+- Final Test — locked.
+
+Next atomic task:
+
+- TASK-006A-BUNDLE — execute the PLAN-required shuffled/mismatched pseudo-target negative control on the matched Equal composition at seeds42/43/44.
+- This is chosen first because it isolates the sample-specific semantic/pseudo alignment claim without the additional RA-STCH controller confound.
+- No tuning is authorized from this negative control.
+
