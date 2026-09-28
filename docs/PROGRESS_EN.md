@@ -436,3 +436,48 @@ TRAIN-only firewall smoke was run for each config at `pseudo_scale=1.0`, with no
 For each smoke, observed supervision and accepted missing-head pseudo supervision produced non-zero finite model gradients; pseudo target/reliability gradients were `None`; main heads, audio/video projections, task queries, and gate gradients were finite and non-zero. `git diff --check` passed and `git diff origin/main -- src` was empty.
 
 No corrective production run may start before this firewall is committed and pushed. The only authorized subsequent commands are the three FIX1 production commands in order: seeds42, 43, 44.
+
+
+### TASK-006A-FIX1   corrective production and claim evidence
+
+Status: complete. Exactly three NEW corrective production runs completed in order: FIX1 seed42, seed43, seed44. The prior rejected runs remain superseded diagnostic evidence and are not reused, averaged, selected among, or counted.
+
+Run identities:
+
+- seed42: `stage6_shuffled_pseudo_equal_seed42_exact_fix1_2026-09-28_14-48_wsm_av_r3_disease_query_model_71480159`; MLflow ID `75fbd0da0dc9439389ca8026a8902405`; status `FINISHED`; artifact URI `/media/maxim/Programs/Projects/WSM/mlruns/5/75fbd0da0dc9439389ca8026a8902405/artifacts`;
+- seed43: `stage6_shuffled_pseudo_equal_seed43_exact_fix1_2026-09-28_14-51_wsm_av_r3_disease_query_model_79faa7ba`; MLflow ID `9a72fa9c8ec5469b821ea0b74b44a379`; status `FINISHED`; artifact URI `/media/maxim/Programs/Projects/WSM/mlruns/5/9a72fa9c8ec5469b821ea0b74b44a379/artifacts`;
+- seed44: `stage6_shuffled_pseudo_equal_seed44_exact_fix1_2026-09-28_14-54_wsm_av_r3_disease_query_model_b4590a31`; MLflow ID `6e760048f620431da3c2dc4f430b2a17`; status `FINISHED`; artifact URI `/media/maxim/Programs/Projects/WSM/mlruns/5/6e760048f620431da3c2dc4f430b2a17/artifacts`.
+
+DEV-only selected checkpoints:
+
+| Seed | Epoch | D UAR/MF1/Score | P UAR/MF1/Score | Mean | Checkpoint SHA256 |
+|---:|---:|---|---|---:|---|
+| 42 | 1 | 0.707796/0.707439/0.707618 | 0.737681/0.756072/0.746877 | 0.727247 | `b24a8be454db99ba735fadf3b040b07a154bfbb78caa52d3ce0664df717c2302` |
+| 43 | 3 | 0.690056/0.689597/0.689827 | 0.766322/0.786323/0.776322 | 0.733074 | `fb0b863509ff10fa19adfc5e07d89e8d8350aa49ea8f58be219a65734da3b8fa` |
+| 44 | 3 | 0.675023/0.674677/0.674850 | 0.801794/0.812994/0.807394 | 0.741122 | `95c523d35dc747cdcd1f102661866b9cb4e846d09fb61bf5d5efa12bf9ca2392` |
+
+FIX1 shuffled DEV D/P/Mean: seed42 `0.707618/0.746877/0.727247`; seed43 `0.689827/0.776322/0.733074`; seed44 `0.674850/0.807394/0.741122`. Three-seed means are D `0.690765`, P `0.7768643333`, Mean `0.7338143333`; sample standard deviations are D `0.0164041257`, P `0.0302621449`, Mean `0.0069670637`.
+
+Matched Equal minus FIX1 shuffled deltas are:
+
+| Seed | D delta | P delta | Mean delta |
+|---:|---:|---:|---:|
+| 42 | +0.004880 | +0.096465 | +0.050673 |
+| 43 | +0.013472 | +0.079721 | +0.046597 |
+| 44 | +0.033127 | +0.044484 | +0.038805 |
+
+Aggregate matched-minus-FIX1 deltas are D `+0.0171600000`, P `+0.0735566667`, and Mean `+0.0453583333`. Matched DEV Mean exceeds FIX1 on `3/3` seeds and in the three-seed mean.
+
+Corrected DEV calibration audit used identical DEV rows/masks; observed counts were D/P `621/312` for every seed and method. Values and deltas are matched minus FIX1:
+
+| Seed | D matched Brier | D FIX1 Brier | D delta | D matched ECE-15 | D FIX1 ECE-15 | D delta | P matched Brier | P FIX1 Brier | P delta | P matched ECE-15 | P FIX1 ECE-15 | P delta |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 42 | 0.250991 | 0.183690 | +0.067301 | 0.216796 | 0.078068 | +0.138728 | 0.090156 | 0.133782 | -0.043627 | 0.041386 | 0.054640 | -0.013254 |
+| 43 | 0.250396 | 0.258899 | -0.008503 | 0.221254 | 0.218367 | +0.002886 | 0.093445 | 0.128615 | -0.035171 | 0.048379 | 0.111257 | -0.062877 |
+| 44 | 0.254806 | 0.262067 | -0.007262 | 0.228324 | 0.219220 | +0.009103 | 0.088165 | 0.120834 | -0.032668 | 0.038778 | 0.082013 | -0.043235 |
+
+Three-seed mean matched-minus-FIX1 calibration deltas: D Brier `+0.0171788832`; D ECE-15 `+0.0502391444`; P Brier `-0.0371552979`; P ECE-15 `-0.0397886039`. This audit is diagnostic only; no recalibration or rerun occurred.
+
+Same-epoch Test monitoring, read only after checkpoint freeze and never used for selection or interpretation: seed42 TEST_NONE/SOFT/HARD Mean `0.820707/0.837643/0.836956`; seed43 `0.745789/0.745173/0.726297`; seed44 `0.780918/0.783803/0.780038`.
+
+Frozen claim result: `SAMPLE-SPECIFIC PSEUDO ALIGNMENT CLAIM SUPPORTED BY THIS NEGATIVE CONTROL`. This is narrow sample-specific pseudo-alignment evidence only. No claim is made about missing-label correctness, comorbidity recovery, significance, or final promotion. No tuning, sweep, retry for metric improvement, post-hoc config change, source change, or additional run occurred.
