@@ -767,3 +767,38 @@ Source SHA before/after: `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a518
 All configs validated successfully. Programmatic equivalence against refs37/38/39 passed: only run_name and pseudo_cache_path differ; seeds remain 42/43/44. Frozen full checkpoint files and all three required SHA256 values verified. TRAIN-only firewall smoke passed for every config: derived cache loaded through the existing DataModule; trainable parameters `295239`; accepted pseudo rows present; pseudo targets/reliability detached; direct pseudo supervision at scale `1.0` produced finite nonzero model gradients; RA reliability EMA updated exactly to `[1.0, 1.0]`; controller diagnostics were finite. No optimizer step and no DEV/Test iteration occurred. `git diff --check` passed and `git diff origin/main -- src` was empty.
 
 Mandatory firewall commit/push precedes exactly three production runs in order seed42, seed43, seed44.
+
+
+### TASK-006E — uniform accepted-reliability production ablation
+
+Status: complete; Stage-6 uncertainty/reliability evidence produced. Firewall commit `6991153` was pushed before production. Exactly three production runs occurred in order, with no sweep, retry, extra seed, or post-firewall cache/config change:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/ablations/43_uniform_reliability_seed42.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/ablations/44_uniform_reliability_seed43.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/ablations/45_uniform_reliability_seed44.yaml
+
+All MLflow runs were FINISHED: seed42 `017b81c94ec24726a61e448723634dd5`, seed43 `c8247e56925f434e8c41b39eac764e82`, seed44 `ebe5d6fcd91749d5893613dc3d8b9d7d`. DEV/mean_score-only selected checkpoints:
+
+| Seed | Epoch | DEV D/P/Mean | Checkpoint SHA256 |
+|---:|---:|---|---|
+| 42 | 11 | `0.755716/0.871962/0.813839` | `e3eeab3eb974c65b4410b35a183e42cbe0d484cc0e21f231543ef0f4ffe51065` |
+| 43 | 10 | `0.720095/0.799734/0.759915` | `76098413ad16314f0575a1b574a8d8bf851fa6bc67039f154acc0272eba94554` |
+| 44 | 11 | `0.729964/0.832060/0.781012` | `3de5862828ddabe36c507990780fe690269079520d99d8a9111f67c11ffb78b7` |
+
+Uniform-reliability three-seed DEV mean/sample SD/range: D `0.7352583333/0.0183912040/0.035621`, P `0.8345853333/0.0361801600/0.072228`, Mean `0.7849220000/0.0271738021/0.053924`. Frozen full trial-012 mean is D/P/Mean `0.7352563333/0.8385606667/0.7869088179`; aggregate full-minus-ablation deltas are D `-0.0000020000`, P `+0.0039753333`, Mean `+0.0019868179`. Per-seed full-minus-ablation D/P/Mean deltas: seed42 `+0.003309/+0.007297/+0.0053034538`, seed43 `-0.001568/+0.004629/+0.0015300000`, seed44 `-0.001747/+0.000000/-0.0008730000`.
+
+The exact frozen gate passes: full DEV Mean wins `2/3` seeds, full three-seed Mean is higher, and full D/P means are not more than `0.010000` below the ablation. Record exactly: `UNCERTAINTY/RELIABILITY CONTRIBUTION SUPPORTED`. This concerns the implemented graded reliability signal as a whole, jointly covering pseudo-BCE reliability weighting and RA reliability input; it does not separate those effects.
+
+Selected controller diagnostics (alpha D/P; progress D/P; grad-norm EMA D/P; grad-cosine EMA; reliability EMA D/P; pseudo scale): seed42 `0.391610/0.608390; +0.143760/+0.082452; 0.379403/0.259262; +0.045782; 1.000000/1.000000; 1.000000`; seed43 `0.249567/0.750433; +0.050214/-0.701800; 0.356957/0.284160; -0.005376; 1.000000/1.000000; 1.000000`; seed44 `0.291637/0.708363; +0.119063/-0.194524; 0.344999/0.259215; +0.009421; 1.000000/1.000000; 1.000000`. All diagnostics were finite and reliability EMA reached exactly `1.0/1.0` for every selected run.
+
+Post-freeze DEV-only calibration/gate audit used observed counts D/P `621/312` per seed and no Test rows. Per-seed `(D Brier, D ECE-15, D audio-gate mean/std; P Brier, P ECE-15, P audio-gate mean/std)`:
+
+- seed42: `0.175110/0.075461/0.419239/0.196150; 0.071968/0.069305/0.549952/0.170355`
+- seed43: `0.188070/0.093503/0.349542/0.111722; 0.111041/0.088769/0.433419/0.103559`
+- seed44: `0.176722/0.062885/0.435787/0.134986; 0.087910/0.115290/0.488573/0.111126`
+
+Uniform-reliability three-seed means: D Brier/ECE `0.1799669747/0.0772831558`, P `0.0903061726/0.0911213222`, audio gate D mean/std `0.4015226364/0.1476193691`, P `0.4906478624/0.1283467487`. Full-minus-ablation deltas: D Brier/ECE `-0.0010416017/-0.0072790382`, P `-0.0003581253/-0.0012824243`, gate D mean/std `+0.0002734562/+0.0011427750`, P `+0.0001821518/+0.0018059562`. No recalibration or threshold search occurred.
+
+Same-epoch Test monitoring was read only after checkpoint freeze: seed42 TEST_NONE/SOFT/HARD `0.801394/0.811302/0.808134`; seed43 `0.820499/0.828142/0.841820`; seed44 `0.822560/0.833204/0.850724`. Test did not affect selection, interpretation, or follow-up, and no Test rows entered the post-hoc audit. No pseudo-label correctness, semantic acceptance correctness, missing-label recovery, comorbidity recovery, significance, or final-promotion claim is made. Stage-5 optimization remains closed; Stage 6 remains active; Stage 7, Text/Description, and Final Test remain locked.
+
+Final scope checks: source cache remained SHA `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`; derived cache remains external at SHA `713b5a3d963c8759e4b2c12f148be12818e72c135b6d1420207cf5aa150bcc40`; `git diff --check` passed; `git diff origin/main -- src` was empty; only the builder, configs43/44/45, and this ledger are tracked changes.
