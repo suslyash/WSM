@@ -4723,3 +4723,28 @@ Verification after production:
 - The frozen firewall evidence remains valid: `TRIPLE_OPTUNA_FIREWALL_PASS`, exact checkpoint/cache hashes, parameter caps, registered forward/loss/backward smoke, and clean plugin registration.
 
 Manager conclusion: nominate corrected R4 RA-STCH trial `012` as the frozen DEV-only family representative for the next manager decision, subject to the project's existing rule that this search result is not a final Test evaluation or automatic promotion. Do not start the next PLAN stage in this task.
+
+
+### TASK-005H top-three systems per experiment series
+
+For manager comparison, the following are the three highest-DEV systems in each completed 20-trial series. Ranking is by native `dev/mean_score`; the displayed D/P/Mean values are from each manifest's selected `target_epoch`. Exact full overrides and run names remain in the corresponding machine-readable manifests.
+
+Candidate B - `candidate-b-optuna-v1`:
+
+1. Trial `bd81-003`, epoch 7: D `0.730860`, P `0.902321`, Mean `0.8165907903`; hidden_dim=192, heads=4, residual_hidden_dim=96, dropout=0.2444412395, lr=5.3461419887e-05, weight_decay=1.5827443588e-05.
+2. Trial `bd81-013`, epoch 3: D `0.708276`, P `0.909590`, Mean `0.8089333700`; hidden_dim=192, heads=4, residual_hidden_dim=256, dropout=0.1745255831, lr=6.2191170079e-05, weight_decay=1.1818705586e-05.
+3. Trial `bd81-011`, epoch 3: D `0.706586`, P `0.908200`, Mean `0.8073930526`; hidden_dim=192, heads=4, residual_hidden_dim=256, dropout=0.1569927600, lr=6.9258745642e-05, weight_decay=0.0160452661.
+
+Corrected R3-B - `r3b-optuna-v1`:
+
+1. Trial `5990-018`, epoch 13: D `0.732198`, P `0.899651`, Mean `0.8159243728`; hidden_dim=192, gate_hidden_dim=160, dropout=0.2985446939, aux_weight=0.4125362047, agreement_weight=0.1217054858, lr=0.0001006369, weight_decay=1.0010668262e-05.
+2. Trial `5990-007`, epoch 13: D `0.733649`, P `0.892362`, Mean `0.8130057836`; hidden_dim=192, gate_hidden_dim=160, dropout=0.3101738312, aux_weight=0.4879906698, agreement_weight=0.0545492871, lr=9.8567037424e-05, weight_decay=7.1143464329e-05.
+3. Trial `5990-017`, epoch 16: D `0.718272`, P `0.896685`, Mean `0.8074784562`; hidden_dim=224, gate_hidden_dim=160, dropout=0.3135675887, aux_weight=0.4152761004, agreement_weight=0.1069819622, lr=0.0001136244, weight_decay=1.0521048587e-05.
+
+Corrected R4 RA-STCH - `r4-ra-stch-optuna-v1`:
+
+1. Trial `18c6-012`, epoch 11: D `0.759025`, P `0.879259`, Mean `0.8191424538`; hidden_dim=160, gate_hidden_dim=96, dropout=0.1003463049, aux_weight=0.4121598308, agreement_weight=0.4812668453, tau=0.0487101635, progress_temperature=0.7232081823, controller_ema=0.7848422072, lr=2.1217831107e-05, weight_decay=0.0001855296.
+2. Trial `18c6-020`, epoch 11: D `0.747331`, P `0.890934`, Mean `0.8191321961`; hidden_dim=160, gate_hidden_dim=96, dropout=0.0950180318, aux_weight=0.4429678745, agreement_weight=0.1962998296, tau=0.0434445224, progress_temperature=0.2998801721, controller_ema=0.8362673982, lr=2.8381991156e-05, weight_decay=0.0122461181.
+3. Trial `18c6-018`, epoch 11: D `0.742336`, P `0.890934`, Mean `0.8166349920`; hidden_dim=160, gate_hidden_dim=96, dropout=0.0643698922, aux_weight=0.4425117188, agreement_weight=0.2453416405, tau=0.0782552816, progress_temperature=0.4308899331, controller_ema=0.8062335150, lr=2.6308858969e-05, weight_decay=0.0160159778.
+
+Analysis note: R4 occupies all three top positions and trials 012 and 020 are nearly tied on DEV Mean, while trial 012 is the only one of these top-three R4 systems that clears the exact frozen-audio D threshold. Candidate B top systems preserve strong P but show D regression; corrected R3-B has the same pattern. This reinforces trial 012 as the DEV-only representative, without changing the no-Test-promotion rule.
