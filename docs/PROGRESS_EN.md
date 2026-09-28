@@ -578,3 +578,18 @@ Three-seed mean matched-minus-FIX2 calibration deltas: D Brier `-0.0047011574`; 
 Same-epoch Test monitoring was read only after checkpoint freeze and did not affect selection or interpretation: seed42 TEST_NONE/SOFT/HARD Mean `0.777046/0.771482/0.778540`; seed43 `0.745789/0.745173/0.726297`; seed44 `0.780918/0.783803/0.780038`.
 
 Frozen claim result: `SAMPLE-SPECIFIC PSEUDO ALIGNMENT CLAIM SUPPORTED BY THIS NEGATIVE CONTROL`. This is narrow sample-specific pseudo-alignment evidence only. No missing-label correctness, comorbidity recovery, significance, or final-promotion claim is made. No tuning, sweep, retry, post-hoc config change, or source change occurred.
+
+
+### TASK-006B — corpus-probe firewall
+
+Status: firewall complete; full probe not yet executed. Branch: `codex/task-006b`, based on manager `origin/main` `6487f1e`.
+
+Implemented only [`scripts/common/run_r4_corpus_probe.py`](../scripts/common/run_r4_corpus_probe.py). The firewall command was:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python scripts/common/run_r4_corpus_probe.py --firewall
+
+Firewall passed for all three frozen configurations/checkpoints: checkpoint files exist and SHA256 matches seed42 `104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a`, seed43 `6af4a4ed21040aff4db2906b0adc8aa5fd27a4b72c375fbb67f68de04ab8446e`, and seed44 `b06fec6912b27cd19d811b72b2c3c08cd1b0a6c826b637f87a314e3976b88c17`. Correct model state loaded at epochs 11/10/11 and models were in eval mode. Tiny two-row canonical TRAIN+DEV extraction passed for every seed; all six representations were finite with exact dimensions audio/video/projected A+V/task fused/gates/logits = `160/160/320/320/4/2`. Corpus labels were read from `sample_meta[*]["corpus"]` only. No Test loader was iterated.
+
+Local AUROC synthetic checks passed for perfect `1.0`, reversed `0.0`, and tied constant `0.5`; the deterministic zero-initialized float64 LBFGS probe sanity check passed. Frozen probe settings are encoded in the script: TRAIN-only population standardization, class-balanced weighted BCE, weight-only L2 `1e-4`, and LBFGS `lr=1.0`, `max_iter=250`, `tolerance_grad=1e-10`, `tolerance_change=1e-12`, `history_size=50`, `strong_wolfe`. `git diff --check` passed and `git diff origin/main -- src` was empty. No main-model training occurred.
+
+Mandatory firewall commit and push must precede the single full-probe command.
