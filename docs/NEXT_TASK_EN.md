@@ -1,89 +1,98 @@
-# TASK-006A-BUNDLE: Stage-6 Shuffled Pseudo-Target Negative Control on the Equal Composition
+# TASK-006A-FIX1: Exact Shuffled-Pseudo Derangement Correction and Three-Seed Rerun
 
 ## Authority and branch
 
-This task follows **MANAGER-DECISION-059** and resumes the previously paused TASK-006A-BUNDLE after the matched-seed frozen-audio confirmation.
+This corrective task follows **MANAGER-DECISION-060**.
 
 Required branch:
 
-    codex/task-006a
+    codex/task-006a-fix1
 
-Start from the current manager-updated `origin/main`, which includes the merged TASK-006-PRE-AUDIO-CONFIRM evidence and MANAGER-DECISION-059.
+Start from the current manager-updated `origin/main`.
 
-Create exactly one new task branch from that `origin/main`.
+Create exactly one fresh task branch from that `origin/main`.
 
-Stage-5 optimization is CLOSED. The prior negative robustness interpretation was superseded by matched-seed audio confirmation; R4 trial 012 is retained as the leading matched-seed candidate for Stage-6 audit. Do not reopen Stage-5 tuning.
+Do **not** reuse, reset, overwrite, force-push, merge, or rebase the rejected branch `codex/task-006a`. It remains preserved as rejected evidence.
+
+Stage-5 optimization is CLOSED. Stage 6 remains ACTIVE. This is a narrow reproducibility correction to TASK-006A, not a tuning task.
+
+## Why FIX1 is required
+
+Manager review rejected `codex/task-006a` despite its apparently strong matched-vs-shuffled result.
+
+The rejected builder did:
+
+    random_order = missing[randperm(...)]
+    source_rows = roll(random_order, 1)
+    derived[field][missing, task] = source[field][source_rows, task]
+
+This is **not** the frozen mapping.
+
+The required mapping is:
+
+    order = missing[randperm(...)]
+    source_order = roll(order, 1)
+    derived[field][order, task] = source[field][source_order, task]
+
+The rejected builder also included a conditional fixed-point repair. That repair is forbidden. A one-position circular shift of a unique `order` already guarantees zero destination/source fixed points for these task sizes.
+
+The rejected branch also reported calibration deltas as `shuffled - matched` and omitted the required three-seed mean `matched - shuffled` calibration deltas.
+
+Therefore the rejected cache and its three runs are superseded diagnostic evidence only and MUST NOT be used to close the claim gate.
 
 ## Goal
 
-Execute the PLAN-required shuffled/mismatched pseudo-target negative control while preserving every non-semantic factor as closely as possible.
+Re-execute the Stage-6 shuffled/mismatched pseudo-target negative control using the **exact frozen within-task circular-shift derangement**.
 
-Use the accepted three-seed Equal full composition as the matched-pseudo reference because:
+Preserve every non-semantic factor:
 
-- it has no dynamic/fixed balancing-controller comparison confound;
-- it uses the exact R3 model;
-- it uses the frozen R2 pseudo path and warm-up;
-- it uses the frozen R3 auxiliary/agreement terms;
-- it has valid matched-pseudo results for seeds42/43/44.
+- canonical rows;
+- observed truth;
+- accepted counts;
+- accepted class balance;
+- pseudo target/reliability/class/calibrated-probability tuple multiset;
+- R3 architecture;
+- Equal loss;
+- optimizer;
+- warm-up;
+- seeds.
 
-Build ONE deterministic negative-control pseudo cache by permuting the complete pseudo-supervision tuple among missing rows within each task while leaving canonical rows and observed truth fixed.
+Run exactly three new corrective production trainings: seeds42,43,44.
 
-Then run the Equal composition at seeds42/43/44 using ONLY that derived shuffled cache.
-
-Exactly three production training invocations are authorized.
-
-This task is an ablation/claims audit. It is NOT a tuning task and cannot reopen Stage 5.
+No sweep. No tuning. No rerun for metric improvement.
 
 ## Required reading
 
 Read in this exact order:
 
-1. AGENTS.md
-2. docs/README.md
-3. docs/PROJECT_REQUIREMENTS.md
-4. docs/PROGRESS_EN.md
-5. docs/plan/STAGE_6.md
-6. docs/NEXT_TASK_EN.md
-7. src/fusion/data/wsm_ramps_semantic_datamodule.py
-8. src/fusion/models/av_r3_disease_query.py
-9. src/fusion/loss/r4_ramps_balance_loss.py
-10. configs/wsm_mm_pd_dep_v1/fusion/13_r4_equal_seed42.yaml
-11. configs/wsm_mm_pd_dep_v1/fusion/19_r4_equal_seed43.yaml
-12. configs/wsm_mm_pd_dep_v1/fusion/20_r4_equal_seed44.yaml
+1. `AGENTS.md`
+2. `docs/README.md`
+3. `docs/PROJECT_REQUIREMENTS.md`
+4. `docs/PROGRESS_EN.md`
+5. `docs/plan/STAGE_6.md`
+6. `docs/NEXT_TASK_EN.md`
+7. `src/fusion/data/wsm_ramps_semantic_datamodule.py`
+8. `src/fusion/models/av_r3_disease_query.py`
+9. `src/fusion/loss/r4_ramps_balance_loss.py`
+10. `configs/wsm_mm_pd_dep_v1/fusion/13_r4_equal_seed42.yaml`
+11. `configs/wsm_mm_pd_dep_v1/fusion/19_r4_equal_seed43.yaml`
+12. `configs/wsm_mm_pd_dep_v1/fusion/20_r4_equal_seed44.yaml`
 
-Do not read the historical progress archive or closed-stage plan files unless a concrete verification question requires them.
+Do not load the historical archive or closed-stage plans unless a concrete verification issue requires them.
+
+You MAY inspect the rejected `codex/task-006a` builder only to verify the manager-identified defect. Do not copy its mapping or its rejected result into the accepted evidence.
 
 ## Allowed tracked files
 
-Codex may modify/add only:
+Codex may add/modify only:
 
-- scripts/common/build_ramps_shuffled_pseudo_negative_control.py
-- configs/wsm_mm_pd_dep_v1/ablations/31_shuffled_pseudo_equal_seed42.yaml
-- configs/wsm_mm_pd_dep_v1/ablations/32_shuffled_pseudo_equal_seed43.yaml
-- configs/wsm_mm_pd_dep_v1/ablations/33_shuffled_pseudo_equal_seed44.yaml
-- docs/PROGRESS_EN.md
+- `scripts/common/build_ramps_shuffled_pseudo_negative_control.py`
+- `configs/wsm_mm_pd_dep_v1/ablations/31_shuffled_pseudo_equal_seed42.yaml`
+- `configs/wsm_mm_pd_dep_v1/ablations/32_shuffled_pseudo_equal_seed43.yaml`
+- `configs/wsm_mm_pd_dep_v1/ablations/33_shuffled_pseudo_equal_seed44.yaml`
+- `docs/PROGRESS_EN.md`
 
 No source file may change.
-
-## Forbidden actions
-
-- Do not modify src/audio.
-- Do not modify src/video.
-- Do not modify src/fusion.
-- Do not modify src/common.
-- Do not modify src/chimera_plugin.py.
-- Do not modify the original semantic pseudo cache.
-- Do not regenerate teachers, semantic embeddings, thresholds, calibration, or acceptance rules.
-- Do not change accepted counts, pseudo class balance, or the multiset of pseudo target/reliability values.
-- Do not change R3 architecture.
-- Do not change Equal loss/formula, auxiliary/agreement coefficients, optimizer, warm-up, or instrumentation.
-- Do not run Static, Progress, RA-STCH, Candidate B, or another Stage-5 model.
-- Do not tune based on negative-control results.
-- Do not use Test for selection, ranking, interpretation, or branching.
-- Do not start another Stage-6 ablation.
-- Do not start Stage 7, Text/Description, or Final Test.
-- Do not claim missing-label correctness, comorbidity, significance, or final-model superiority.
-- Do not reopen Stage-5 optimization or tune against confirmation seeds.
 
 ## Frozen source cache
 
@@ -91,286 +100,329 @@ Source:
 
     /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt
 
-Required SHA256:
+Required source SHA256:
 
     17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945
 
-Required rows:
+Rows:
 
     6325
 
-Required accepted counts D/P:
+Missing D/P:
+
+    2665 / 3660
+
+Accepted D/P:
 
     376 / 1801
 
-Required accepted positive/negative counts:
+Accepted class counts:
 
-- depression: 376 / 0
-- Parkinson: 212 / 1589
+- D positive/negative: `376 / 0`
+- P positive/negative: `212 / 1589`
 
 The source cache is immutable.
 
-## 1. Negative-control cache builder
+## Fresh corrective external cache
 
-Implement:
+The rejected external cache must remain untouched.
 
-    scripts/common/build_ramps_shuffled_pseudo_negative_control.py
+Use this new output path:
 
-This is an executable/reproducibility helper, not reusable training code.
+    /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001_exact_fix1.pt
 
-CLI arguments:
+The builder MUST fail rather than overwrite an existing output path.
 
-    --source
-    --output
-    --shuffle-seed
-
-Frozen invocation:
+Frozen corrective invocation:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 \
       scripts/common/build_ramps_shuffled_pseudo_negative_control.py \
       --source /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt \
-      --output /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001.pt \
+      --output /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001_exact_fix1.pt \
       --shuffle-seed 6001
 
-The script MUST fail rather than overwrite an existing output path.
+If this exact FIX1 path already exists before the task begins, stop and report the conflict. Do not delete or overwrite it.
 
-### Frozen permutation contract
-
-Load the source cache read-only on CPU.
+## Exact permutation contract — MUST be implemented literally
 
 For each task independently:
 
-1. identify rows where `observed_mask[:, task] == False`;
-2. use a deterministic `torch.Generator`:
-   - depression seed = `6001`;
-   - Parkinson seed = `6002`;
-3. generate a random ordering of the missing row indices;
-4. create a derangement by circularly shifting that random ordering by exactly one position;
-5. every missing destination row receives the pseudo tuple from a DIFFERENT missing source row;
-6. observed rows are never sources or destinations.
+1. compute the canonical missing-row IDs:
 
-Permute the following fields together as one aligned tuple for that task:
+       missing = (~observed_mask[:, task]).nonzero(...).flatten()
 
-- `pseudo_accept_mask`;
-- `pseudo_targets`;
-- `pseudo_reliability`;
-- `pseudo_class`;
-- `calibrated_audio_probs`.
+2. construct a CPU `torch.Generator`:
+   - D seed = `6001`
+   - P seed = `6002`
 
-Do not permute:
+3. construct exactly:
 
-- `segment_ids`;
-- `observed_mask`;
-- `observed_targets`;
-- corpus/split identity;
-- teacher/prompt/cache provenance metadata.
+       order = missing[torch.randperm(missing.numel(), generator=generator)]
 
-The derived cache MUST retain the original required `version`, task names, teacher identities, prompt SHA, and other fields needed by `wsm_ramps_semantic_datamodule`.
+4. construct exactly:
 
-Add an extra metadata mapping that does not alter training, for example:
+       source_order = torch.roll(order, shifts=1, dims=0)
 
-    negative_control:
-      type: within_task_missing_row_tuple_derangement
-      source_cache_sha256: <exact source SHA>
-      shuffle_seed: 6001
-      depression_permutation_sha256: ...
-      parkinson_permutation_sha256: ...
-      permuted_fields: [...]
+5. assert:
 
-Do not change the canonical cache version solely for this negative control.
+       torch.all(order != source_order)
 
-## 2. Mandatory cache invariant audit
+6. for EACH field below, assign exactly:
 
-Before saving, and again after loading the derived file, prove:
+       derived[field][order, task] = source[field][source_order, task].clone()
 
-- source SHA256 is exactly the frozen SHA;
+Permuted fields:
+
+- `pseudo_accept_mask`
+- `pseudo_targets`
+- `pseudo_reliability`
+- `pseudo_class`
+- `calibrated_audio_probs`
+
+Forbidden mapping changes:
+
+- do not assign shuffled sources to canonical `missing` destinations;
+- do not sort `order` before assignment;
+- do not repair, swap, rotate, or modify fixed points after the one-position roll;
+- do not add any conditional permutation repair;
+- do not perform rejection sampling;
+- do not change the per-task seeds.
+
+Observed rows must never be a source or destination.
+
+## Permutation audit
+
+For each task retain and audit both tensors:
+
+- `destination_order = order`;
+- `source_order = roll(order, 1)`.
+
+Record a permutation SHA256 over the exact ordered int64 pair matrix:
+
+    stack([destination_order, source_order], dim=1)
+
+Record:
+
+- destination/source fixed points = exactly 0;
+- destination set equals the complete task missing-row set;
+- source set equals the complete task missing-row set;
+- source_order equals `roll(destination_order, 1)` exactly;
+- no repair path exists or executes.
+
+Add negative-control metadata including:
+
+- type;
+- source cache SHA256;
+- shuffle seed;
+- D/P permutation SHA256;
+- permuted fields;
+- fixed-point counts;
+- acceptance-assignment Hamming differences;
+- explicit `mapping: destination_order_to_roll1_source_order`.
+
+Do not change the canonical cache version.
+
+## Mandatory invariant audit — before save and after reload
+
+Prove all of the following:
+
+- source SHA before generation equals the frozen SHA;
+- source SHA **after generation** still equals the frozen SHA;
 - `segment_ids` unchanged exactly;
 - `observed_mask` unchanged exactly;
-- `observed_targets` unchanged exactly including NaN pattern/finite values;
-- no observed row has pseudo acceptance;
-- each task permutation has zero fixed points among missing-row source/destination identities;
-- missing counts remain `2665/3660`;
-- accepted counts remain `376/1801`;
-- accepted class balance remains D `376/0`, P `212/1589`;
-- pseudo target/reliability/class/calibrated-probability tuple multiset over missing rows is preserved exactly per task;
-- rejected entries still have pseudo_target NaN, reliability 0, pseudo_class -1;
-- accepted pseudo targets remain equal to calibrated_audio_probs at accepted entries;
-- accepted reliability remains finite in [0,1];
-- source file SHA is unchanged after generation;
+- `observed_targets` unchanged exactly, including NaN pattern and finite values;
+- explicitly assert that no observed row has pseudo acceptance;
+- missing counts remain D/P `2665/3660`;
+- accepted counts remain D/P `376/1801`;
+- class counts remain D `376/0`, P `212/1589`;
+- complete missing-row tuple multiset is identical per task;
+- rejected entries have target NaN, reliability0, class -1;
+- accepted target equals calibrated audio probability;
+- accepted reliability is finite and in [0,1];
+- exact roll-1 permutation relation holds;
+- zero destination/source fixed points;
 - derived cache SHA256 is recorded;
-- derived cache loads successfully through the existing `wsm_ramps_semantic_datamodule`.
+- derived cache loads through the existing semantic DataModule.
 
-Record per-task permutation SHA256 and the number of rows whose acceptance assignment differs from the original.
+Record D/P acceptance-assignment Hamming differences.
 
-The purpose is to break sample-to-pseudo alignment while preserving coverage/class/reliability distributions.
-
-## 3. Frozen matched reference
-
-Use these accepted matched-pseudo Equal results:
+## Frozen matched Equal reference
 
 | Seed | D Score | P Score | Mean |
-|---|---:|---:|---:|
+|---:|---:|---:|---:|
 | 42 | 0.712498 | 0.843342 | 0.777920 |
 | 43 | 0.703299 | 0.856043 | 0.779671 |
 | 44 | 0.707977 | 0.851878 | 0.779927 |
 
-Matched three-seed means:
+Three-seed matched:
 
-- D `0.707925`
-- P `0.850421`
-- Mean `0.779173`
+- D mean `0.707925`
+- P mean `0.850421`
+- Mean `0.7791726667`
+- Mean sample std `0.0010923664`
 
-Matched three-seed sample std:
+Do not use the rejected shuffled results from `codex/task-006a` for the claim decision.
 
-- D `0.004600`
-- P `0.006475`
-- Mean `0.001092`
+## Corrective configs
 
-## 4. Freeze three negative-control configs before training
-
-Create:
+Create the same tracked config paths:
 
     configs/wsm_mm_pd_dep_v1/ablations/31_shuffled_pseudo_equal_seed42.yaml
     configs/wsm_mm_pd_dep_v1/ablations/32_shuffled_pseudo_equal_seed43.yaml
     configs/wsm_mm_pd_dep_v1/ablations/33_shuffled_pseudo_equal_seed44.yaml
 
-For each seed, copy the corresponding matched Equal config semantics exactly:
+Each must copy the corresponding matched Equal config semantics exactly.
 
-- seed42 from config 13;
-- seed43 from config 19;
-- seed44 from config 20.
+Allowed semantic differences only:
 
-The ONLY semantic changes are:
-
-1. `data.params.pseudo_cache_path` points to the derived shuffled cache;
-2. `run_name` identifies the Stage-6 shuffled negative control.
+1. `data.params.pseudo_cache_path` points to the fresh FIX1 cache;
+2. `run_name` uses the distinct FIX1 name below.
 
 Required run names:
 
-- `stage6_shuffled_pseudo_equal_seed42`
-- `stage6_shuffled_pseudo_equal_seed43`
-- `stage6_shuffled_pseudo_equal_seed44`
+- `stage6_shuffled_pseudo_equal_seed42_exact_fix1`
+- `stage6_shuffled_pseudo_equal_seed43_exact_fix1`
+- `stage6_shuffled_pseudo_equal_seed44_exact_fix1`
 
-All other data/model/loss/optimizer/train/callback/logging settings MUST be identical to the matched Equal config for that seed.
+Everything else must remain identical to matched Equal for the same seed.
 
-## 5. Mandatory pre-run firewall commit
+## Mandatory FIX1 pre-run firewall commit
 
-Before any production run:
+Before any corrective production run:
 
-1. build and audit the derived negative-control cache;
-2. validate all three configs;
-3. programmatically prove config equivalence to matched Equal except cache path/run_name;
-4. build DataModule/model/loss for each seed config;
-5. verify R3 trainable parameter count `403079`;
-6. verify derived cache accepted counts/class balance;
-7. run a tiny TRAIN-only forward/loss/backward at `pseudo_scale=1.0`:
+1. build the fresh FIX1 cache;
+2. perform all pre-save/post-load invariants above;
+3. validate all three configs;
+4. programmatically prove config equivalence except cache path/run_name;
+5. build DataModule/model/loss for each config;
+6. verify R3 trainable params = `403079`;
+7. run TRAIN-only forward/loss/backward at `pseudo_scale=1.0`;
+8. explicitly verify:
    - finite loss;
-   - observed gradients non-zero;
-   - accepted missing-head pseudo gradients non-zero;
-   - pseudo target/reliability receive no gradients;
-   - main heads, projections, task queries, and gate have finite gradients;
+   - at least one observed-supervision contribution has non-zero model gradient;
+   - at least one accepted missing-head pseudo-supervision contribution has non-zero model gradient;
+   - pseudo target/reliability tensors have no gradients;
+   - main heads have finite gradients;
+   - projections have finite gradients;
+   - task queries have finite gradients;
+   - gate has finite gradients;
    - no optimizer step;
    - no DEV/Test loader iteration;
-8. append exact evidence to PROGRESS_EN.md;
-9. commit and push one firewall commit.
+9. run `git diff --check`;
+10. run `git diff origin/main -- src` and require empty output;
+11. append exact firewall evidence to PROGRESS;
+12. commit and push one firewall commit to `origin/codex/task-006a-fix1`.
 
-No production run may begin before that firewall commit exists on origin.
+No corrective production run may start before the firewall commit is visible on origin.
 
-## 6. Exact production sequence
+## Exactly three corrective production runs
 
-Run exactly three new production invocations:
+Run exactly, in order:
 
-1. shuffled Equal seed42;
-2. shuffled Equal seed43;
-3. shuffled Equal seed44.
+1. FIX1 seed42;
+2. FIX1 seed43;
+3. FIX1 seed44.
 
-Use exactly:
+Commands:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path <authorized-config>
+      --config-path configs/wsm_mm_pd_dep_v1/ablations/31_shuffled_pseudo_equal_seed42.yaml
 
-No sweep.
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
+      --config-path configs/wsm_mm_pd_dep_v1/ablations/32_shuffled_pseudo_equal_seed43.yaml
 
-No rerun for metric improvement.
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
+      --config-path configs/wsm_mm_pd_dep_v1/ablations/33_shuffled_pseudo_equal_seed44.yaml
 
-## 7. Selection and Test firewall
+The three rejected runs on `codex/task-006a` are not counted as accepted TASK-006A evidence; they must not be repeated, reused, averaged, or selected among.
 
-For each run:
+No sweep, extra seed, retry for metric improvement, or post-hoc config change.
+
+## Checkpoint/Test firewall
+
+For each FIX1 run:
 
 - checkpoint/epoch selected only by maximum `dev/mean_score`;
-- freeze selected checkpoint before reading same-epoch Test monitoring;
-- TEST_NONE/SOFT/HARD remain mandatory monitoring only;
-- Test must not affect interpretation of the negative control.
+- freeze selected checkpoint identity before reading same-epoch Test monitoring;
+- record checkpoint SHA256;
+- TEST_NONE/SOFT/HARD are monitoring only and may not affect the claim interpretation.
 
-Record selected checkpoint SHA256.
+## Frozen claim rule
 
-## 8. Frozen negative-control interpretation
+Using only matched Equal and the three **FIX1** shuffled results, compute:
 
-After all three shuffled runs, compute:
+- FIX1 shuffled D/P/Mean per seed;
+- FIX1 shuffled three-seed mean and sample std;
+- same-seed `matched - FIX1_shuffled` D/P/Mean deltas;
+- aggregate `matched - FIX1_shuffled` deltas.
 
-- shuffled D/P/Mean per seed;
-- shuffled three-seed mean/sample std;
-- same-seed `matched - shuffled` deltas;
-- three-seed matched-minus-shuffled deltas.
+Sample-specific pseudo alignment is supported only if BOTH:
 
-Evidence SUPPORTS sample-specific pseudo alignment only if BOTH are true:
+1. matched DEV Mean > FIX1 shuffled DEV Mean on at least 2/3 seeds;
+2. matched three-seed DEV Mean > FIX1 shuffled three-seed DEV Mean.
 
-1. matched Equal DEV Mean > shuffled Equal DEV Mean on at least 2 of 3 seeds;
-2. matched Equal three-seed Mean > shuffled Equal three-seed Mean.
-
-If either condition fails, record exactly:
+If either fails, record exactly:
 
     SAMPLE-SPECIFIC PSEUDO ALIGNMENT CLAIM NOT SUPPORTED BY THIS NEGATIVE CONTROL
 
-This interpretation is about sample-specific semantic alignment only.
+If both pass, report support narrowly as sample-specific pseudo-alignment evidence only.
 
-Do NOT claim correctness of the missing disease labels.
+Do not claim missing-label correctness, comorbidity recovery, significance, or final promotion.
 
-## 9. DEV-only calibration audit
+## DEV-only calibration audit — corrected direction
 
-After all selected checkpoints are frozen, compare matched Equal vs shuffled Equal on identical DEV rows/masks for each seed.
+Use identical DEV rows/masks.
 
-For D/P record:
+For each seed and D/P report:
 
 - observed count;
-- Brier;
-- ECE-15.
+- matched Brier;
+- FIX1 shuffled Brier;
+- `matched - FIX1_shuffled` Brier delta;
+- matched ECE-15;
+- FIX1 shuffled ECE-15;
+- `matched - FIX1_shuffled` ECE-15 delta.
 
-Compute three-seed mean calibration deltas:
+Then compute and record **three-seed mean matched-minus-shuffled deltas** for:
 
-    matched - shuffled
+- D Brier;
+- D ECE-15;
+- P Brier;
+- P ECE-15.
 
-Diagnostics only.
+This is diagnostic only. No recalibration or rerun.
 
-No recalibration, threshold changes, or reruns.
+## Required PROGRESS evidence
 
-## 10. Required evidence
+Record:
 
-Record in PROGRESS_EN.md:
+- rejected `codex/task-006a` status = NOT MERGED / superseded diagnostic evidence;
+- FIX1 task/branch;
+- source SHA before and after generation;
+- fresh FIX1 cache path/SHA;
+- exact destination/source mapping contract;
+- D/P permutation hashes;
+- fixed points;
+- destination/source set equality;
+- acceptance Hamming;
+- all invariant results;
+- config-equivalence proof;
+- firewall commands/results and firewall commit SHA;
+- exact three corrective commands;
+- production count = exactly 3 corrective runs;
+- run directories / MLflow IDs/status/artifact URI;
+- selected epochs/checkpoints/SHA256;
+- full DEV D/P UAR/MF1/Score/Mean;
+- same-epoch Test monitoring only after freeze;
+- matched-vs-FIX1 shuffled tables;
+- three-seed means/std and matched-minus-shuffled deltas;
+- frozen claim interpretation;
+- corrected calibration table/deltas and three-seed mean calibration deltas;
+- no Test decision;
+- no tuning/rerun;
+- no `src` changes.
 
-- source cache SHA;
-- derived cache absolute path/SHA;
-- negative-control metadata;
-- permutation hashes;
-- zero-fixed-point proof;
-- original-vs-derived invariant table;
-- acceptance-assignment Hamming differences;
-- exact three configs and validation;
-- firewall command/results;
-- exact three production commands;
-- run directories;
-- MLflow IDs/status/artifact URI;
-- epochs/early stopping;
-- selected DEV-only epoch/checkpoint;
-- checkpoint SHA256;
-- full DEV D/P UAR/MF1/Score and Mean;
-- same-epoch TEST_NONE/SOFT/HARD monitoring only after DEV freeze;
-- three-seed matched/shuffled tables;
-- frozen negative-control interpretation;
-- calibration audit;
-- explicit no-Test-driven-decision statement.
-
-## 11. Scope checks
+## Final scope checks
 
 Run exactly:
 
@@ -380,36 +432,34 @@ Run exactly:
     git diff --stat origin/main...HEAD
     git log -10 --oneline --decorate
 
-The source diff MUST be empty.
-
-The generated negative-control cache is an external artifact and MUST NOT be committed to Git.
+Only the builder, three ablation configs, and PROGRESS may differ from origin/main.
 
 ## Acceptance criteria
 
-TASK-006A-BUNDLE passes only if:
+FIX1 passes only if:
 
-- branch is exactly `codex/task-006a` from current manager-updated `origin/main`;
-- only the script, three ablation configs, and PROGRESS change;
-- original cache remains byte-identical;
-- derived cache is deterministic and clearly marked as a negative control;
-- row/observed-truth identity is unchanged;
-- pseudo tuple is deranged only within each task's missing rows;
-- coverage/class balance/value multisets are preserved;
-- existing semantic DataModule accepts the derived cache;
-- all three configs differ from matched Equal only by cache path/run_name;
-- firewall commit exists before production;
-- exactly three production runs occur;
+- branch exactly `codex/task-006a-fix1` from current manager main;
+- rejected branch is untouched and unmerged;
+- exact destination-order -> roll1-source-order mapping is implemented literally;
+- no fixed-point repair exists;
+- fresh external FIX1 cache is used;
+- source remains byte-identical;
+- all tuple/count/class/observed invariants pass;
+- source SHA is rechecked after generation;
+- semantic DataModule loads the FIX1 cache;
+- configs differ only cache path/run_name;
+- explicit gradient firewall evidence passes;
+- firewall commit precedes all three corrective runs;
+- exactly three corrective production runs occur;
 - no source changes;
-- no tuning/reruns;
 - DEV-only selection;
 - Test monitoring only;
-- selected checkpoint SHA256 recorded;
-- three-seed negative-control interpretation applied exactly;
-- DEV-only calibration audit complete;
+- claim rule uses only matched Equal vs FIX1 runs;
+- calibration deltas use `matched - FIX1_shuffled` and include three-seed mean deltas;
 - branch pushed;
 - main/master untouched.
 
-Passing TASK-006A-BUNDLE closes Stage-6 negative-control item 8 for the matched Equal reference. It does not authorize another Stage-6 task.
+Passing FIX1 closes only Stage-6 shuffled/mismatched negative-control item 8. It authorizes no next task.
 
 ## Required handoff
 
@@ -424,30 +474,33 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch `codex/task-006a`;
-- firewall commit SHA;
-- final evidence commit SHA;
-- pushed-to-origin status;
+- branch `codex/task-006a-fix1`;
+- rejected branch `codex/task-006a` untouched/unmerged;
+- firewall SHA;
+- final evidence SHA;
+- pushed status;
 - main/master untouched;
 - source diff empty;
-- source and derived cache SHA256;
-- permutation hashes/fixed-point counts;
+- source SHA before/after;
+- fresh FIX1 derived SHA;
+- exact mapping statement;
+- permutation hashes/fixed points;
+- acceptance Hamming;
 - preserved coverage/class balance;
-- acceptance-assignment Hamming differences;
-- number of production runs = 3;
-- matched vs shuffled seed42/43/44 D/P/Mean table;
-- three-seed mean/std and deltas;
-- frozen sample-specific-pseudo interpretation result;
-- calibration summary;
+- production runs = exactly 3 corrective runs;
+- matched vs FIX1 shuffled seed42/43/44 D/P/Mean;
+- three-seed mean/std and matched-minus-shuffled deltas;
+- frozen claim result;
+- calibration matched-minus-shuffled per-seed and mean summary;
 - no Test-driven decision;
-- no post-hoc tuning;
-- no missing-label correctness/comorbidity claim;
+- no tuning/rerun;
+- no missing-label correctness/comorbidity/significance/final-promotion claim;
 - Stage 6 active;
-- Stage-5 optimization closed; prior negative robustness interpretation superseded by matched-seed audio confirmation;
+- Stage-5 optimization closed;
 - no Stage7/Text/Final Test.
 
 For section 6 write only:
 
-    Manager review of TASK-006A-BUNDLE; do not start another task.
+    Manager review of TASK-006A-FIX1; do not start another task.
 
-Stop after TASK-006A-BUNDLE.
+Stop.
