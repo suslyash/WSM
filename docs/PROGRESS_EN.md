@@ -812,3 +812,18 @@ Uniform-reliability three-seed means: D Brier/ECE `0.1799669747/0.0772831558`, P
 Same-epoch Test monitoring was read only after checkpoint freeze: seed42 TEST_NONE/SOFT/HARD `0.801394/0.811302/0.808134`; seed43 `0.820499/0.828142/0.841820`; seed44 `0.822560/0.833204/0.850724`. Test did not affect selection, interpretation, or follow-up, and no Test rows entered the post-hoc audit. No pseudo-label correctness, semantic acceptance correctness, missing-label recovery, comorbidity recovery, significance, or final-promotion claim is made. Stage-5 optimization remains closed; Stage 6 remains active; Stage 7, Text/Description, and Final Test remain locked.
 
 Final scope checks: source cache remained SHA `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`; derived cache remains external at SHA `713b5a3d963c8759e4b2c12f148be12818e72c135b6d1420207cf5aa150bcc40`; `git diff --check` passed; `git diff origin/main -- src` was empty; only the builder, configs43/44/45, and this ledger are tracked changes.
+
+
+### TASK-006F — no semantic-enabled depression pseudo path firewall
+
+Status: firewall complete; production runs not started. Branch: `codex/task-006f`, based on manager `origin/main` `6fd035c`.
+
+Authorized source change: [`src/fusion/data/wsm_ramps_semantic_datamodule.py`](../src/fusion/data/wsm_ramps_semantic_datamodule.py) now accepts optional expected accepted/positive/negative count contracts, defaulting exactly to `(376,1801)`, `(376,212)`, `(0,1589)`. Supplied contracts require exactly two non-negative integers; expected missing counts remain fixed at `(2665,3660)` and all other cache invariants are unchanged.
+
+Full backward compatibility passed for configs37/38/39 with omitted parameters: full counts remained D/P `376/1801`, classes D `376/0`, P `212/1589`, and a canonical TRAIN batch was tensor-identical against an isolated clean `origin/main` DataModule implementation.
+
+Builder: [`scripts/common/build_ramps_no_semantic_depression_ablation.py`](../scripts/common/build_ramps_no_semantic_depression_ablation.py). Source SHA before/after: `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`. Derived cache: `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_semantic_ablation/no_semantic_depression_v1.pt`, SHA `aae9d250c5030eab1e68e07ee8af43fe8ebb7286eca621f9fa5c6dd7af283fe6`. Exactly 376 D accepted rows were removed; all 1801 P accepted rows, targets, reliability, and classes were preserved exactly. D fields are neutralized to accept false, NaN targets, zero reliability, and class `-1`.
+
+Configs46/47/48 validated and differ from refs37/38/39 only by run_name, cache path, and the three explicit expected-count contracts. Frozen full checkpoint paths/SHA values were verified. TRAIN-only firewall passed for all three ablation configs: trainable parameters `295239`; D accepted `0`; P accepted `1801`, classes `212/1589`; P pseudo gradients finite/nonzero at pseudo scale `1.0`; D pseudo contribution absent; pseudo tensors detached; P reliability EMA finite (`0.738575935` in the deterministic smoke batch); D reliability EMA uninitialized with controller fallback `0.5`; controller weights/diagnostics finite. No optimizer step and no DEV/Test loader iteration occurred. `git diff --check` passed; all forbidden source scopes (`src/audio`, `src/video`, `src/fusion/models`, `src/fusion/loss`, `src/common/callbacks`) were empty.
+
+Mandatory firewall commit/push precedes exactly three production runs in order seed42, seed43, seed44.

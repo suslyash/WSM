@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+from numbers import Integral
 from pathlib import Path
 from typing import Any
 
@@ -81,8 +82,21 @@ def collate_wsm_ramps_semantic(samples: list[dict[str, Any]]) -> Batch:
 class WSMRampsSemanticDataModule(WSMAVFusionDataModule):
     """Base A+V datasets with immutable accepted RAMPS pseudo fields on TRAIN."""
 
-    def __init__(self, pseudo_cache_path: str, **kwargs: Any) -> None:
+    def __init__(self, pseudo_cache_path: str,
+                 expected_accepted_counts: Any = EXPECTED_ACCEPTED,
+                 expected_positive_counts: Any = EXPECTED_POSITIVE,
+                 expected_negative_counts: Any = EXPECTED_NEGATIVE,
+                 **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        def contract(value: Any, name: str) -> tuple[int, int]:
+            if not isinstance(value, (list, tuple)) or len(value) != 2:
+                raise WSMAVFusionDataError(f"{name} must contain exactly two non-negative integers")
+            if any(isinstance(x, bool) or not isinstance(x, Integral) or int(x) < 0 for x in value):
+                raise WSMAVFusionDataError(f"{name} must contain exactly two non-negative integers")
+            return (int(value[0]), int(value[1]))
+        expected_accepted = contract(expected_accepted_counts, "expected_accepted_counts")
+        expected_positive = contract(expected_positive_counts, "expected_positive_counts")
+        expected_negative = contract(expected_negative_counts, "expected_negative_counts")
         cache_path = Path(pseudo_cache_path).expanduser().resolve()
         if not cache_path.is_file():
             raise WSMAVFusionDataError(f"pseudo cache is missing: {cache_path}")
@@ -134,7 +148,7 @@ class WSMRampsSemanticDataModule(WSMAVFusionDataModule):
         missing_counts = tuple(int((~observed[:, i]).sum()) for i in range(2))
         positive_counts = tuple(int((accepted[:, i] & (pseudo_class[:, i] == 1)).sum()) for i in range(2))
         negative_counts = tuple(int((accepted[:, i] & (pseudo_class[:, i] == 0)).sum()) for i in range(2))
-        if (accepted_counts, missing_counts, positive_counts, negative_counts) != (EXPECTED_ACCEPTED, EXPECTED_MISSING, EXPECTED_POSITIVE, EXPECTED_NEGATIVE):
+        if (accepted_counts, missing_counts, positive_counts, negative_counts) != (expected_accepted, EXPECTED_MISSING, expected_positive, expected_negative):
             raise WSMAVFusionDataError("pseudo accepted/missing/class counts mismatch")
         self.pseudo_accept_mask = accept.clone()
         self.pseudo_targets = pseudo_targets.clone()
@@ -152,9 +166,9 @@ class WSMRampsSemanticDataModule(WSMAVFusionDataModule):
             "pseudo_cache_video_checkpoint_sha256": VIDEO_SHA256,
             "pseudo_cache_prompt_bank_sha256": PROMPT_BANK_SHA256,
             "pseudo_missing_counts": list(EXPECTED_MISSING),
-            "pseudo_accepted_counts": list(EXPECTED_ACCEPTED),
-            "pseudo_accepted_positive_counts": list(EXPECTED_POSITIVE),
-            "pseudo_accepted_negative_counts": list(EXPECTED_NEGATIVE),
+            "pseudo_accepted_counts": list(expected_accepted),
+            "pseudo_accepted_positive_counts": list(expected_positive),
+            "pseudo_accepted_negative_counts": list(expected_negative),
         })
         self.train_dataset = _PseudoDataset(self.train_dataset, {
             "pseudo_accept_mask": self.pseudo_accept_mask,
@@ -170,7 +184,7 @@ class WSMRampsSemanticDataModule(WSMAVFusionDataModule):
         super().describe_context(context)
         context.set("data.pseudo_cache_path", self.audit["pseudo_cache_path"])
         context.set("data.pseudo_cache_sha256", self.audit["pseudo_cache_sha256"])
-        context.set("data.pseudo_accepted_counts", list(EXPECTED_ACCEPTED))
+        context.set("data.pseudo_accepted_counts", self.audit["pseudo_accepted_counts"])
 
 
 @DATAMODULES.register("wsm_ramps_semantic_datamodule")
