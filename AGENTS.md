@@ -6,11 +6,14 @@ These rules apply to the entire repository. They are intended for an implementin
 
 Read these files in order before editing:
 
-1. docs/PROJECT_REQUIREMENTS.md
-2. docs/PLAN.md
+1. docs/README.md
+2. docs/PROJECT_REQUIREMENTS.md
 3. docs/PROGRESS_EN.md
 4. docs/NEXT_TASK_EN.md
-5. the files explicitly named by docs/NEXT_TASK_EN.md
+5. the active-stage plan explicitly named by docs/NEXT_TASK_EN.md, if any
+6. the source/config files explicitly named by docs/NEXT_TASK_EN.md
+
+Do **not** read docs/archive/*, closed-stage plan files, or the full cross-stage PLAN.md by default. They are optional context and should be loaded only when the active task or manager explicitly requires them.
 
 Also inspect git status before changes. Existing user changes are not disposable.
 
@@ -31,8 +34,9 @@ Repository authority order:
 1. current explicit user/manager instruction;
 2. docs/PROJECT_REQUIREMENTS.md;
 3. docs/NEXT_TASK_EN.md;
-4. docs/PLAN.md;
-5. existing implementation conventions.
+4. docs/PROGRESS_EN.md for current stage/status and frozen recent decisions;
+5. the active-stage detail file under docs/plan/ and docs/PLAN.md for planning detail;
+6. existing implementation conventions.
 
 NEXT_TASK_EN cannot waive a project invariant unless the manager explicitly identifies and approves the exact requirement being changed.
 
@@ -143,7 +147,9 @@ Unit tests are optional, but registry/config validation and a forward/loss/backw
 
 ## 7. PROGRESS_EN update format
 
-Do not erase previous evidence. Update the status table and append:
+PROGRESS_EN.md is the compact active ledger, not an unlimited chronological dump.
+
+For the current task, update it with only the evidence needed for manager review and future active-stage context:
 
 - task identifier;
 - complete, partial, or blocked outcome;
@@ -153,6 +159,10 @@ Do not erase previous evidence. Update the status table and append:
 - metrics/artifacts;
 - deviations;
 - blockers and recommended next atomic task.
+
+Do not copy large historical tables or old-stage chronology back into PROGRESS_EN.md. Closed-stage history is preserved under docs/archive/ and is optional context.
+
+Codex must not move, rewrite, or compact historical evidence on its own unless the current task explicitly authorizes a documentation refactor. The manager owns archive/compaction decisions.
 
 Only the manager edits docs/NEXT_TASK_EN.md unless the current task explicitly transfers ownership.
 
