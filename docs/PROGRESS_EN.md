@@ -872,3 +872,29 @@ Branch codex/task-006g. Added only an optional modality_available_override to th
 TRAIN-only firewall passed before production: full pseudo cache SHA 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945, accepted counts D/P 376/1801, class counts D 376/0 and P 212/1589; no-video availability was [true,false] for every row; trainable parameters remained 295239. Model weights were exactly audio 1/video 0, features_video exactly zero, video_aux_valid all false, audio_aux_valid all true. A strongly perturbed raw video tensor left logits, loss, and all non-video gradients unchanged within 1e-7; video-only gradients were zero or None. Accepted pseudo supervision produced finite nonzero active-path gradients; pseudo targets/reliability were detached; controller diagnostics were finite. No optimizer step and no DEV/Test iteration occurred. Forbidden source scopes and src/audio remained unchanged.
 
 Firewall verification was completed with no production run started.
+
+
+### TASK-006G final no-video modality-removal evidence
+
+Status: complete; branch codex/task-006g. The semantic DataModule accepts optional modality_available_override; default null remains backward-compatible and [true,false] forces audio available/video unavailable without changing raw tensors, masks, pseudo fields, labels, IDs, or split membership. Firewall commit: e6ac651. Exactly three production runs were executed after the firewall, in order, with no sweep, retry, tuning, extra seed, or post-firewall change.
+
+Run identities and DEV-only selected checkpoints:
+- seed42 MLflow 56a6fceb846e440e9f5ee4425c64418c, run directory stage6_no_video_trial012_seed42_2026-09-28_20-44_wsm_av_r3_disease_query_model_b26772b5, selected epoch30, checkpoint SHA b5105863d9fd9da293abc5c5fa2e8b466faa2eb62e1ca73700e0696b3d3f4dfd. DEV D UAR/MF1/Score 0.742997/0.742422/0.742710; P 0.778330/0.800766/0.789548; Mean 0.766129.
+- seed43 MLflow f324499e3b7c416582c847e7decf1306, run directory stage6_no_video_trial012_seed43_2026-09-28_20-55_wsm_av_r3_disease_query_model_c36f4ab6, selected epoch14, checkpoint SHA 00f68d7e6a47fa979f3529dcf951c569a6299734cf8760fff4950cf8f181f0bd. DEV D UAR/MF1/Score 0.745238/0.745280/0.745259; P 0.773568/0.796060/0.784814; Mean 0.765037.
+- seed44 MLflow 95321ff8ce334d5e8846ae06f009a616, run directory stage6_no_video_trial012_seed44_2026-09-28_21-03_wsm_av_r3_disease_query_model_cc4c3b54, selected epoch12, checkpoint SHA 45be3f38b6a2dcaada2045b1a05430a5b7aaed32c1fe295816759cd0e85d3775. DEV D UAR/MF1/Score 0.761018/0.760915/0.760966; P 0.764044/0.786530/0.775287; Mean 0.768127.
+
+Same-epoch Test monitoring was read only after each checkpoint freeze. NONE/SOFT/HARD Mean: seed42 0.818529/0.831500/0.845517; seed43 0.776637/0.787068/0.806849; seed44 0.796877/0.817045/0.833882. Test did not affect selection, claim, or follow-up and no Test rows entered the calibration audit.
+
+No-video three-seed DEV mean/std/range: D 0.749645/0.009887/0.018256; P 0.783216/0.007264/0.014261; Mean 0.766431/0.001567/0.003090. Frozen full-minus-no-video deltas: D -0.014389, P +0.055344, Mean +0.020478. Per-seed full-minus-no-video D/P/Mean: seed42 +0.016315/+0.089711/+0.053013; seed43 -0.026732/+0.019549/-0.003592; seed44 -0.032749/+0.056773/+0.012012. The frozen rule fails criterion 3 because full three-seed D is 0.014389 below no-video, exceeding 0.010000. Exact claim: VIDEO MODALITY CONTRIBUTION NOT SUPPORTED.
+
+Selected controller diagnostics alpha D/P; progress D/P; grad-norm EMA D/P; grad-cosine EMA; reliability EMA D/P; pseudo scale:
+- seed42 0.240506/0.759494; +0.124813/-0.597987; 0.548988/0.529721; +0.018974; 0.668266/0.791510; 1.0.
+- seed43 0.258275/0.741725; +0.169270/-0.793759; 0.428030/0.485103; +0.018560; 0.672106/0.773204; 1.0.
+- seed44 0.227573/0.772427; +0.196643/-0.915312; 0.432169/0.476490; +0.035741; 0.663937/0.782318; 1.0.
+Task modality weights were exactly audio 1/video 0 at selected evaluation. TRAIN pseudo cache identity remained SHA 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945 with accepted counts D/P 376/1801 and classes D 376/0, P 212/1589.
+
+Post-freeze DEV calibration audit observed counts were D/P 621/312. Per-seed D Brier/ECE-15: 0.170881/0.063989, 0.173205/0.061858, 0.169655/0.064567. Per-seed P: 0.119443/0.091652, 0.126624/0.101381, 0.130272/0.115606. Audio gate mean/std was exactly 1.000000/0.000000 for all seeds. Ablation calibration means D Brier/ECE 0.171247/0.063471 and P 0.125446/0.102880. Full-minus-ablation calibration deltas: D +0.007678/+0.006533; P -0.035498/-0.013041. No recalibration or threshold search occurred.
+
+Contextual frozen matched temporal-audio DEV values were D/P/Mean seed42 0.747918/0.827735/0.787827, seed43 0.708699/0.811771/0.760235, seed44 0.734396/0.809382/0.771889; no-video minus audio Mean was -0.021698/+0.004802/+0.003762 by seed and -0.006886 in the three-seed mean. This is contextual only and not an architecture-equivalent comparison.
+
+Final checks: config validation passed for configs49/50/51; default full behavior and config equivalence passed; git diff --check passed; src/audio, src/video, src/fusion/models, src/fusion/loss, and src/common/callbacks remained unchanged; no optimizer step or DEV/Test iteration occurred in the firewall; only the authorized DataModule source, configs49/50/51, and this ledger differ from origin/main. No causal, significance, disease-content, missing-label, comorbidity, or final-promotion claim is made. Stage 5 remains closed; Stage 6 remains active; Stage 7, Text/Description, and Final Test remain locked.
