@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-006C — isolated three-seed RA-STCH balancing contribution audit**.
+Current atomic task: **TASK-006D — direct pseudo-supervision ablation on the leading optimized R4 composition**.
 
-Expected Codex branch: `codex/task-006c`.
+Expected Codex branch: `codex/task-006d`.
 
-`TASK-006B` is complete and merged. Stage-6 corpus-probe item 9 is CLOSED: the frozen strong corpus-decodability flag was not triggered and fusion amplification of corpus decodability was not supported.
+`TASK-006C` is complete and merged. Stage-6 RA-STCH balancing contribution item is CLOSED as a negative result: neither contribution over Equal nor advantage over simpler balancing was supported.
 
 ## 2. Default Context Policy
 
@@ -144,30 +144,28 @@ The detailed contract is in [plan/STAGE_6.md](plan/STAGE_6.md). At high level it
 
 Each scientific claim must map to an ablation or negative control. Negative results are retained. Test protocols remain monitoring-only and cannot drive decisions.
 
-## 7. Active Task — TASK-006C
+## 7. Active Task — TASK-006D
 
-Purpose: complete the detailed Stage-6 **RA-STCH balancing contribution** ablation on the original fixed R4 composition.
+Purpose: isolate the **direct pseudo-supervision loss contribution** inside the leading optimized R4 trial-012 composition.
 
-Retain the already-valid corrected RA-STCH seed42 result:
+Frozen full reference remains configs37/38/39 and their selected DEV results:
 
-- config `fusion/16_r4_ra_stch_seed42.yaml`;
-- DEV D/P/Mean `0.700992/0.864298/0.782645`;
-- selected epoch 13;
-- checkpoint SHA256 `53397e3bbcbfc95abd30bdf63fec018a28f0effc2d92d66231061fb2d051254a`.
+| Seed | D | P | Mean |
+|---:|---:|---:|---:|
+| 42 | 0.759025 | 0.879259 | 0.8191424538 |
+| 43 | 0.718527 | 0.804363 | 0.7614450000 |
+| 44 | 0.728217 | 0.832060 | 0.7801390000 |
 
-Run exactly the two previously unrun frozen configs:
+Three-seed full means: D `0.7352563333`, P `0.8385606667`, Mean `0.7869088179`.
 
-- `fusion/17_r4_ra_stch_seed43.yaml`;
-- `fusion/18_r4_ra_stch_seed44.yaml`.
+TASK-006D creates three ablation configs semantically identical to configs37/38/39 except:
 
-These use the same fixed R3 architecture, semantic pseudo cache, warm-up, auxiliary/agreement terms, optimizer, and RA-STCH controller constants as seed42. No tuning or config edits are authorized.
+- distinct run names;
+- pseudo warm-up callback `final_scale: 0.0`.
 
-The resulting three-seed RA-STCH evidence will be compared pairwise against the already-frozen Equal, Static-STCH, and corrected Progress controls on seeds42/43/44. The audit asks two separate questions:
+The loss-level `pseudo_scale` is therefore frozen at zero for every epoch. The semantic cache, accepted masks, pseudo reliability, and RA reliability/controller path are intentionally retained. This isolates the **direct pseudo BCE term only**; it is not a reliability or semantic-acceptance ablation.
 
-1. does RA-STCH improve over Equal weighting repeatably?
-2. does RA-STCH add value beyond the simpler Static/Progress balancing controls?
-
-No optimized trial-012 hyperparameters are used for this isolation test. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
+Exactly three production runs are authorized: seeds42/43/44. No source change or tuning is authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -288,6 +286,21 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - no separate domain-mitigation experiment is triggered by this probe;
 - Stage-6 corpus-probe item 9 is CLOSED;
 - next sole atomic task is TASK-006C: complete the original fixed-composition RA-STCH ablation on true seeds43/44 and compare three-seed evidence against Equal/Static/Progress.
+
+### MANAGER-DECISION-065 — Accept TASK-006C; close RA-STCH contribution claim negative; assign direct pseudo ablation
+
+- TASK-006C passed manager review and was merged via PR #58;
+- firewall commit `45b17ebb6d54acb602ba9698677a37b47292e38d` preceded final evidence `c7d201fe9ff463187827dc3d4a60a7884349c032`;
+- exactly two new frozen RA-STCH runs occurred, seed43 then44; retained seed42 was not rerun;
+- three-seed fixed-composition RA D/P/Mean = `0.6931503333/0.8519640000/0.7725573333`;
+- RA minus Equal Mean by seed = `+0.004725/+0.002163/-0.026734`; aggregate Mean delta `-0.0066153333`;
+- RA minus best simpler balancing Mean by seed = `-0.004654/-0.010530/-0.024654`;
+- therefore `RA-STCH BALANCING CONTRIBUTION OVER EQUAL NOT SUPPORTED`;
+- and `RA-STCH ADVANTAGE OVER SIMPLER BALANCING NOT SUPPORTED`;
+- controller diagnostics remained finite/bounded but do not rescue the failed DEV gates;
+- this negative mechanism result does not automatically demote the separately optimized trial-012 composition, whose hyperparameters differ and which remains the leading matched-seed candidate pending remaining Stage-6 component audits;
+- Stage-6 balancing/RA-STCH claim is CLOSED as negative;
+- next sole atomic task is TASK-006D: remove only the direct pseudo-supervision loss term from optimized trial-012 on seeds42/43/44 while retaining pseudo acceptance/reliability/controller information.
 
 ## 10. Historical Evidence
 
