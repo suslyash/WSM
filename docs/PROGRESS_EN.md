@@ -5012,3 +5012,29 @@ No Test metric may influence this confirmation decision.
 
 Recommended next atomic task: TASK-005I-R4-CONFIRM — freeze exact trial-012 config and run true seeds43/44 once each.
 
+
+
+### TASK-005I-R4-CONFIRM - pre-run firewall complete
+
+Status: partial; evidence firewall passed and was frozen before either true-seed confirmation run.
+
+Required configs created from the selected generated seed42 config:
+
+- `configs/wsm_mm_pd_dep_v1/fusion/37_r4_ra_stch_optuna_selected_seed42.yaml`
+- `configs/wsm_mm_pd_dep_v1/fusion/38_r4_ra_stch_optuna_confirm_seed43.yaml`
+- `configs/wsm_mm_pd_dep_v1/fusion/39_r4_ra_stch_optuna_confirm_seed44.yaml`
+
+Read-only firewall results:
+
+- Config 37 is byte-for-byte equal to `logs/wsm_mm_pd_dep_v1/optuna_r4_ra_stch_base_seed42_2026-09-28_01-54_wsm_av_r3_disease_query_model_r4-ra-stch-optuna-v1-18c6-012_0ce9c7a4/r4-ra-stch-optuna-v1-18c6-012.yaml`.
+- Config 38 differs from config 37 only by `seed: 43` and `run_name: r4_ra_stch_optuna_trial012_confirm_seed43`.
+- Config 39 differs from config 37 only by `seed: 44` and `run_name: r4_ra_stch_optuna_trial012_confirm_seed44`.
+- `chimera-ml validate-config` passed for configs 38 and 39.
+- All ten frozen selected hyperparameters matched exactly: hidden_dim 160, gate_hidden_dim 96, dropout 0.10034630487649018, aux_weight 0.41215983081110485, agreement_weight 0.48126684525457264, tau 0.0487101634503887, progress_temperature 0.7232081822527684, controller_ema 0.7848422072252504, lr 2.1217831107180076e-05, weight_decay 0.0001855295766514827.
+- Checkpointing and early stopping both monitor only `dev/mean_score` in `max` mode.
+- Frozen selected seed42 checkpoint SHA256 verified as `104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a`.
+- R4 pseudo cache SHA256 verified as `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`.
+- No source changes and no configs 31-36 changes are present; `git diff --check` passed.
+- No production training, sweep, DEV/Test evaluation, or optimizer step has started.
+
+The firewall commit must be pushed before running exactly the two authorized commands: seed43 once, then seed44 once. No seed42 rerun, extra restart, seed45/46, or hyperparameter change is authorized.
