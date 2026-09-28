@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-006G — no-video modality-removal ablation on optimized R4 trial-012**.
+Current atomic task: **TASK-006H — no-audio online-input modality-removal ablation on optimized R4 trial-012**.
 
-Expected Codex branch: `codex/task-006g`.
+Expected Codex branch: `codex/task-006h`.
 
-`TASK-006F` is complete and merged. Stage-6 semantic-evidence contribution via depression pseudo acceptance is CLOSED as NOT SUPPORTED under the frozen three-seed gate.
+`TASK-006G` is complete and merged. The video-removal half of Stage-6 modality item 7 is CLOSED as NOT SUPPORTED under the frozen gate.
 
 ## 2. Default Context Policy
 
@@ -144,28 +144,28 @@ The detailed contract is in [plan/STAGE_6.md](plan/STAGE_6.md). At high level it
 
 Each scientific claim must map to an ablation or negative control. Negative results are retained. Test protocols remain monitoring-only and cannot drive decisions.
 
-## 7. Active Task — TASK-006G
+## 7. Active Task — TASK-006H
 
-Purpose: execute the first required Stage-6 modality removal: **remove video from the leading optimized R4 trial-012 composition while keeping the architecture and parameter count fixed**.
+Purpose: execute the second required Stage-6 modality removal: **remove the online audio input branch from the leading optimized R4 trial-012 composition while keeping architecture, parameter count, and the frozen pseudo-training path fixed**.
 
-The existing R3 model already supports per-sample modality availability. TASK-006G may make one narrow DataModule/collate generalization so configs can force a fixed availability vector. Full-method default behavior must remain bit/tensor-identical.
+The availability override infrastructure already merged in TASK-006G is reused unchanged.
 
-For the no-video ablation, every TRAIN/DEV/Test-monitoring batch must expose:
+For the no-audio ablation, every TRAIN/DEV/Test-monitoring batch must expose:
 
-- audio available = true;
-- video available = false.
+- audio available = false;
+- video available = true.
 
-The model/loss then naturally enforce:
+The existing model/loss then enforce:
 
-- video fusion weight = 0;
-- audio fusion weight = 1;
-- video auxiliary supervision invalid/masked;
-- audio-video agreement term absent;
-- video projected/fused contribution zeroed through the existing availability-aware path.
+- audio fusion weight = 0;
+- video fusion weight = 1;
+- audio projected contribution = 0;
+- audio auxiliary supervision invalid/masked;
+- audio-video agreement term absent.
 
-The same model architecture, trainable parameter count, semantic pseudo cache, pseudo supervision, reliability, RA controller, optimizer, warm-up, and trial-012 hyperparameters remain intact. This avoids a model-size confound.
+Important interpretation boundary: the frozen semantic pseudo cache remains unchanged and was originally built from audio/video teacher evidence, including calibrated audio probabilities. Therefore TASK-006H tests the contribution of the **online audio input branch under the current frozen training pipeline**. It does not remove every historical/audio-derived signal from pseudo supervision and must not be described as “no audio information anywhere.”
 
-Exactly three production runs are authorized: seeds42/43/44. No tuning is authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
+Exactly three production runs are authorized: seeds42/43/44. No source change, config tuning, pseudo-cache change, or Stage-5 reopening is authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -342,6 +342,21 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - the final TASK-006F ledger typo “P 376” is manager-corrected to “P accepted 1801”; all runtime/cache evidence already used 1801;
 - Stage-6 semantic-evidence item is CLOSED as negative;
 - next sole atomic task is TASK-006G: train the same optimized trial-012 composition with video declared unavailable on every sample, using the existing availability-aware model path and preserving parameter count.
+
+### MANAGER-DECISION-069 — Accept TASK-006G; video contribution not supported; assign no-audio removal
+
+- TASK-006G passed manager review and was merged via PR #66;
+- firewall commit `e6ac651601a75eb7e839b35230f32b6df41ba7ab` preceded final evidence `bafeee1fe1f5b0fa4457d50b24665778154b03fd`;
+- the availability override is backward-compatible and leaves full default behavior unchanged;
+- no-video uses fixed architecture/parameter count `295239`, full pseudo cache, and exact availability `[true,false]`;
+- video perturbation had no effect on logits/loss/non-video gradients; video weights/features/availability gradients were neutralized as required;
+- no-video three-seed D/P/Mean = `0.749645/0.783216/0.766431`;
+- full-minus-no-video D/P/Mean = `-0.014389/+0.055344/+0.020478`;
+- full Mean exceeded no-video on 2/3 seeds and in aggregate, but full aggregate D was `0.014389` below no-video, violating the frozen `0.010000` non-regression bound;
+- therefore `VIDEO MODALITY CONTRIBUTION NOT SUPPORTED`;
+- this is a negative claim result, not evidence that video is useless in general or that a video-free model should be promoted;
+- the video-removal half of Stage-6 modality item 7 is CLOSED;
+- next sole atomic task is TASK-006H: no-audio online-input removal using the same availability mechanism with `[false,true]`, fixed architecture/parameter count, and unchanged frozen pseudo-training path.
 
 ## 10. Historical Evidence
 
