@@ -1016,3 +1016,52 @@ DEV-only post-freeze calibration used observed counts D/P 621/312 for every seed
 Same-epoch Test monitoring was read only after each checkpoint was frozen: NONE/SOFT/HARD means seed42 0.801124/0.811002/0.815546, seed43 0.819130/0.826236/0.839551, seed44 0.808215/0.818077/0.831848. Test did not affect selection, calibration, claim, or next-step decision; no Test row entered post-hoc diagnostics.
 
 Final scope checks passed: git diff --check; forbidden src/audio, src/video, src/fusion/data, src/fusion/loss, and src/common/callbacks diffs are empty; only the authorized model file, configs55/56/57, and this ledger differ from origin/main. No Test-driven decision, sparse-MTL claim, significance claim, disease-content claim, missing-label/comorbidity claim, promotion, or demotion claim is made. Stage-5 optimization remains closed; Stage 6 remains active; Stage 7, Text/Description, and Final Test remain locked.
+
+
+### TASK-006J — sparse-MTL task-isolated firewall
+
+Status: firewall complete; production runs not started. Branch: codex/task-006j, based on manager origin/main 4c5d4f6. Authorized changes are limited to the R4 loss switch, configs58–63, and this ledger.
+
+Implemented backward-compatible loss parameter training_task with values both, depression, and parkinson. Clean origin/main comparison on a deterministic TRAIN batch passed: default both loss value, every model gradient, diagnostics, and controller state were tensor-identical. Single-task routing computes only the active objective; inactive objective terms and reliability updates are excluded, pseudo warm-up remains active, and RA weights cannot affect the single-task total.
+
+All six configs validated. Programmatic equivalence against refs37/38/39 passed with only the authorized run_name, training_task, and three active-task monitor changes; seeds are exactly 42/42/43/43/44/44. Frozen full checkpoint SHA256 values verified: seed42 104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a, seed43 6af4a4ed21040aff4db2906b0adc8aa5fd27a4b72c375fbb67f68de04ab8446e, seed44 b06fec6912b27cd19d811b72b2c3c08cd1b0a6c826b637f87a314e3976b88c17. All six DataModule/model/loss configurations instantiated; each model has exactly 295239 trainable parameters and required callback-bearing config metadata.
+
+TRAIN-only isolation firewall passed for depression and Parkinson: inactive logits and auxiliary-output perturbations left total loss and all active gradients unchanged; inactive task-query, candidate-norm, fusion-norm, main-head, and auxiliary-head parameters had zero/None gradients; active task branches, projections, and shared gate had finite gradients; active accepted pseudo supervision at pseudo_scale=1.0 produced finite nonzero gradients; active reliability diagnostics were finite and inactive reliability remained uninitialized; pseudo targets/reliability were detached; controller-weight perturbation left single-task totals unchanged. Pseudo cache SHA remained 17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945 with accepted D/P 376/1801, positive D/P 376/212, negative D/P 0/1589. No optimizer step and no DEV/Test loader iteration occurred.
+
+git diff --check and forbidden-source checks passed. Mandatory firewall commit must be pushed before exactly six production commands in order: D42, P42, D43, P43, D44, P44. No sweep, tuning, retry, extra seed, or post-firewall config change is authorized.
+
+
+TASK-006J corrective firewall note: the first D-only seed42 invocation reached TRAIN epoch 1 and stopped on an empty depression-active batch before completing evaluation. Inspection found 29 canonical TRAIN and 10 DEV batches without depression-active rows. The loss was corrected in the authorized R4 loss file so single-task empty batches return a zero-connected neutral loss without computing inactive terms or gradients. Corrective TRAIN-only checks passed for both active-task directions, including empty-batch neutral loss and deterministic clean-origin default compatibility. The failed invocation is not counted as a completed production run; the required production sequence restarts with corrected firewall commit before the six completed runs.
+
+
+### TASK-006J — final sparse-MTL joint-training audit evidence
+
+Status: complete for the corrected six-run sequence; exact frozen claim: SPARSE MTL JOINT-TRAINING CONTRIBUTION NOT SUPPORTED. Branch codex/task-006j. Firewall commits b9e45c7 and corrective 63c3276 were pushed before the six completed runs. One initial D-only seed42 invocation at 23:30 reached TRAIN epoch 1 and stopped on empty active-task handling before evaluation; it is recorded as failed diagnostic setup, not counted among the six completed production runs. The corrected six commands then completed exactly in order: D42, P42, D43, P43, D44, P44. No sweep, tuning, metric retry, extra seed, or post-correction config change occurred.
+
+Completed MLflow identities:
+- D42 ed70407bb31c45a689ffb2b1a5f100ed; run stage6_d_only_trial012_seed42_2026-09-28_23-35_wsm_av_r3_disease_query_model_8851ab7b.
+- P42 ff9a31a20bb748a59b160144788405fa; run stage6_p_only_trial012_seed42_2026-09-28_23-39_wsm_av_r3_disease_query_model_fe1b59e5.
+- D43 c621fd3f7db0428987b5d7f609b59118; run stage6_d_only_trial012_seed43_2026-09-28_23-49_wsm_av_r3_disease_query_model_21fdaad0.
+- P43 3054a688776d47eba89d598cfd2c0372; run stage6_p_only_trial012_seed43_2026-09-28_23-54_wsm_av_r3_disease_query_model_820a113f.
+- D44 457af2bf694c4c3bb539a1319a18e100; run stage6_d_only_trial012_seed44_2026-09-29_00-05_wsm_av_r3_disease_query_model_4c3989d5.
+- P44 c10343cad7ce4ae3a8ebd9344a170581; run stage6_p_only_trial012_seed44_2026-09-29_00-10_wsm_av_r3_disease_query_model_eda84d7e.
+
+DEV active-task selection by the required active monitor:
+- seed42 D-only epoch5, active D UAR/MF1/Score 0.722456/0.722335/0.722396; inactive P Score 0.541443; checkpoint SHA256 55f27fef743ade6684b56159ee60d410178c56ab73e741001613d535b920fbc9.
+- seed42 P-only epoch21, active P UAR/MF1/Score 0.894893/0.901431/0.898162; inactive D Score 0.724889; checkpoint SHA256 efca8c5743322c4a54a29e60af4578d3a9af7b4c9518cee32b48764db9061b4d.
+- seed43 D-only epoch6, active D UAR/MF1/Score 0.723343/0.721865/0.722604; inactive P Score 0.590842; checkpoint SHA256 083ba177a21e7d9e91ebcf753b0efecc8f2430ef9f74a839a3e4cd892cad89d9.
+- seed43 P-only epoch28, active P UAR/MF1/Score 0.887992/0.905687/0.896839; inactive D Score 0.633823; checkpoint SHA256 7e050e6a454602888adf4054b82a06b07b6234e942a57c481b8a6908be3dd167.
+- seed44 D-only epoch9, active D UAR/MF1/Score 0.709057/0.708018/0.708538; inactive P Score 0.583242; checkpoint SHA256 d13de374ef118e7393179504796d1b547f9b83d8836f39080558c5697a961ed7.
+- seed44 P-only epoch12, active P UAR/MF1/Score 0.840235/0.858735/0.849485; inactive D Score 0.726031; checkpoint SHA256 e1bd25a250b7aec8b8a7bfefa390a49e9e7a1c321cda1b958a7ab8e90cfbd1e4.
+
+Task-isolated active scores: single_D 0.722396/0.722604/0.708538; single_P 0.898162/0.896839/0.849485; paired Mean 0.810279/0.809722/0.779012 for seeds42/43/44. Three-seed single_D mean/std/range 0.717846/0.008062/0.014066; single_P 0.881495/0.027730/0.048677; paired Mean 0.799671/0.017894/0.031268. Full-minus-single same-seed D/P/paired-Mean deltas: seed42 +0.036629/-0.018903/+0.008863; seed43 -0.004077/-0.092476/-0.048276; seed44 +0.019679/-0.017425/+0.001128. Aggregate deltas: D +0.017410, P -0.042935, paired Mean -0.012762. Frozen gate fails on aggregate Mean and aggregate P, so the exact claim is SPARSE MTL JOINT-TRAINING CONTRIBUTION NOT SUPPORTED.
+
+DEV-only active calibration used observed counts D=621 and P=312 per seed. Per-seed active Brier/ECE-15: D42 0.195620/0.117496; P42 0.065901/0.073082; D43 0.215300/0.156690; P43 0.070935/0.092257; D44 0.216406/0.156601; P44 0.080944/0.093646. Three-seed active means: D Brier/ECE 0.209109/0.143595; P 0.072593/0.086329. Matching full-reference means are D 0.178925/0.070004 and P 0.089948/0.089839; full-minus-single calibration deltas: D Brier -0.030183/ECE -0.073591; P Brier +0.017355/ECE +0.003510.
+
+Active DEV audio-gate mean/std: D42 0.466700/0.146920; P42 0.438374/0.196786; D43 0.441651/0.154020; P43 0.297180/0.191392; D44 0.414473/0.133582; P44 0.502733/0.186750. Three-seed gate means/std: D 0.440941/0.026121 across seeds; P 0.412762/0.105142. Deterministic TRAIN active shared-gradient L2: D42 5.158658, P42 2.908360, D43 7.441620, P43 1.993566, D44 6.581375, P44 2.909846. Loss active grad-norm diagnostics were finite: D42 0.204165, P42 0.142843, D43 0.272388, P43 0.144416, D44 0.279896, P44 0.165217. RA weights were instrumentation only and are not interpreted as task balancing because each run returned one task objective.
+
+Pseudo coverage remained unchanged: accepted D/P 376/1801; accepted classes D positive/negative 376/0 and P 212/1589. Each task-isolated model retained 295239 trainable parameters; the two-model pair is explicitly not an equal-total-deployment-size comparator.
+
+Same-epoch Test monitoring was read only after active-task checkpoint freeze: D42 NONE/SOFT/HARD 0.465976/0.593093/0.594806; P42 0.576740/0.707599/0.713087; D43 0.535903/0.634482/0.640188; P43 0.495735/0.651528/0.631796; D44 0.395258/0.578021/0.580933; P44 0.519774/0.707595/0.714565. Test did not affect selection, claim, or follow-up, and no Test rows entered post-hoc diagnostics.
+
+Final scope checks passed: git diff --check; model, DataModule, callbacks, audio, and video diffs against origin/main are empty; only the authorized R4 loss file, configs58–63, and this ledger differ. No sparse-MTL significance, pseudo-label correctness, missing-label/comorbidity recovery, promotion, or demotion claim is made. Stage 6 remains active pending manager review; Stage 5 remains closed; Stage 7, Text/Description, and Final Test remain locked.
