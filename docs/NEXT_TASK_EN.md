@@ -1,30 +1,32 @@
-# TASK-006B: Frozen R4 Corpus-Identity Probe on TRAIN→DEV
+# TASK-006C: Isolated Three-Seed RA-STCH Balancing Contribution Audit
 
 ## Authority and branch
 
-This task follows **MANAGER-DECISION-063**.
+This task follows **MANAGER-DECISION-064**.
 
 Required branch:
 
-    codex/task-006b
+    codex/task-006c
 
 Start from current manager-updated `origin/main`.
 
-Create exactly one new task branch from that `origin/main`.
+Create exactly one new task branch from that main.
 
-This is a Stage-6 diagnostic/claims audit. It does **not** retrain the main model, does not reopen Stage-5 optimization, and does not authorize another ablation.
+This is a Stage-6 ablation/claims audit, not Stage-5 optimization.
 
 ## Goal
 
-Execute Stage-6 required item 9: **corpus probe**.
+Complete the original **fixed-composition RA-STCH** three-seed evidence by running only the two frozen, previously unrun RA-STCH configs for seeds43 and44.
 
-Question:
+Then compare RA-STCH against the same-seed frozen controls:
 
-> How linearly decodable is corpus identity (`depression` vs `parkinson`) from frozen R4 representations on DEV, and does task-conditioned fusion amplify corpus decodability relative to the equal-dimensional projected A+V representation?
+- Equal weighting;
+- Static-STCH;
+- corrected Progress.
 
-This is a domain/confound diagnostic only.
+The purpose is to isolate the balancing/controller contribution with architecture, pseudo supervision, optimizer, warm-up, and all non-balancing factors held fixed.
 
-A positive corpus probe does NOT prove that corpus identity causes disease predictions or that corpus identity “replaces disease signal.”
+Do **not** use the optimized trial-012 R4 configs37/38/39 as the RA ablation result. Those differ in model/loss/optimizer hyperparameters and are not an isolated balancing comparison.
 
 ## Required reading
 
@@ -36,364 +38,339 @@ Read in this exact order:
 4. `docs/PROGRESS_EN.md`
 5. `docs/plan/STAGE_6.md`
 6. `docs/NEXT_TASK_EN.md`
-7. `src/common/data/wsm_manifest.py`
-8. `src/fusion/data/wsm_av_fusion_datamodule.py`
-9. `src/fusion/data/wsm_ramps_semantic_datamodule.py`
-10. `src/fusion/models/av_r3_disease_query.py`
-11. `configs/wsm_mm_pd_dep_v1/fusion/37_r4_ra_stch_optuna_selected_seed42.yaml`
-12. `configs/wsm_mm_pd_dep_v1/fusion/38_r4_ra_stch_optuna_confirm_seed43.yaml`
-13. `configs/wsm_mm_pd_dep_v1/fusion/39_r4_ra_stch_optuna_confirm_seed44.yaml`
+7. `src/fusion/models/av_r3_disease_query.py`
+8. `src/fusion/loss/r4_ramps_balance_loss.py`
+9. `src/common/callbacks/wsm_r4_balance_callback.py`
+10. `src/fusion/data/wsm_ramps_semantic_datamodule.py`
+11. configs `13_r4_equal_seed42.yaml` through `24_r4_progress_seed44.yaml`
 
-The Stage-5 historical archive may be read only to verify the three frozen checkpoint paths/hashes listed below.
+The Stage-5 historical archive may be read only to verify the retained selected checkpoints/results listed below.
 
-## Frozen R4 checkpoints
+## No implementation changes
 
-Use exactly these selected checkpoints; do not retrain or reselect.
+This task is experiment/evidence only.
 
-### Seed42
+Allowed tracked modification:
 
-Config:
-
-    configs/wsm_mm_pd_dep_v1/fusion/37_r4_ra_stch_optuna_selected_seed42.yaml
-
-Checkpoint:
-
-    logs/wsm_mm_pd_dep_v1/optuna_r4_ra_stch_base_seed42_2026-09-28_01-54_wsm_av_r3_disease_query_model_r4-ra-stch-optuna-v1-18c6-012_0ce9c7a4/checkpoints/epoch=11_dev_mean_score=0.8191.pt
-
-SHA256:
-
-    104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a
-
-Frozen DEV Mean:
-
-    0.8191424538
-
-### Seed43
-
-Config:
-
-    configs/wsm_mm_pd_dep_v1/fusion/38_r4_ra_stch_optuna_confirm_seed43.yaml
-
-Checkpoint:
-
-    logs/wsm_mm_pd_dep_v1/r4_ra_stch_optuna_trial012_confirm_seed43_2026-09-28_12-01_wsm_av_r3_disease_query_model_12038580/checkpoints/epoch=10_dev_mean_score=0.7614.pt
-
-SHA256:
-
-    6af4a4ed21040aff4db2906b0adc8aa5fd27a4b72c375fbb67f68de04ab8446e
-
-Frozen DEV Mean:
-
-    0.7614450000
-
-### Seed44
-
-Config:
-
-    configs/wsm_mm_pd_dep_v1/fusion/39_r4_ra_stch_optuna_confirm_seed44.yaml
-
-Checkpoint:
-
-    logs/wsm_mm_pd_dep_v1/r4_ra_stch_optuna_trial012_confirm_seed44_2026-09-28_12-07_wsm_av_r3_disease_query_model_41bc602b/checkpoints/epoch=11_dev_mean_score=0.7801.pt
-
-SHA256:
-
-    b06fec6912b27cd19d811b72b2c3c08cd1b0a6c826b637f87a314e3976b88c17
-
-Frozen DEV Mean:
-
-    0.7801390000
-
-Before any probe execution, verify all three checkpoint files exist and SHA256 matches exactly.
-
-If any checkpoint is missing or mismatched, stop and report. Do not substitute a different checkpoint.
-
-## Dataset contract
-
-Use canonical TRAIN to fit diagnostic probes and canonical DEV to evaluate them.
-
-Corpus label:
-
-- `depression` -> 0
-- `parkinson` -> 1
-
-Derive corpus only from canonical sample metadata `meta["corpus"]`.
-
-Do not derive corpus from observed masks, targets, filenames, path substrings, or disease outputs.
-
-Important structural fact to record in the report: in the canonical programme, corpus identity is coupled to which disease label is observed. Therefore high corpus decodability is a **risk diagnostic**, not causal proof of shortcut use.
-
-No Test loader may be iterated. No TEST_NONE/SOFT/HARD metric may be read or reported in this task.
-
-## Allowed tracked files
-
-Codex may add/modify only:
-
-- `scripts/common/run_r4_corpus_probe.py`
 - `docs/PROGRESS_EN.md`
 
-No `src/*` file may change.
-No config may change.
+Forbidden tracked modifications:
 
-Generated probe results are external artifacts and MUST NOT be committed.
+- every `src/*` file;
+- every config;
+- every script;
+- `src/audio`, `src/video`, common training code, plugin registration.
 
-## External output
+If an existing frozen config or source implementation cannot run as-is, STOP and report the blocker. Do not patch it inside TASK-006C.
 
-Write one external JSON report:
+## Frozen RA-STCH composition
 
-    /media/maxim/Programs/Features/WSM/stage6_corpus_probe/r4_corpus_probe_v1.json
+Use configs exactly as committed:
 
-The script MUST fail rather than overwrite an existing output path.
+- seed42: `configs/wsm_mm_pd_dep_v1/fusion/16_r4_ra_stch_seed42.yaml` — retained, DO NOT rerun;
+- seed43: `configs/wsm_mm_pd_dep_v1/fusion/17_r4_ra_stch_seed43.yaml`;
+- seed44: `configs/wsm_mm_pd_dep_v1/fusion/18_r4_ra_stch_seed44.yaml`.
 
-Record the report SHA256 in PROGRESS.
+All three must be semantically identical except top-level `seed` and `run_name`.
 
-## Frozen representation set
+Frozen composition:
 
-For each checkpoint, run the frozen model in `eval()` and `torch.no_grad()`.
+- model `wsm_av_r3_disease_query_model`;
+- audio/video dims `768/512`;
+- hidden/gate hidden `192/192`;
+- dropout `0.2`;
+- trainable params `403079`;
+- semantic pseudo cache:
+  `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt`;
+- pseudo cache SHA256:
+  `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`;
+- loss `wsm_r4_ramps_balance_loss`, mode `ra_stch`;
+- aux weight `0.25`;
+- agreement weight `0.10`;
+- tau `0.1`;
+- progress temperature `0.25`;
+- progress references D/P `0.697035/0.852104`;
+- controller EMA `0.8`;
+- grad EMA `0.9`;
+- reliability EMA `0.9`;
+- weight min/max `0.2/0.8`;
+- AdamW lr `1e-4`, weight decay `0.01`;
+- pseudo warm-up: 3 observed-only epochs, 5 ramp epochs, final scale 1.0.
 
-Extract exactly these representations on TRAIN and DEV:
+## Retained valid RA seed42
 
-1. `audio_projected`
-   - `ModelOutput.aux["features_audio"]`
-   - dimension 160
+Do not rerun seed42.
 
-2. `video_projected`
-   - `ModelOutput.aux["features_video"]`
-   - dimension 160
+Run:
 
-3. `projected_av`
-   - concatenate `features_audio` and `features_video`
-   - dimension 320
+    logs/wsm_mm_pd_dep_v1/r4_ra_stch_seed42_c1_2026-09-25_16-51_wsm_av_r3_disease_query_model_c350ca36
 
-4. `task_fused`
-   - flatten/concatenate both task vectors from `aux["task_features"]`
-   - dimension 320
+Selected epoch:
 
-5. `gates`
-   - flatten `aux["task_modality_weights"]`
-   - dimension 4
+    13
 
-6. `logits`
-   - `ModelOutput.preds`
-   - dimension 2
+Checkpoint:
 
-The equal dimension of `projected_av` and `task_fused` is intentional for the fusion-amplification diagnostic.
+    logs/wsm_mm_pd_dep_v1/r4_ra_stch_seed42_c1_2026-09-25_16-51_wsm_av_r3_disease_query_model_c350ca36/checkpoints/epoch=13_dev_mean_score=0.7826.pt
 
-Do not add other representations after seeing results.
+Checkpoint SHA256:
 
-## Extraction invariants
+    53397e3bbcbfc95abd30bdf63fec018a28f0effc2d92d66231061fb2d051254a
 
-For every seed and split:
+DEV:
 
-- model is frozen and in eval mode;
-- no gradients;
-- TRAIN extraction is deterministic and not shuffled;
-- DEV extraction is deterministic and not shuffled;
-- one representation row per canonical segment;
-- segment IDs are unique;
-- corpus labels align with segment IDs;
-- TRAIN and DEV segment-ID sets are disjoint;
-- representation tensors are finite;
-- dimensions exactly match the contract above;
-- sample counts equal the DataModule canonical TRAIN/DEV counts;
-- no Test loader iteration.
+- D `0.700992`
+- P `0.864298`
+- Mean `0.782645`
 
-Sort extracted rows by canonical `segment_id` before fitting probes.
+Selected-epoch controller diagnostics:
 
-## Deterministic linear probe
+- alpha D/P `0.269192/0.730808` in the accepted Stage-5 record;
+- final logged controller trajectory alpha `0.256828/0.743172`;
+- progress `0.020070/-0.151804`;
+- grad-norm EMA D/P `0.248995/0.121096`;
+- grad-cosine EMA `0.009814`;
+- reliability EMA D/P `0.671974/0.773563`.
 
-Implement the probe inside `scripts/common/run_r4_corpus_probe.py`; do not add a dependency.
+Verify the retained checkpoint file and SHA before production.
 
-For each checkpoint and each of the six representations:
+## Frozen three-seed controls
 
-1. fit feature standardization on TRAIN only:
-   - mean per dimension;
-   - population std per dimension;
-   - replace std < `1e-8` with 1;
-2. apply TRAIN statistics to TRAIN and DEV;
-3. convert probe tensors to CPU float64;
-4. linear classifier: one affine logit;
-5. initialize weight and bias to exactly zero;
-6. use class-balanced weighted BCE:
-   - each TRAIN class contributes equal total weight;
-7. fixed L2 penalty:
-   - coefficient `1e-4`;
-   - weights only, not bias;
-8. optimizer exactly:
-   - `torch.optim.LBFGS`;
-   - `lr=1.0`;
-   - `max_iter=250`;
-   - `tolerance_grad=1e-10`;
-   - `tolerance_change=1e-12`;
-   - `history_size=50`;
-   - `line_search_fn="strong_wolfe"`;
-9. no hyperparameter search;
-10. no early stopping on DEV;
-11. DEV is evaluation only.
+### Equal
 
-Record convergence/final TRAIN objective.
+| Seed | D | P | Mean |
+|---:|---:|---:|---:|
+| 42 | 0.712498 | 0.843342 | 0.777920 |
+| 43 | 0.703299 | 0.856043 | 0.779671 |
+| 44 | 0.707977 | 0.851878 | 0.779927 |
 
-## Shuffled-label sanity control
+Three-seed means:
 
-For each checkpoint use one deterministic TRAIN-label permutation:
+- D `0.707925`
+- P `0.850421`
+- Mean `0.7791726667`
 
-    generator seed = 9201 + checkpoint_seed
+### Static-STCH
 
-Use `torch.randperm` over the sorted TRAIN corpus-label vector.
+| Seed | D | P | Mean |
+|---:|---:|---:|---:|
+| 42 | 0.725077 | 0.849485 | 0.787281 |
+| 43 | 0.698945 | 0.853184 | 0.776064 |
+| 44 | 0.702072 | 0.853622 | 0.777847 |
 
-The shuffled vector must preserve exact class counts and must not equal the original vector.
+Three-seed means:
 
-Fit the same probe procedure for every representation using shuffled TRAIN labels.
+- D `0.708698`
+- P `0.852097`
+- Mean `0.7803973333`
 
-Evaluate against the TRUE DEV corpus labels.
+### Corrected Progress
 
-Do not shuffle DEV labels.
+| Seed | D | P | Mean |
+|---:|---:|---:|---:|
+| 42 | 0.701245 | 0.873354 | 0.787299 |
+| 43 | 0.721597 | 0.863131 | 0.792364 |
+| 44 | 0.701971 | 0.847208 | 0.774590 |
 
-This control is diagnostic only and is not used to tune the probe.
+Three-seed means:
 
-## Probe metrics
+- D `0.708271`
+- P `0.861231`
+- Mean `0.7847510000`
 
-For true-label and shuffled-label probes record on DEV:
+## Mandatory pre-run firewall
 
-- AUROC;
-- balanced accuracy at fixed probability threshold 0.5;
-- Brier score.
+Before either production run:
 
-Implement AUROC locally/deterministically without sklearn.
+1. validate configs16/17/18;
+2. programmatically prove 17 and18 are semantically identical to16 except `seed` and `run_name`;
+3. prove seeds are exactly 42/43/44;
+4. verify retained seed42 checkpoint path/SHA;
+5. instantiate DataModule/model/loss for configs17/18;
+6. verify trainable params `403079`;
+7. verify semantic cache path/SHA and accepted counts D/P `376/1801`;
+8. run one TRAIN-only forward/loss/backward smoke for each of configs17/18;
+9. verify finite loss and non-zero finite gradients for main model under observed+pseudo supervision;
+10. verify RA controller diagnostics are finite;
+11. verify pseudo target/reliability are detached;
+12. no optimizer step;
+13. no DEV/Test loader iteration;
+14. `git diff --check`;
+15. `git diff origin/main -- src` is empty;
+16. `git diff origin/main -- configs` is empty;
+17. append firewall evidence to PROGRESS;
+18. commit and push one firewall commit.
 
-For every representation report per-seed values and three-seed mean/sample std.
+No production run before the firewall commit exists on origin.
 
-Also report per-seed:
+## Exactly two production runs
 
-    true AUROC - shuffled-label AUROC
+Run exactly in this order:
 
-## Gate-distribution audit
+1. RA-STCH seed43;
+2. RA-STCH seed44.
 
-Without fitting another model, for each R4 checkpoint and DEV corpus report task-specific audio gate weight:
+Commands:
 
-- mean;
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/fusion/17_r4_ra_stch_seed43.yaml
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/fusion/18_r4_ra_stch_seed44.yaml
+
+No seed42 rerun.
+No retry for metric improvement.
+No sweep.
+No config change between runs.
+No optimized trial-012 run.
+
+## Selection/Test firewall
+
+For each new run:
+
+- select checkpoint only by maximum `dev/mean_score`;
+- freeze selected epoch/checkpoint before using same-epoch Test monitoring;
+- record checkpoint SHA256;
+- Test remains mandatory epoch-level monitoring but cannot enter any Stage-6 conclusion.
+
+## Three-seed RA evidence
+
+Combine retained valid seed42 with new seeds43/44.
+
+Compute RA-STCH:
+
+- D/P/Mean by seed;
+- three-seed arithmetic mean;
 - sample std;
-- q25;
-- median;
-- q75.
+- min/max/range.
 
-For each task report the difference:
+Compute same-seed RA minus Equal D/P/Mean deltas.
 
-    mean_audio_weight(depression_corpus) - mean_audio_weight(parkinson_corpus)
+Compute same-seed RA minus Static D/P/Mean deltas.
 
-Do this for depression query and Parkinson query separately.
+Compute same-seed RA minus Progress D/P/Mean deltas.
 
-This is descriptive only.
+For a same-seed “best simpler balancing” comparator use:
 
-## Frozen interpretation rules
+    max(Static Mean, Progress Mean)
 
-### A. Strong corpus-decodability flag
+and report:
 
-Record exactly:
+    RA Mean - best_simple Mean
 
-    CORPUS IDENTITY IS STRONGLY LINEARLY DECODEABLE FROM R4 FUSED REPRESENTATIONS
+for each seed.
 
-only if BOTH conditions hold for `task_fused`:
-
-1. true-label DEV corpus AUROC >= 0.90 on at least 2 of 3 R4 seeds;
-2. `true AUROC - shuffled-label AUROC >= 0.20` on at least 2 of 3 R4 seeds.
-
-Otherwise record exactly:
-
-    STRONG CORPUS-ID DECODABILITY FLAG NOT TRIGGERED
-
-### B. Fusion-amplification flag
-
-Compute same-seed:
-
-    task_fused AUROC - projected_av AUROC
+## Frozen claim rule A — contribution over Equal
 
 Record exactly:
 
-    R4 TASK-CONDITIONED FUSION AMPLIFIES LINEAR CORPUS DECODABILITY
+    RA-STCH BALANCING CONTRIBUTION OVER EQUAL SUPPORTED
 
-only if BOTH:
+only if ALL hold:
 
-1. the delta is >= +0.05 on at least 2 of 3 seeds;
-2. the three-seed mean delta is >= +0.05.
+1. RA DEV Mean > Equal DEV Mean on at least 2/3 seeds;
+2. RA three-seed Mean > Equal three-seed Mean;
+3. RA three-seed D mean is not more than `0.010000` below Equal D mean;
+4. RA three-seed P mean is not more than `0.010000` below Equal P mean.
 
 Otherwise record exactly:
 
-    FUSION AMPLIFICATION OF CORPUS DECODABILITY NOT SUPPORTED
+    RA-STCH BALANCING CONTRIBUTION OVER EQUAL NOT SUPPORTED
 
-### Interpretation boundary
+## Frozen claim rule B — advantage beyond simpler balancing
 
-Even if either flag triggers:
+Record exactly:
 
-- do not say corpus identity causes the disease predictions;
-- do not say corpus identity replaces disease signal;
-- do not demote/promote R4;
-- do not alter configs;
-- do not propose domain mitigation as an implemented change;
-- do not use Test;
-- do not claim significance from three seeds.
+    RA-STCH ADVANTAGE OVER SIMPLER BALANCING SUPPORTED
 
-Manager will decide whether a later domain ablation is required.
+only if ALL hold:
 
-## Mandatory pre-execution firewall commit
+1. RA Mean > same-seed `max(Static, Progress)` on at least 2/3 seeds;
+2. RA three-seed Mean > both Static three-seed Mean and Progress three-seed Mean;
+3. relative to corrected Progress three-seed task means, neither RA D mean nor RA P mean is lower by more than `0.010000`.
 
-Before running the full three-checkpoint probe:
+Otherwise record exactly:
 
-1. implement the script;
-2. verify the three checkpoint paths and SHA256;
-3. instantiate each config/DataModule/model;
-4. load the correct checkpoint into the correct model;
-5. run a tiny TRAIN+DEV extraction smoke for each seed;
-6. prove all six representations exist, are finite, and have exact dimensions;
-7. prove corpus labels come from `sample_meta[*]["corpus"]`;
-8. prove no Test loader was iterated;
-9. run a tiny synthetic unit check of the local AUROC implementation:
-   - perfect ordering -> AUROC 1.0;
-   - reversed ordering -> AUROC 0.0;
-   - tied constant scores -> AUROC 0.5;
-10. run a tiny synthetic probe optimization sanity check;
-11. `git diff --check`;
-12. `git diff origin/main -- src` must be empty;
-13. append firewall evidence to PROGRESS;
-14. commit and push one firewall commit.
+    RA-STCH ADVANTAGE OVER SIMPLER BALANCING NOT SUPPORTED
 
-Do not run the full probe before the firewall commit exists on origin.
+The two claim rules are independent. Report both.
 
-## Exact execution
+## Controller/mechanism diagnostics
 
-After the firewall commit, run exactly once:
+For each RA seed at the DEV-selected epoch, record:
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/common/run_r4_corpus_probe.py       --output /media/maxim/Programs/Features/WSM/stage6_corpus_probe/r4_corpus_probe_v1.json
+- alpha D/P;
+- progress D/P;
+- grad-norm EMA D/P;
+- grad-cosine EMA;
+- reliability EMA D/P;
+- pseudo scale.
 
-No second run for metric improvement.
+Also report across the three seeds:
 
-If execution fails before producing a valid output, repair only a deterministic implementation/runtime defect, document it, and do not change the frozen probe method.
+- whether all values are finite;
+- whether alpha remains within the frozen `[0.2,0.8]` bounds;
+- whether alpha values are identical across all seeds or show seed-specific adaptation;
+- sign/range of grad-cosine EMA;
+- D/P reliability EMA ranges.
+
+These are diagnostics only. They cannot rescue a failed DEV claim gate.
+
+## DEV-only calibration and gate audit
+
+After selected checkpoints are frozen, evaluate **DEV only** for RA seeds42/43/44.
+
+Record for each seed/task:
+
+- observed row count;
+- Brier;
+- ECE-15.
+
+Record three-seed mean Brier/ECE for D/P.
+
+Compare RA three-seed calibration against Equal and corrected Progress using the already-frozen comparator means where available.
+
+Also report DEV task-modality audio gate mean and sample std for each task and seed from `task_modality_weights`.
+
+Do not recalibrate, threshold-search, or rerun.
+
+No Test row may be used in this post-hoc audit.
+
+## Pseudo/negative-transfer diagnostics
+
+Record:
+
+- frozen pseudo accepted counts D/P `376/1801`;
+- frozen pseudo class counts D `376/0`, P `212/1589`;
+- RA minus Equal three-seed D/P/Mean;
+- RA minus corrected R3-B contextual three-seed means:
+  - R3-B D `0.696178`;
+  - R3-B P `0.857996`;
+  - R3-B Mean `0.777087`.
+
+This is diagnostic only and does not reopen Stage 5.
 
 ## Required PROGRESS evidence
 
 Record:
 
 - task/branch;
-- script path;
-- exact three config/checkpoint paths and checkpoint SHA256;
+- retained seed42 checkpoint path/SHA and DEV metrics;
+- config equivalence proof;
 - firewall commit SHA;
-- checkpoint-load verification;
-- TRAIN/DEV counts and corpus counts;
-- representation dimensions;
-- no-Test proof;
-- probe method and frozen hyperparameters;
-- external JSON path/SHA256;
-- per-seed/per-representation true and shuffled metrics;
-- three-seed mean/std metrics;
-- task_fused true-minus-shuffled AUROC deltas;
-- task_fused-minus-projected_av AUROC deltas;
-- both exact frozen interpretation strings;
-- gate distributions/deltas by corpus;
-- explicit statement that corpus identity is structurally coupled to observed-task identity;
-- explicit no causal shortcut claim;
-- no main-model training;
-- no source/config changes;
-- no Test use.
+- exact two production commands;
+- production count = exactly 2;
+- seed43/44 run dirs, MLflow IDs/status/artifact URIs;
+- selected epochs/checkpoints/SHA256;
+- DEV D/P UAR/MF1/Score/Mean;
+- same-epoch Test monitoring only after freeze;
+- full three-seed RA mean/std/range;
+- all paired comparator deltas;
+- both exact frozen claim strings;
+- controller diagnostics;
+- DEV-only calibration and gate audit;
+- pseudo coverage/class counts;
+- no Test-driven decision;
+- no tuning/rerun;
+- no source/config changes.
 
 ## Final scope checks
 
@@ -401,33 +378,34 @@ Run:
 
     git diff --check
     git diff origin/main -- src
+    git diff origin/main -- configs
     git status --short
     git diff --stat origin/main...HEAD
     git log -12 --oneline --decorate
 
-Only the new probe script and PROGRESS may differ from origin/main.
+Only PROGRESS may differ from origin/main.
 
 ## Acceptance criteria
 
-TASK-006B passes only if:
+TASK-006C passes only if:
 
-- branch exactly `codex/task-006b` from current manager main;
-- only script + PROGRESS change;
-- all three frozen R4 checkpoints are verified by SHA;
-- no R4/main-model retraining occurs;
-- TRAIN-only fit / DEV-only evaluation for probes;
-- no Test loader iteration;
-- all six frozen representations are audited;
-- deterministic true-label and shuffled-label probes complete for all seeds/representations;
-- AUROC implementation sanity checks pass;
-- probe method is not tuned;
-- gate distributions are reported;
-- interpretation strings are applied exactly;
-- report is external and hashed;
+- branch exactly `codex/task-006c` from current manager main;
+- no source/config/script changes;
+- retained seed42 checkpoint is verified;
+- configs17/18 remain frozen;
+- firewall pushed before production;
+- exactly two production runs occur, seed43 then44;
+- seed42 is not rerun;
+- DEV-only selection;
+- Test is monitoring-only;
+- three-seed RA evidence uses retained42 + new43/44 only;
+- both frozen claim rules are applied exactly;
+- controller, calibration, gate, pseudo, and negative-transfer diagnostics are recorded;
+- no tuning, sweep, retry, or Stage-5 reopening;
 - branch pushed;
 - main/master untouched.
 
-Passing TASK-006B closes Stage-6 corpus-probe item 9 only. It authorizes no next task.
+Passing TASK-006C closes only the detailed Stage-6 RA-STCH balancing contribution item. It authorizes no next task.
 
 ## Required handoff
 
@@ -442,28 +420,29 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch `codex/task-006b`;
+- branch `codex/task-006c`;
 - firewall SHA;
 - final evidence SHA;
 - pushed status;
 - main/master untouched;
 - source/config diff empty;
-- checkpoint paths/SHA;
-- output JSON path/SHA;
-- no main-model training;
-- no Test loader iteration;
-- per-representation three-seed AUROC summary;
-- task_fused per-seed AUROC and shuffled-control deltas;
-- task_fused-minus-projected_av deltas;
-- both exact frozen interpretation strings;
-- gate-distribution summary;
-- no causal shortcut claim;
+- retained seed42 checkpoint/SHA;
+- seed43/44 run identities/checkpoint SHA;
+- exactly two new production runs;
+- three-seed RA D/P/Mean and std;
+- same-seed RA-minus-Equal;
+- same-seed RA-minus-best-simple;
+- both exact frozen claim strings;
+- controller diagnostics summary;
+- calibration/gate summary;
+- no Test-driven decision;
+- no tuning/rerun;
 - Stage 6 active;
 - Stage-5 optimization closed;
 - no Stage7/Text/Final Test.
 
 For section 6 write only:
 
-    Manager review of TASK-006B; do not start another task.
+    Manager review of TASK-006C; do not start another task.
 
 Stop.
