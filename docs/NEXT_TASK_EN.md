@@ -44,8 +44,8 @@ Read in this exact order:
 1. AGENTS.md
 2. docs/README.md
 3. docs/PROJECT_REQUIREMENTS.md
-4. docs/PLAN.md, especially Stage 6 items 3–5 and item 8 plus the promotion/claims rules
-5. docs/PROGRESS_EN.md through MANAGER-DECISION-057
+4. docs/PROGRESS_EN.md
+5. docs/plan/STAGE_6.md
 6. docs/NEXT_TASK_EN.md
 7. src/fusion/data/wsm_ramps_semantic_datamodule.py
 8. src/fusion/models/av_r3_disease_query.py
@@ -53,6 +53,8 @@ Read in this exact order:
 10. configs/wsm_mm_pd_dep_v1/fusion/13_r4_equal_seed42.yaml
 11. configs/wsm_mm_pd_dep_v1/fusion/19_r4_equal_seed43.yaml
 12. configs/wsm_mm_pd_dep_v1/fusion/20_r4_equal_seed44.yaml
+
+Do not read the historical progress archive or closed-stage plan files unless a concrete verification question requires them.
 
 ## Allowed tracked files
 
