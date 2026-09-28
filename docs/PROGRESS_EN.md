@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-006A-FIX1 — exact shuffled-pseudo derangement correction and rerun**.
+Current atomic task: **TASK-006A-FIX2 — bind the corrected configs to the verified exact cache and rerun**.
 
-Expected Codex branch: `codex/task-006a` (explicitly authorized reuse for this corrective pass).
+Expected Codex branch: `codex/task-006a` (same logical task branch; reuse remains authorized).
 
-`codex/task-006a` was reviewed and **NOT MERGED** because its cache builder did not implement the frozen circular-shift mapping exactly. The same branch is explicitly authorized for correction; TASK-006A remains scientifically unresolved until FIX1 passes.
+FIX1 corrected the builder and produced the verified exact cache, but its three production configs still referenced the old rejected cache. Therefore FIX1 production evidence is **NOT ACCEPTED**. TASK-006A remains scientifically unresolved until FIX2 runs use the exact cache path.
 
 ## 2. Default Context Policy
 
@@ -144,33 +144,40 @@ The detailed contract is in [plan/STAGE_6.md](plan/STAGE_6.md). At high level it
 
 Each scientific claim must map to an ablation or negative control. Negative results are retained. Test protocols remain monitoring-only and cannot drive decisions.
 
-## 7. Active Task — TASK-006A-FIX1
+## 7. Active Task — TASK-006A-FIX2
 
-Purpose: correct the exact permutation semantics of the shuffled-pseudo negative control and rerun the same three-seed Equal control without tuning.
+Purpose: correct the **cache binding only** and rerun the same three-seed shuffled Equal negative control.
 
-The existing `codex/task-006a` branch is **not merged** and is explicitly reused for this correction. Its first three shuffled runs are **superseded diagnostic evidence only** and do not close the claim gate. Codex must first merge the current `origin/main` into this existing branch; reset/rebase/force-push are not authorized.
+Manager review of FIX1 accepted these pieces:
 
-Required exact mapping for each task:
+- corrected exact builder mapping: `destination_order = order`, `source_order = roll(order, 1)`;
+- no fixed-point repair;
+- fresh exact cache path:
+  `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001_exact_fix1.pt`;
+- fresh exact cache SHA256:
+  `e4baf2a2eea9dc7703e73b7956971b0d571eedda55fc8e6984750270712cf0f9`;
+- source SHA before/after:
+  `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`;
+- permutation SHA256 D/P:
+  `1dcfde36463f21d2d2d525d70f6642c6b599cc23534f3cb47ffc41953ec4d4b8` /
+  `847f8e2cf156cd0d4ecb28f5269d5cc79fd5943c6605f44c57c78528ecc6d767`;
+- fixed points D/P `0/0`;
+- acceptance Hamming D/P `646/1788`;
+- preserved coverage/class balance and tuple multisets.
 
-1. form the canonical missing-row tensor `missing`;
-2. create `order = missing[randperm(...)]` with D seed6001 and P seed6002;
-3. create `source_order = roll(order, 1)`;
-4. assign every permuted pseudo field as `derived[field][order, task] = source[field][source_order, task]`;
-5. do not perform any fixed-point repair or other mapping modification.
+FIX1 production is rejected because configs31/32/33 at both firewall commit `096b720` and final commit `d5fbbc5` still pointed to:
 
-Because `order` contains unique row IDs and is shifted by one, `order[k] != source_order[k]` by construction.
+`.../shuffled_missing_targets_seed6001.pt`
 
-A fresh external cache path and distinct FIX1 run names are required so the rejected artifact/runs remain auditable. Exactly three corrective production runs are authorized: seeds42/43/44.
+instead of the verified exact cache:
 
-The frozen matched Equal reference remains:
+`.../shuffled_missing_targets_seed6001_exact_fix1.pt`.
 
-| Seed | D Score | P Score | Mean |
-|---:|---:|---:|---:|
-| 42 | 0.712498 | 0.843342 | 0.777920 |
-| 43 | 0.703299 | 0.856043 | 0.779671 |
-| 44 | 0.707977 | 0.851878 | 0.779927 |
+The FIX1 DEV metrics/checkpoint SHA values exactly reproduced the first rejected runs, consistent with this wrong cache binding.
 
-Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
+FIX2 changes no research semantics beyond binding all three configs to the verified exact cache and assigning distinct FIX2 run names. Exactly three new production runs are authorized: seeds42/43/44.
+
+The same `codex/task-006a` branch is reused. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -252,6 +259,17 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - do not reset, rebase, overwrite, or force-push the branch;
 - preserve the original rejected commits/runs as superseded evidence, then append a new corrective firewall commit and final evidence commit;
 - exactly three new corrective production runs remain authorized.
+
+### MANAGER-DECISION-062 — Reject FIX1 production for wrong cache binding; assign FIX2 on same branch
+
+- FIX1 branch history correctly merged manager main before corrective work;
+- corrected builder implementation at firewall commit `096b720c875b427fc6d17d1dd04b65a67614b802` implements the frozen roll-1 mapping literally and removes the unauthorized repair;
+- FIX1 produced and audited the exact cache SHA `e4baf2a2eea9dc7703e73b7956971b0d571eedda55fc8e6984750270712cf0f9`;
+- however, configs31/32/33 in both `096b720` and final `d5fbbc5b9ac0fb7136996caf4090fd5d309f5fe7` point to the old rejected cache `shuffled_missing_targets_seed6001.pt`, not `shuffled_missing_targets_seed6001_exact_fix1.pt`;
+- the reported FIX1 DEV metrics and checkpoint SHA256 values exactly equal the earlier rejected runs, so FIX1 production evidence is superseded and cannot close the claim;
+- do not rebuild or overwrite the verified exact cache; verify it read-only by path/SHA/metadata/invariants before production;
+- assign exactly one narrow correction: update the three configs to the exact cache, use distinct FIX2 run names, firewall, then run exactly seeds42/43/44 again;
+- reuse `codex/task-006a`; no new Codex branch; no tuning.
 
 ## 10. Historical Evidence
 
