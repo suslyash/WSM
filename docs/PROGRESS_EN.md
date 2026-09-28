@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-006I — equal-parameter task-aware fusion ablation on optimized R4 trial-012**.
+Current atomic task: **TASK-006J — sparse-MTL joint-training contribution audit with task-isolated comparators**.
 
-Expected Codex branch: `codex/task-006i`.
+Expected Codex branch: `codex/task-006j`.
 
-`TASK-006H` is complete and merged. Stage-6 modality-removal item 7 is CLOSED: video contribution was NOT SUPPORTED under its frozen gate, while online audio-input contribution was SUPPORTED.
+`TASK-006I` is complete and merged. Stage-6 task-aware fusion contribution is CLOSED as NOT SUPPORTED under the frozen equal-parameter three-seed gate.
 
 ## 2. Default Context Policy
 
@@ -144,27 +144,26 @@ The detailed contract is in [plan/STAGE_6.md](plan/STAGE_6.md). At high level it
 
 Each scientific claim must map to an ablation or negative control. Negative results are retained. Test protocols remain monitoring-only and cannot drive decisions.
 
-## 7. Active Task — TASK-006I
+## 7. Active Task — TASK-006J
 
-Purpose: isolate the **task-aware fusion contribution** inside the leading optimized R4 trial-012 composition without introducing a parameter-count confound.
+Purpose: isolate the **sparse multi-task joint-training contribution** of the leading optimized R4 trial-012 composition.
 
-TASK-006I adds one backward-compatible model switch:
+For each seed 42/43/44, TASK-006J trains two task-isolated copies of the same full trial-012 architecture:
 
-- default `task_aware_fusion: true` preserves the current full model exactly;
-- ablation `task_aware_fusion: false` keeps the same parameter tensors and trainable parameter count, but constructs a single shared A+V fused representation and a single shared modality gate for both disease tasks.
+- a depression-only optimization run;
+- a Parkinson-only optimization run.
 
-In the shared-fusion ablation:
+Each copy retains the same model architecture and `295239` trainable parameters, semantic pseudo cache, direct pseudo-supervision formulation, reliability values, optimizer, warm-up, and task-specific branch capacity. The loss routes gradients from only the selected task; inactive-task outputs remain evaluable but do not enter training.
 
-- the two learned task queries are averaged into one shared query so both query parameters remain trainable;
-- the two task candidate norms are both evaluated and averaged, so both norm parameter sets remain trainable while producing one shared audio candidate and one shared video candidate;
-- one shared modality gate is computed and duplicated across tasks;
-- both task fusion norms are evaluated and averaged into one shared fused representation;
-- that same fused representation is fed to the two existing task-specific main heads;
-- task-specific auxiliary heads and sparse task losses remain intact.
+The paired no-MTL comparator for a seed is:
 
-Thus sparse MTL, pseudo supervision, reliability, RA controller, architecture size, optimizer, and all trial-012 hyperparameters remain fixed. The ablation removes only task-conditioned fusion specialization.
+- depression Score from the DEV-selected depression-only model;
+- Parkinson Score from the DEV-selected Parkinson-only model;
+- paired Mean = arithmetic mean of those two independently selected task Scores.
 
-Exactly three production runs are authorized: seeds42/43/44. No tuning is authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
+This comparator is deliberately favorable to independent single-task training because each model is selected by its own active DEV task score. It tests whether joint sparse MTL produces positive transfer relative to task-isolated optimization. It is not a deployment-parameter comparison: the paired comparator uses two separately trained models.
+
+Exactly six production runs are authorized: D42, P42, D43, P43, D44, P44. No tuning is authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -370,6 +369,20 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - interpretation remains limited to the online student audio branch because the frozen pseudo cache retains historical audio-derived teacher information;
 - together with TASK-006G, Stage-6 modality-removal item 7 is CLOSED;
 - next sole atomic task is TASK-006I: an equal-parameter shared-fusion ablation that removes task-conditioned fusion specialization while preserving sparse MTL, separate disease heads, pseudo/reliability/controller paths, and the full trial-012 training protocol.
+
+### MANAGER-DECISION-071 — Accept TASK-006I; task-aware fusion not supported; assign sparse-MTL audit
+
+- TASK-006I passed manager review and was merged via PR #71;
+- firewall commit `cf4f9c481976f4e358242324ce4ff6e6d526e61d` preceded final evidence `5795c0ddadbf2d8f65dfaa112ca3da21e5759151`;
+- full/default model behavior was bitwise-compatible, and full/shared-fusion variants both retained exactly `295239` trainable parameters;
+- exactly three shared-fusion runs occurred, seeds42/43/44;
+- shared-fusion three-seed D/P/Mean = `0.7407873333/0.8467100000/0.7935663333`;
+- full-minus-shared D/P/Mean = `-0.0055310000/-0.0081493333/-0.0066575154`;
+- full Mean exceeded shared-fusion on `0/3` seeds and the shared aggregate Mean was higher;
+- therefore `TASK-AWARE FUSION CONTRIBUTION NOT SUPPORTED`;
+- sparse MTL and separate disease heads remained active in TASK-006I, so no sparse-MTL conclusion follows from that negative result;
+- Stage-6 task-aware fusion item is CLOSED as negative;
+- next sole atomic task is TASK-006J: compare the full joint sparse-MTL model against independently DEV-selected depression-only and Parkinson-only copies on seeds42/43/44.
 
 ## 10. Historical Evidence
 
