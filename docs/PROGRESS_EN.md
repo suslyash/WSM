@@ -239,3 +239,27 @@ The full former 5,000+ line ledger is intentionally no longer part of default co
 Use it only when a historical implementation detail, exact old command, old PR/commit, or prior corrective review is material:
 
 [archive/PROGRESS_EN_THROUGH_STAGE5_2026-09-28.md](archive/PROGRESS_EN_THROUGH_STAGE5_2026-09-28.md)
+
+
+### TASK-006-PRE-AUDIO-CONFIRM - pre-run firewall complete
+
+Status: partial; the frozen-audio seed43/44 firewall passed and was committed before production.
+
+Created configs:
+
+- `configs/wsm_mm_pd_dep_v1/audio/01_frozen_baseline_seed43.yaml`
+- `configs/wsm_mm_pd_dep_v1/audio/02_frozen_baseline_seed44.yaml`
+
+Firewall evidence:
+
+- Both configs validate with `chimera-ml validate-config`.
+- Config 01 differs from config00 only by `seed: 43` and `run_name: frozen_audio_wavlm_l9_pool4_seed43`.
+- Config 02 differs from config00 only by `seed: 44` and `run_name: frozen_audio_wavlm_l9_pool4_seed44`.
+- The registered audio DataModule, model, and loss instantiated successfully for both configs.
+- TRAIN-only forward/loss/backward smoke passed for both configs with finite loss and nonzero finite trainable gradients: config01 batch shape `(8, 1245, 768)`, loss `0.3348849714`; config02 batch shape `(8, 1250, 768)`, loss `0.3805317283`; each reported 113 nonzero-gradient tensors.
+- No optimizer step was executed. No DEV or Test loader was iterated.
+- Frozen audio checkpoint SHA256 remains `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`.
+- `git diff --check` passed and `git diff origin/main -- src` is empty.
+- No source file or existing config was changed.
+
+No production training has started. The firewall commit is pushed before the exactly two authorized invocations, in order: seed43 once, then seed44 once. TASK-006A-BUNDLE remains paused/unstarted; Stage 5 remains historically closed negative.
