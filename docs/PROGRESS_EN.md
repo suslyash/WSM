@@ -534,3 +534,50 @@ FIX2 firewall smoke passed for all three configs with exact DataModule resolutio
 No optimizer step and no DEV/Test loader iteration occurred. `git diff --check` passed and `git diff origin/main -- src` was empty.
 
 The firewall commit must precede exactly three FIX2 production commands in order: seeds42, 43, 44. No sweep, tuning, retry, or post-hoc config change is authorized.
+
+
+### TASK-006A-FIX2 — corrected cache binding production evidence
+
+Status: complete. FIX1 production is rejected because configs31/32/33 used the old wrong cache path `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001.pt`. The accepted exact cache path is `/media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001_exact_fix1.pt`, SHA256 `e4baf2a2eea9dc7703e73b7956971b0d571eedda55fc8e6984750270712cf0f9`. The exact cache was verified read-only; it was not regenerated or overwritten.
+
+The new FIX2 firewall commit is `24fd49b`. Exactly three NEW FIX2 production runs completed in order: seed42, seed43, seed44. No prior shuffled run was reused, averaged, selected among, or counted.
+
+Run identities:
+
+- seed42: `stage6_shuffled_pseudo_equal_seed42_exact_fix2_2026-09-28_15-17_wsm_av_r3_disease_query_model_fdd3d5a9`; MLflow ID `1783b4c6424842b6a6cb88aa38c4c164`; status `FINISHED`; artifact URI `/media/maxim/Programs/Projects/WSM/mlruns/5/1783b4c6424842b6a6cb88aa38c4c164/artifacts`;
+- seed43: `stage6_shuffled_pseudo_equal_seed43_exact_fix2_2026-09-28_15-21_wsm_av_r3_disease_query_model_21343cc1`; MLflow ID `23d9b071710347d7983d79b7ea43351f`; status `FINISHED`; artifact URI `/media/maxim/Programs/Projects/WSM/mlruns/5/23d9b071710347d7983d79b7ea43351f/artifacts`;
+- seed44: `stage6_shuffled_pseudo_equal_seed44_exact_fix2_2026-09-28_15-25_wsm_av_r3_disease_query_model_6c38e6e8`; MLflow ID `8941f5f4bb0d485cb07bbd00e56b1980`; status `FINISHED`; artifact URI `/media/maxim/Programs/Projects/WSM/mlruns/5/8941f5f4bb0d485cb07bbd00e56b1980/artifacts`.
+
+DEV-only selected results:
+
+| Seed | Epoch | D UAR/MF1/Score | P UAR/MF1/Score | Mean | Checkpoint SHA256 |
+|---:|---:|---|---|---:|---|
+| 42 | 5 | 0.675490/0.674841/0.675166 | 0.785645/0.812657/0.799151 | 0.737158 | `baa2336955ea192acc1304a26c5f3aad3affadc6df3e13aa278228a5a91832a7` |
+| 43 | 3 | 0.690056/0.689597/0.689827 | 0.766322/0.786323/0.776322 | 0.733074 | `fb0b863509ff10fa19adfc5e07d89e8d8350aa49ea8f58be219a65734da3b8fa` |
+| 44 | 3 | 0.675023/0.674677/0.674850 | 0.801794/0.812994/0.807394 | 0.741122 | `95c523d35dc747cdcd1f102661866b9cb4e846d09fb61bf5d5efa12bf9ca2392` |
+
+FIX2 shuffled D/P/Mean values are seed42 `0.675166/0.799151/0.737158`, seed43 `0.689827/0.776322/0.733074`, and seed44 `0.674850/0.807394/0.741122`. Three-seed means are D `0.6799476667`, P `0.7942890000`, Mean `0.7371180000`; sample standard deviations are D `0.0085572124`, P `0.0160964772`, Mean `0.0040241491`.
+
+Matched Equal minus FIX2 deltas:
+
+| Seed | D delta | P delta | Mean delta |
+|---:|---:|---:|---:|
+| 42 | +0.037332 | +0.044191 | +0.040762 |
+| 43 | +0.013472 | +0.079721 | +0.046597 |
+| 44 | +0.033127 | +0.044484 | +0.038805 |
+
+Aggregate matched-minus-FIX2 deltas are D `+0.0279770000`, P `+0.0561320000`, and Mean `+0.0420546667`. Matched DEV Mean exceeds FIX2 on `3/3` seeds and in the three-seed mean.
+
+DEV calibration audit used identical rows/masks, with observed counts D/P `621/312` for every seed. Values are matched, FIX2, then matched-minus-FIX2:
+
+| Seed | D Brier | D ECE-15 | P Brier | P ECE-15 |
+|---:|---|---|---|---|
+| 42 | 0.250991 / 0.249330 / +0.001661 | 0.216796 / 0.189452 / +0.027344 | 0.090156 / 0.122209 / -0.032053 | 0.041386 / 0.095453 / -0.054067 |
+| 43 | 0.250396 / 0.258899 / -0.008503 | 0.221254 / 0.218367 / +0.002886 | 0.093445 / 0.128615 / -0.035171 | 0.048379 / 0.111257 / -0.062877 |
+| 44 | 0.254806 / 0.262067 / -0.007262 | 0.228324 / 0.219220 / +0.009103 | 0.088165 / 0.120834 / -0.032668 | 0.038778 / 0.082013 / -0.043235 |
+
+Three-seed mean matched-minus-FIX2 calibration deltas: D Brier `-0.0047011574`; D ECE-15 `+0.0131110949`; P Brier `-0.0332974344`; P ECE-15 `-0.0533929869`. No recalibration or rerun occurred.
+
+Same-epoch Test monitoring was read only after checkpoint freeze and did not affect selection or interpretation: seed42 TEST_NONE/SOFT/HARD Mean `0.777046/0.771482/0.778540`; seed43 `0.745789/0.745173/0.726297`; seed44 `0.780918/0.783803/0.780038`.
+
+Frozen claim result: `SAMPLE-SPECIFIC PSEUDO ALIGNMENT CLAIM SUPPORTED BY THIS NEGATIVE CONTROL`. This is narrow sample-specific pseudo-alignment evidence only. No missing-label correctness, comorbidity recovery, significance, or final-promotion claim is made. No tuning, sweep, retry, post-hoc config change, or source change occurred.
