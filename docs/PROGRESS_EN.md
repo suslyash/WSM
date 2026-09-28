@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-006J — sparse-MTL joint-training contribution audit with task-isolated comparators**.
+Current atomic task: **TASK-006K — Stage-6 evidence synthesis and claim-freeze dossier**.
 
-Expected Codex branch: `codex/task-006j`.
+Expected Codex branch: `codex/task-006k`.
 
-`TASK-006I` is complete and merged. Stage-6 task-aware fusion contribution is CLOSED as NOT SUPPORTED under the frozen equal-parameter three-seed gate.
+`TASK-006J` is complete and merged with a documented manager procedural exception. The remaining work is synthesis only: no further Stage-6 A+V training or tuning is authorized.
 
 ## 2. Default Context Policy
 
@@ -144,26 +144,24 @@ The detailed contract is in [plan/STAGE_6.md](plan/STAGE_6.md). At high level it
 
 Each scientific claim must map to an ablation or negative control. Negative results are retained. Test protocols remain monitoring-only and cannot drive decisions.
 
-## 7. Active Task — TASK-006J
+## 7. Active Task — TASK-006K
 
-Purpose: isolate the **sparse multi-task joint-training contribution** of the leading optimized R4 trial-012 composition.
+Purpose: create the **authoritative Stage-6 evidence synthesis / claim-freeze dossier**.
 
-For each seed 42/43/44, TASK-006J trains two task-isolated copies of the same full trial-012 architecture:
+TASK-006K is documentation-only. It must:
 
-- a depression-only optimization run;
-- a Parkinson-only optimization run.
+- map every required Stage-6 item to its accepted task evidence;
+- freeze the exact supported / not-supported / diagnostic-only claim ledger;
+- preserve all interpretation boundaries;
+- record the TASK-006J procedural exception honestly;
+- identify any remaining evidence gap, if one truly exists;
+- assess whether the **core A+V Stage-6 research cycle is evidence-complete**;
+- summarize candidate implications without promoting or selecting a final method;
+- prepare the manager handoff for the required deferred Stage-3 Text/Description work.
 
-Each copy retains the same model architecture and `295239` trainable parameters, semantic pseudo cache, direct pseudo-supervision formulation, reliability values, optimizer, warm-up, and task-specific branch capacity. The loss routes gradients from only the selected task; inactive-task outputs remain evaluable but do not enter training.
+No new training, probing, cache generation, Test analysis, source change, config change, or model selection is authorized.
 
-The paired no-MTL comparator for a seed is:
-
-- depression Score from the DEV-selected depression-only model;
-- Parkinson Score from the DEV-selected Parkinson-only model;
-- paired Mean = arithmetic mean of those two independently selected task Scores.
-
-This comparator is deliberately favorable to independent single-task training because each model is selected by its own active DEV task score. It tests whether joint sparse MTL produces positive transfer relative to task-isolated optimization. It is not a deployment-parameter comparison: the paired comparator uses two separately trained models.
-
-Exactly six production runs are authorized: D42, P42, D43, P43, D44, P44. No tuning is authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
+Stage 7 and Final Test remain locked. The project requirements still require deferred Text/Description before paper-ready freeze.
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -383,6 +381,23 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - sparse MTL and separate disease heads remained active in TASK-006I, so no sparse-MTL conclusion follows from that negative result;
 - Stage-6 task-aware fusion item is CLOSED as negative;
 - next sole atomic task is TASK-006J: compare the full joint sparse-MTL model against independently DEV-selected depression-only and Parkinson-only copies on seeds42/43/44.
+
+### MANAGER-DECISION-072 — Accept TASK-006J with procedural exception; assign Stage-6 synthesis
+
+- TASK-006J passed scientific manager review and was merged via PR #73;
+- initial firewall `b9e45c71586057fcbcd0bf5add97b373cea89f99` was followed by one failed D42 invocation that reached TRAIN epoch 1 and stopped on an empty depression-active batch before any DEV/Test evaluation or checkpoint selection;
+- corrective commit `63c327699f30ebd572de35cfb6a7d144734156ba` changed only the authorized loss file plus PROGRESS, added zero-connected neutral handling for empty active-task batches, re-established clean-origin default compatibility, and was pushed before the accepted completed sequence;
+- therefore the original “exactly six invocations” criterion was **formally violated**: total training invocations were 7;
+- manager accepts a documented procedural exception because the failed invocation produced no DEV/Test evidence, no selected checkpoint, and no metric-driven feedback; the accepted scientific evidence comes only from the corrected six completed runs;
+- corrected completed run order was exactly D42, P42, D43, P43, D44, P44;
+- task-isolated D/P/paired-Mean three-seed means = `0.717846/0.881495/0.799671`;
+- full-minus-isolated aggregate D/P/Mean = `+0.017410/-0.042935/-0.012762`;
+- therefore `SPARSE MTL JOINT-TRAINING CONTRIBUTION NOT SUPPORTED`;
+- TASK-006J closes the remaining sparse-MTL item;
+- no further Stage-6 A+V experiments are authorized before synthesis;
+- next sole atomic task is TASK-006K, a documentation-only Stage-6 evidence synthesis / claim-freeze dossier;
+- Stage 6 remains ACTIVE pending manager review of that dossier; Stage 7 and Final Test remain locked;
+- deferred Stage 3 Text/Description remains required before paper-ready/final evaluation freeze.
 
 ## 10. Historical Evidence
 
