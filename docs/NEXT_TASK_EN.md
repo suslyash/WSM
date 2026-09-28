@@ -1,406 +1,404 @@
-# TASK-006J: Sparse-MTL Joint-Training Contribution Audit
+# TASK-006K: Stage-6 Evidence Synthesis and Claim-Freeze Dossier
 
 ## Authority and branch
 
-This task follows **MANAGER-DECISION-071**.
+This task follows **MANAGER-DECISION-072**.
 
 Required branch:
 
-    codex/task-006j
+    codex/task-006k
 
 Start from current manager-updated `origin/main`.
 
 Create exactly one new task branch from that main.
 
-Stage-5 optimization remains closed. This is a Stage-6 component ablation only.
+This task is **documentation-only**.
 
-## Scientific question
+No training, probing, model execution, cache build, metric recomputation from Test, source edit, config edit, or model-selection experiment is authorized.
 
-Does **joint sparse multi-task training** contribute repeatably to the leading optimized R4 trial-012 composition compared with task-isolated training?
+## Goal
 
-For every seed, train two independent copies of the same trial-012 model:
+Produce one authoritative, compact, traceable Stage-6 dossier that answers:
 
-1. depression-only optimization;
-2. Parkinson-only optimization.
+1. Which Stage-6 claims are supported?
+2. Which are not supported?
+3. Which findings are diagnostic-only?
+4. Has every required Stage-6 plan item received its required evidence?
+5. Are there any genuine remaining core A+V evidence gaps?
+6. What do the results imply for candidate complexity and scientific claims?
+7. What remains required before Stage 7 can be unlocked?
 
-The paired task-isolated comparator uses each model only for its active task.
-
-This task does NOT test task-aware fusion; that claim is already closed negative by TASK-006I.
-
-## Interpretation contract
-
-The full method is one jointly trained two-task model.
-
-The no-MTL comparator is a **pair of separately trained task-isolated models**. Each individual model has the same architecture and trainable parameter count as full, but the pair is not a single equal-deployment-size model.
-
-Therefore:
-
-- a positive full result supports positive transfer / efficiency from joint sparse-MTL optimization under the current pipeline;
-- a negative result means the joint sparse-MTL contribution is not supported by this paired task-isolated control;
-- do not describe the comparator as equal total deployment parameter count.
+Do NOT promote or select a final method. Manager retains that decision.
 
 ## Required reading
 
-Read in order:
+Read in this order:
 
 1. `AGENTS.md`
 2. `docs/README.md`
 3. `docs/PROJECT_REQUIREMENTS.md`
 4. `docs/PROGRESS_EN.md`
 5. `docs/plan/STAGE_6.md`
-6. `docs/NEXT_TASK_EN.md`
-7. `src/fusion/loss/r4_ramps_balance_loss.py`
-8. `src/fusion/models/av_r3_disease_query.py`
-9. `src/fusion/data/wsm_ramps_semantic_datamodule.py`
-10. configs37/38/39.
+6. `docs/plan/STAGE_3.md`
+7. `docs/plan/STAGE_7.md`
+8. `docs/NEXT_TASK_EN.md`
 
-Historical F0/F1/F2 evidence is context only and must not substitute for this trial-012 matched-seed audit.
+Read source/config files only when needed to resolve an evidence identity already recorded in PROGRESS. Do not execute training or evaluation.
+
+The Stage-5 archive may be read only when needed to verify frozen references already cited by Stage-6 evidence.
 
 ## Allowed tracked files
 
 Only:
 
-- `src/fusion/loss/r4_ramps_balance_loss.py`
-- `configs/wsm_mm_pd_dep_v1/ablations/58_d_only_seed42.yaml`
-- `configs/wsm_mm_pd_dep_v1/ablations/59_p_only_seed42.yaml`
-- `configs/wsm_mm_pd_dep_v1/ablations/60_d_only_seed43.yaml`
-- `configs/wsm_mm_pd_dep_v1/ablations/61_p_only_seed43.yaml`
-- `configs/wsm_mm_pd_dep_v1/ablations/62_d_only_seed44.yaml`
-- `configs/wsm_mm_pd_dep_v1/ablations/63_p_only_seed44.yaml`
+- `docs/STAGE6_CLAIM_LEDGER_EN.md`
 - `docs/PROGRESS_EN.md`
 
-Forbidden:
+No other tracked file may change.
 
-- model source changes;
-- DataModule changes;
-- callback changes;
-- `src/audio/*` / `src/video/*` changes;
-- existing config changes;
-- pseudo-cache changes;
-- tuning.
+## Mandatory evidence policy
 
-## Minimal backward-compatible loss switch
+GitHub-committed Stage-6 PROGRESS evidence is authoritative.
 
-Extend `WSMR4RampsBalanceLoss` with:
+Do not invent missing metrics.
+Do not infer significance.
+Do not reinterpret Test monitoring.
+Do not reopen failed gates.
+Do not convert “NOT SUPPORTED” into “harmful”, “useless”, or “proven unnecessary”.
 
-    training_task: str = "both"
+Use exact frozen claim strings where they exist.
 
-Allowed values exactly:
+## Required claim ledger
 
-- `both`
-- `depression`
-- `parkinson`
+Create `docs/STAGE6_CLAIM_LEDGER_EN.md`.
 
-Reject anything else.
+It must contain a table with at least:
 
-### Default/full behavior
+- Stage-6 plan item;
+- accepted task / PR;
+- comparator/control;
+- seed count;
+- key DEV evidence;
+- exact frozen claim/result;
+- status: SUPPORTED / NOT SUPPORTED / DIAGNOSTIC ONLY;
+- interpretation boundary.
 
-When `training_task="both"`, behavior, numerical ordering, loss value, gradients, diagnostics, and controller interaction must remain tensor/numerically identical to current `origin/main`.
+At minimum include all of the following accepted results.
 
-Do not refactor the default path beyond what is necessary to add the switch.
+### Sparse MTL
 
-### Depression-only behavior
-
-When `training_task="depression"`:
-
-- compute and optimize only task index 0 objective;
-- task index 1 must not contribute to total loss;
-- task index 1 observed/pseudo/aux/agreement terms must not be computed into the training objective;
-- depression observed/pseudo/aux/agreement formulation remains exactly the current one;
-- `pseudo_scale` warm-up remains active;
-- RA task-balancing weights are mathematically irrelevant because only one task objective is returned;
-- controller callback may remain configured for instrumentation compatibility, but its weights must not affect training;
-- inactive Parkinson-specific model parameters must receive zero/None gradients;
-- shared projections and shared gate may receive depression gradients as normal.
-
-### Parkinson-only behavior
-
-Symmetric for task index 1.
-
-### Diagnostics
-
-For single-task mode:
-
-- diagnostics for the active task remain valid;
-- inactive-task grad norm/cosine/reliability training diagnostics should be absent/uninitialized or explicit neutral fallback;
-- no inactive-task reliability update may influence active training;
-- default `both` diagnostics must remain unchanged.
-
-## Frozen full reference
-
-Full trial-012 DEV:
-
-| Seed | D | P | Mean |
-|---:|---:|---:|---:|
-| 42 | 0.759025 | 0.879259 | 0.8191424538 |
-| 43 | 0.718527 | 0.804363 | 0.7614450000 |
-| 44 | 0.728217 | 0.832060 | 0.7801390000 |
-
-Full three-seed:
-
-- D mean `0.7352563333`;
-- P mean `0.8385606667`;
-- Mean `0.7869088179`.
-
-Checkpoint SHA256:
-
-- seed42 `104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a`;
-- seed43 `6af4a4ed21040aff4db2906b0adc8aa5fd27a4b72c375fbb67f68de04ab8446e`;
-- seed44 `b06fec6912b27cd19d811b72b2c3c08cd1b0a6c826b637f87a314e3976b88c17`.
-
-Verify these before production.
-
-## Exact task-isolated configs
-
-For each seed create one D-only and one P-only config from the corresponding full ref37/38/39.
-
-### D-only allowed semantic differences
-
-Only:
-
-1. run_name;
-2. `loss.params.training_task: depression`;
-3. checkpoint callback monitor = `dev/depression/score`;
-4. early-stopping callback monitor = `dev/depression/score`;
-5. sweep-target callback monitor = `dev/depression/score`.
-
-### P-only allowed semantic differences
-
-Only:
-
-1. run_name;
-2. `loss.params.training_task: parkinson`;
-3. checkpoint callback monitor = `dev/parkinson/score`;
-4. early-stopping callback monitor = `dev/parkinson/score`;
-5. sweep-target callback monitor = `dev/parkinson/score`.
-
-All modes remain `max`.
-All patience/min_delta/save_top_k settings remain unchanged.
-Everything else must match the corresponding full reference.
-
-Required run names:
-
-- 58: `stage6_d_only_trial012_seed42`
-- 59: `stage6_p_only_trial012_seed42`
-- 60: `stage6_d_only_trial012_seed43`
-- 61: `stage6_p_only_trial012_seed43`
-- 62: `stage6_d_only_trial012_seed44`
-- 63: `stage6_p_only_trial012_seed44`
-
-## Mandatory pre-run firewall
-
-Before any production run:
-
-1. implement the loss switch;
-2. prove default `training_task=both` backward compatibility against clean `origin/main`:
-   - identical loss value;
-   - identical model gradients;
-   - identical loss diagnostic/controller state after the same deterministic TRAIN batch;
-3. validate configs58..63;
-4. prove config equivalence to refs37/38/39 except the allowed task/run/monitor differences;
-5. verify seeds exactly 42/42/43/43/44/44;
-6. verify full checkpoint paths/SHA;
-7. instantiate DataModule/model/loss/callbacks for all six configs;
-8. verify every model has exactly `295239` trainable parameters;
-9. verify pseudo cache SHA/counts/classes unchanged;
-10. D-only isolation:
-    - total loss equals D objective;
-    - deterministic perturbation of Parkinson logits and P aux logits leaves total loss and all active gradients unchanged;
-    - D main/query/candidate/fusion/aux plus shared projections/gate receive finite gradients;
-    - P main/query/candidate/fusion/aux parameters receive zero/None gradients;
-11. P-only isolation: symmetric;
-12. at pseudo_scale=1 verify active-task accepted pseudo supervision produces finite nonzero model gradients;
-13. inactive-task accepted pseudo entries do not affect total loss or gradients;
-14. pseudo target/reliability tensors detached;
-15. active task reliability diagnostics finite when accepted pseudo rows occur;
-16. controller/balancing weights cannot change the single-task total loss;
-17. no optimizer step;
-18. no DEV/Test loader iteration;
-19. `git diff --check`;
-20. `git diff origin/main -- src/fusion/models src/fusion/data src/common/callbacks src/audio src/video` empty;
-21. append firewall evidence to PROGRESS;
-22. commit and push one firewall commit.
-
-No production run before the firewall commit is visible on origin.
-
-## Exactly six production runs
-
-Run exactly in this order:
-
-1. D-only seed42;
-2. P-only seed42;
-3. D-only seed43;
-4. P-only seed43;
-5. D-only seed44;
-6. P-only seed44.
-
-Commands:
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/ablations/58_d_only_seed42.yaml
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/ablations/59_p_only_seed42.yaml
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/ablations/60_d_only_seed43.yaml
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/ablations/61_p_only_seed43.yaml
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/ablations/62_d_only_seed44.yaml
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/ablations/63_p_only_seed44.yaml
-
-No sweep.
-No retry for metric improvement.
-No extra seed.
-No config change after firewall.
-
-## Selection/Test firewall
-
-D-only:
-
-- select checkpoint only by maximum `dev/depression/score`.
-
-P-only:
-
-- select checkpoint only by maximum `dev/parkinson/score`.
-
-Freeze each checkpoint before reading same-epoch Test monitoring.
-
-Inactive-task DEV metrics are diagnostic only and MUST NOT affect selection.
-
-Test cannot affect selection, claim, or follow-up.
-
-## Paired no-MTL comparator
-
-For each seed define:
-
-    single_D(seed) = DEV depression Score from selected D-only checkpoint
-    single_P(seed) = DEV Parkinson Score from selected P-only checkpoint
-    single_pair_mean(seed) = 0.5 * (single_D(seed) + single_P(seed))
-
-Ignore P from D-only and D from P-only for the primary comparator.
-
-Compute:
-
-- single_D mean/std/range across seeds;
-- single_P mean/std/range;
-- paired Mean mean/std/range;
-- same-seed `full_D - single_D`;
-- same-seed `full_P - single_P`;
-- same-seed `full_Mean - single_pair_mean`;
-- aggregate deltas.
-
-These task-specific deltas are the Stage-6 negative-transfer diagnostic:
-
-- positive full-minus-single = joint-training gain;
-- negative full-minus-single = task-specific negative transfer relative to isolated optimization.
-
-## Frozen claim rule
-
-Record exactly:
-
-    SPARSE MTL JOINT-TRAINING CONTRIBUTION SUPPORTED
-
-only if ALL hold:
-
-1. full paired DEV Mean > task-isolated paired Mean on at least 2/3 seeds;
-2. full three-seed Mean > task-isolated paired three-seed Mean;
-3. full three-seed D is not more than `0.010000` below D-only three-seed D;
-4. full three-seed P is not more than `0.010000` below P-only three-seed P.
-
-Otherwise record exactly:
+Exact result:
 
     SPARSE MTL JOINT-TRAINING CONTRIBUTION NOT SUPPORTED
 
-This claim concerns joint sparse-MTL optimization only.
+Accepted paired task-isolated three-seed:
+- D `0.717846`
+- P `0.881495`
+- Mean `0.799671`
 
-## Diagnostics
+Full-minus-isolated:
+- D `+0.017410`
+- P `-0.042935`
+- Mean `-0.012762`
 
-For each selected single-task checkpoint record:
+Record TASK-006J procedural exception:
+- total invocations = 7;
+- first D42 failed in TRAIN epoch1 before DEV/Test evaluation;
+- corrective firewall preceded the accepted six completed runs;
+- accepted completed run count = 6;
+- no metric-driven retry/tuning.
 
-- selected active-task Score/UAR/MF1;
-- inactive-task DEV Score as diagnostic only;
-- pseudo scale;
-- active shared-gradient norm on a deterministic TRAIN diagnostic batch;
-- active task modality gate mean/std on DEV;
-- Brier/ECE-15 for the active task on DEV;
-- accepted pseudo coverage/classes for the active task.
+### Task-aware fusion
 
-For the paired comparator report:
+Exact result:
 
-- D-only and P-only active calibration three-seed means;
-- full-minus-single active calibration deltas;
-- task-specific full-minus-single DEV Score deltas and their signs.
+    TASK-AWARE FUSION CONTRIBUTION NOT SUPPORTED
 
-RA controller weights from single-task runs are instrumentation only and cannot be interpreted as task balancing because only one task objective enters training.
+Shared equal-parameter three-seed:
+- D `0.7407873333`
+- P `0.8467100000`
+- Mean `0.7935663333`
 
-## Required PROGRESS evidence
+Full-minus-shared:
+- D `-0.0055310000`
+- P `-0.0081493333`
+- Mean `-0.0066575154`
 
-Record:
+Both variants: `295239` trainable parameters.
 
-- task/branch;
-- loss source change and default backward-compatibility proof;
-- exact single-task routing semantics;
-- configs58..63 equivalence;
-- full checkpoint SHAs;
-- pseudo-cache identity;
-- firewall evidence/SHA;
-- exact six production commands;
-- production count exactly 6;
-- six run/MLflow identities;
-- active-task selected epoch/checkpoint/SHA;
-- active DEV UAR/MF1/Score;
-- inactive DEV Score diagnostic;
-- Test monitoring after freeze only;
-- paired no-MTL per-seed/aggregate results;
-- full-minus-single task/Mean deltas;
-- exact frozen claim string;
-- calibration/gate/gradient/coverage diagnostics;
-- explicit statement that each task-isolated model has `295239` parameters but the pair is not an equal-total-deployment-size comparator;
-- no tuning/retry/Test-driven decision.
+### Direct pseudo supervision
+
+Exact result:
+
+    DIRECT PSEUDO-SUPERVISION CONTRIBUTION SUPPORTED
+
+No-direct-pseudo three-seed:
+- D `0.7134376667`
+- P `0.8263193333`
+- Mean `0.7698780000`
+
+Full-minus-ablation:
+- D `+0.0218186667`
+- P `+0.0122413333`
+- Mean `+0.0170308179`
+
+Boundary: direct pseudo BCE term only.
+
+### Uncertainty / reliability
+
+Exact result:
+
+    UNCERTAINTY/RELIABILITY CONTRIBUTION SUPPORTED
+
+Uniform-reliability three-seed:
+- D `0.7352583333`
+- P `0.8345853333`
+- Mean `0.7849220000`
+
+Full-minus-ablation:
+- D `-0.0000020000`
+- P `+0.0039753333`
+- Mean `+0.0019868179`
+
+Boundary: small effect; combined graded reliability in pseudo BCE weighting + RA-controller reliability signal, not separately identified.
+
+### Semantic evidence
+
+Exact result:
+
+    SEMANTIC-EVIDENCE CONTRIBUTION VIA DEPRESSION PSEUDO ACCEPTANCE NOT SUPPORTED
+
+No-semantic-depression three-seed:
+- D `0.714447`
+- P `0.868369`
+- Mean `0.791408`
+
+Full-minus-ablation:
+- D `+0.020809`
+- P `-0.029808`
+- Mean `-0.004499`
+
+Boundary: tests the semantic-enabled depression pseudo-acceptance path only.
+
+### RA-STCH balancing
+
+Record both exact results:
+
+    RA-STCH BALANCING CONTRIBUTION OVER EQUAL NOT SUPPORTED
+
+    RA-STCH ADVANTAGE OVER SIMPLER BALANCING NOT SUPPORTED
+
+Fixed-composition RA three-seed:
+- D `0.6931503333`
+- P `0.8519640000`
+- Mean `0.7725573333`
+
+Equal Mean `0.7791726667`.
+Corrected Progress Mean `0.7847510000`.
+RA minus best-simple Mean by seed:
+- `-0.004654`
+- `-0.010530`
+- `-0.024654`
+
+Boundary: this isolates balancing/controller contribution; it does not automatically demote the separately optimized trial-012 composition.
+
+### Modality removal
+
+Video exact result:
+
+    VIDEO MODALITY CONTRIBUTION NOT SUPPORTED
+
+No-video three-seed:
+- D `0.749645`
+- P `0.783216`
+- Mean `0.766431`
+
+Full-minus-no-video:
+- D `-0.014389`
+- P `+0.055344`
+- Mean `+0.020478`
+
+Boundary: frozen claim fails due D non-regression criterion; do not say video is universally useless.
+
+Online audio exact result:
+
+    ONLINE AUDIO INPUT MODALITY CONTRIBUTION SUPPORTED
+
+No-audio three-seed:
+- D `0.653375`
+- P `0.792030`
+- Mean `0.722703`
+
+Full-minus-no-audio:
+- D `+0.081881`
+- P `+0.046531`
+- Mean `+0.064206`
+
+Boundary: online student audio branch only; frozen pseudo cache still contains historical audio-derived teacher information.
+
+### Shuffled/mismatched pseudo negative control
+
+Exact accepted result:
+
+    SAMPLE-SPECIFIC PSEUDO ALIGNMENT CLAIM SUPPORTED BY THIS NEGATIVE CONTROL
+
+Matched Equal Mean `0.7791726667`.
+Exact shuffled FIX2 Mean `0.7371180000`.
+Matched-minus-shuffled Mean `+0.0420546667`.
+Matched > shuffled on 3/3 seeds.
+
+Boundary: no pseudo-label correctness, missing-label recovery, comorbidity, or significance claim.
+
+### Corpus probe
+
+Record exact flags:
+
+    STRONG CORPUS-ID DECODABILITY FLAG NOT TRIGGERED
+
+    FUSION AMPLIFICATION OF CORPUS DECODABILITY NOT SUPPORTED
+
+Three-seed true AUROC means:
+- audio `0.791292`
+- video `0.705505`
+- projected A+V `0.750650`
+- task-fused `0.759832`
+- gates `0.551605`
+- logits `0.575197`
+
+Task-fused minus projected-A+V AUROC deltas:
+- `+0.024588`
+- `-0.000165`
+- `+0.003123`
+- mean `+0.009182`
+
+Boundary: corpus identity is structurally coupled to observed-task identity; no causal shortcut claim.
+
+## Stage-6 completeness matrix
+
+Map every current `docs/plan/STAGE_6.md` item 1–10 to accepted evidence.
+
+Required conclusions to check, not assume:
+
+1. sparse MTL — TASK-006J;
+2. task-aware fusion — TASK-006I;
+3. direct pseudo — TASK-006D;
+4. uncertainty/reliability — TASK-006E;
+5. semantic evidence — TASK-006F;
+6. RA-STCH — TASK-006C;
+7. remove each modality — TASK-006G/H;
+8. shuffled/mismatched pseudo negative control — TASK-006A/FIX2;
+9. corpus probe — TASK-006B;
+10. equal-parameter control if size grows materially — TASK-006I provides an explicit equal-parameter architectural control; additionally state whether the conditional requirement is otherwise triggered.
+
+Also assess required diagnostics:
+- DEV UAR/MF1/Score;
+- ECE/Brier;
+- pseudo coverage/class balance;
+- task gradient norms/cosines;
+- negative-transfer deltas;
+- gate distributions.
+
+If all are represented by accepted evidence, record exactly:
+
+    CORE STAGE-6 A+V EVIDENCE MATRIX COMPLETE
+
+Otherwise record exactly:
+
+    CORE STAGE-6 A+V EVIDENCE MATRIX INCOMPLETE
+
+and name the specific missing item. Do not create a new experiment.
+
+## Candidate implications section
+
+This section must be descriptive, not a promotion decision.
+
+Record the frozen full trial-012 reference:
+- D `0.7352563333`
+- P `0.8385606667`
+- Mean `0.7869088179`
+- Mean std `0.0294384420`.
+
+Record matched temporal audio:
+- Mean `0.7733169588`
+- Mean std `0.0138512531`.
+
+Record that full R4 > matched audio Mean on 3/3 seeds but audio is more seed-stable.
+
+Also record materially relevant Stage-6 comparator facts:
+- shared-fusion equal-parameter Mean `0.7935663333`, above full on 3/3 seeds;
+- no-semantic-depression Mean `0.791408`, above full aggregate but with a D/P trade-off;
+- paired task-isolated Mean `0.799671`, but it is a two-model comparator and not equal total deployment size;
+- no-video Mean `0.766431`, below full aggregate but with higher D;
+- no-audio Mean `0.722703`, substantially below full.
+
+Required interpretation:
+- Stage-6 evidence does **not** justify claiming that every component of full trial-012 is necessary;
+- multiple complexity/mechanism claims are not supported;
+- direct pseudo supervision, graded reliability, sample-specific pseudo alignment, and the online audio branch have positive support under their exact gates;
+- no final method promotion/demotion or Stage-7 candidate selection is made in TASK-006K.
+
+## Deferred Stage-3 / Stage-7 boundary
+
+PROJECT_REQUIREMENTS requires deferred Text/Description to be completed before paper-ready freeze.
+
+Therefore the dossier must state:
+
+- even if core Stage-6 A+V evidence is complete, Stage 7 remains LOCKED;
+- Final Test remains unauthorized;
+- the next programme-level phase after manager acceptance should be the deferred Stage-3 Text/Description study, unless the manager identifies a genuine Stage-6 documentation/evidence gap;
+- no new A+V tuning should be proposed.
+
+Do not edit Stage-3 or Stage-7 plans in this task.
+
+## PROGRESS update
+
+Append a compact TASK-006K synthesis entry that includes:
+
+- branch;
+- claim-ledger path;
+- exact completeness string;
+- supported claim list;
+- not-supported claim list;
+- diagnostic-only findings;
+- TASK-006J procedural exception;
+- candidate-implication boundaries;
+- Stage-3 requirement;
+- Stage-7 lock;
+- statement that no run/source/config/Test decision occurred.
+
+Do not mark Stage 6 COMPLETE yourself.
+Do not activate Stage 3 yourself.
+Manager will do that after review.
 
 ## Final scope checks
 
 Run:
 
     git diff --check
-    git diff origin/main -- src/fusion/models
-    git diff origin/main -- src/fusion/data
-    git diff origin/main -- src/common/callbacks
-    git diff origin/main -- src/audio
-    git diff origin/main -- src/video
     git status --short
     git diff --stat origin/main...HEAD
-    git log -14 --oneline --decorate
+    git log -12 --oneline --decorate
 
-Only the authorized R4 loss file, configs58..63, and PROGRESS may differ.
+Only `docs/STAGE6_CLAIM_LEDGER_EN.md` and `docs/PROGRESS_EN.md` may differ.
 
 ## Acceptance criteria
 
-TASK-006J passes only if:
+TASK-006K passes only if:
 
-- branch exactly `codex/task-006j`;
-- default both-task loss behavior is unchanged;
-- single-task loss routing is isolated as specified;
-- each model remains `295239` trainable parameters;
-- configs differ only as authorized;
-- pseudo path unchanged;
-- firewall pushed before production;
-- exactly six runs in fixed order;
-- active-task DEV-only selection;
-- Test monitoring only;
-- frozen claim applied exactly;
-- negative-transfer/calibration/gate/coverage diagnostics recorded;
-- no tuning/sweep/retry;
+- branch exactly `codex/task-006k`;
+- no source/config/script changes;
+- no training/probe/cache generation;
+- no Test-based analysis beyond restating already accepted monitoring boundaries;
+- all Stage-6 claim strings and key values match accepted evidence;
+- TASK-006J exception is represented accurately as 7 total invocations / 6 accepted completed runs;
+- completeness matrix covers all Stage-6 items and required diagnostics;
+- candidate implications are descriptive only;
+- Stage 3 remains deferred pending manager activation;
+- Stage 7/Final Test remain locked;
 - branch pushed;
 - main/master untouched.
 
-Passing TASK-006J closes the remaining Stage-6 sparse-MTL item. It authorizes no Stage-7 action by itself; manager must first review whether Stage 6 is complete and freeze the supported/unsupported claim ledger.
+Passing TASK-006K authorizes no next task automatically.
 
 ## Required handoff
 
@@ -413,10 +411,22 @@ Respond in English using exactly:
 5. Blockers and risks
 6. Next atomic step
 
-Include branch, firewall/final SHA, pushed status, main/master untouched, default backward compatibility, exactly six runs, per-seed task-isolated D/P/paired Mean, three-seed aggregates, full-minus-single deltas, exact claim string, negative-transfer/calibration/gate/coverage summary, parameter-count caveat, no Test-driven decision, Stage 6 active, Stage-5 closed, Stage7/Text/Final Test locked.
+Include:
+- branch;
+- final commit SHA;
+- pushed status;
+- main/master untouched;
+- claim-ledger path;
+- exact completeness string;
+- supported/not-supported/diagnostic-only counts and lists;
+- TASK-006J procedural exception;
+- no run/source/config changes;
+- Stage 6 still pending manager closure;
+- Stage 3 still deferred pending manager activation;
+- Stage 7 and Final Test locked.
 
 For section 6 write only:
 
-    Manager review of TASK-006J; do not start another task.
+    Manager review of TASK-006K; do not start another task.
 
 Stop.
