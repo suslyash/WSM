@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-006D — direct pseudo-supervision ablation on the leading optimized R4 composition**.
+Current atomic task: **TASK-006E — uncertainty/reliability ablation on the leading optimized R4 composition**.
 
-Expected Codex branch: `codex/task-006d`.
+Expected Codex branch: `codex/task-006e`.
 
-`TASK-006C` is complete and merged. Stage-6 RA-STCH balancing contribution item is CLOSED as a negative result: neither contribution over Equal nor advantage over simpler balancing was supported.
+`TASK-006D` is complete and merged. Stage-6 direct pseudo-supervision contribution is CLOSED as supported under the predeclared three-seed gate.
 
 ## 2. Default Context Policy
 
@@ -144,28 +144,25 @@ The detailed contract is in [plan/STAGE_6.md](plan/STAGE_6.md). At high level it
 
 Each scientific claim must map to an ablation or negative control. Negative results are retained. Test protocols remain monitoring-only and cannot drive decisions.
 
-## 7. Active Task — TASK-006D
+## 7. Active Task — TASK-006E
 
-Purpose: isolate the **direct pseudo-supervision loss contribution** inside the leading optimized R4 trial-012 composition.
+Purpose: isolate the **uncertainty/reliability contribution** inside the leading optimized R4 trial-012 composition.
 
-Frozen full reference remains configs37/38/39 and their selected DEV results:
+Full reference remains configs37/38/39.
 
-| Seed | D | P | Mean |
-|---:|---:|---:|---:|
-| 42 | 0.759025 | 0.879259 | 0.8191424538 |
-| 43 | 0.718527 | 0.804363 | 0.7614450000 |
-| 44 | 0.728217 | 0.832060 | 0.7801390000 |
+TASK-006E builds one deterministic derived pseudo cache in which:
 
-Three-seed full means: D `0.7352563333`, P `0.8385606667`, Mean `0.7869088179`.
+- `pseudo_accept_mask` is unchanged;
+- `pseudo_targets` is unchanged;
+- `pseudo_class` is unchanged;
+- `calibrated_audio_probs` is unchanged;
+- observed truth and canonical row identity are unchanged;
+- accepted `pseudo_reliability` values are replaced by exactly `1.0`;
+- rejected/observed reliability remains exactly `0.0`.
 
-TASK-006D creates three ablation configs semantically identical to configs37/38/39 except:
+This preserves **which pseudo examples are accepted and what their targets are**, while removing the graded uncertainty/reliability signal. It therefore tests the combined contribution of reliability weighting in the direct pseudo BCE and reliability input to the RA controller.
 
-- distinct run names;
-- pseudo warm-up callback `final_scale: 0.0`.
-
-The loss-level `pseudo_scale` is therefore frozen at zero for every epoch. The semantic cache, accepted masks, pseudo reliability, and RA reliability/controller path are intentionally retained. This isolates the **direct pseudo BCE term only**; it is not a reliability or semantic-acceptance ablation.
-
-Exactly three production runs are authorized: seeds42/43/44. No source change or tuning is authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
+Exactly three production runs are authorized: seeds42/43/44. No source changes or tuning are authorized. Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -301,6 +298,20 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - this negative mechanism result does not automatically demote the separately optimized trial-012 composition, whose hyperparameters differ and which remains the leading matched-seed candidate pending remaining Stage-6 component audits;
 - Stage-6 balancing/RA-STCH claim is CLOSED as negative;
 - next sole atomic task is TASK-006D: remove only the direct pseudo-supervision loss term from optimized trial-012 on seeds42/43/44 while retaining pseudo acceptance/reliability/controller information.
+
+### MANAGER-DECISION-066 — Accept TASK-006D; direct pseudo contribution supported; assign reliability ablation
+
+- TASK-006D passed manager review and was merged via PR #60;
+- firewall commit `5a5a657c56cdc2eee35c7e85c990022083ab70a1` preceded final evidence `7239d38333ec0019f94644bd10bc5a63aff48e5f`;
+- configs40/41/42 differ from full trial-012 only by run_name and pseudo warm-up `final_scale=0.0`;
+- exactly three runs occurred, seeds42/43/44;
+- no-direct-pseudo three-seed D/P/Mean = `0.7134376667/0.8263193333/0.7698780000`;
+- full trial-012 minus no-direct-pseudo aggregate D/P/Mean = `+0.0218186667/+0.0122413333/+0.0170308179`;
+- full DEV Mean exceeded the ablation on 2/3 seeds and in aggregate, with no aggregate D/P unacceptable regression under the frozen gate;
+- therefore `DIRECT PSEUDO-SUPERVISION CONTRIBUTION SUPPORTED`;
+- interpretation is limited to the direct pseudo BCE term; pseudo-label correctness, missing-label recovery, comorbidity recovery, significance, and final promotion remain unauthorized;
+- Stage-6 direct pseudo-supervision claim is CLOSED as supported;
+- next sole atomic task is TASK-006E: remove graded reliability while preserving pseudo acceptance and targets, then compare three seeds against full trial-012.
 
 ## 10. Historical Evidence
 

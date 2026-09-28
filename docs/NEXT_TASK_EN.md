@@ -1,12 +1,12 @@
-# TASK-006D: Direct Pseudo-Supervision Ablation on Optimized R4 Trial-012
+# TASK-006E: Uncertainty/Reliability Ablation on Optimized R4 Trial-012
 
 ## Authority and branch
 
-This task follows **MANAGER-DECISION-065**.
+This task follows **MANAGER-DECISION-066**.
 
 Required branch:
 
-    codex/task-006d
+    codex/task-006e
 
 Start from current manager-updated `origin/main`.
 
@@ -16,23 +16,31 @@ This is a Stage-6 component ablation. Stage-5 optimization remains closed.
 
 ## Scientific question
 
-Does the **direct accepted-pseudo BCE supervision term** contribute repeatably to the leading optimized R4 trial-012 composition?
+Does the **graded uncertainty/reliability signal** contribute repeatably to the leading optimized R4 trial-012 composition?
 
-This task removes only direct pseudo loss by keeping `pseudo_scale=0` for the entire training run.
+This task preserves the semantic pseudo subset and pseudo targets, but replaces accepted reliability values with uniform 1.0.
 
-It intentionally RETAINS:
+That removes graded reliability from BOTH:
 
-- the exact semantic pseudo cache;
-- pseudo accept masks;
-- pseudo reliability values;
-- RA reliability EMA;
-- RA controller logic;
+1. reliability-weighted direct pseudo BCE;
+2. reliability EMA used by the RA controller.
+
+It does NOT remove:
+
+- pseudo acceptance;
+- pseudo targets;
+- pseudo classes;
+- calibrated audio probabilities;
+- direct pseudo supervision itself;
+- semantic evidence deciding which rows are accepted;
 - architecture;
-- auxiliary/agreement terms;
+- RA-STCH controller mechanics;
+- auxiliary/agreement losses;
 - optimizer;
-- all optimized trial-012 hyperparameters.
+- warm-up;
+- any optimized trial-012 hyperparameter.
 
-Therefore TASK-006D does **not** test reliability contribution or semantic-acceptance contribution. Those remain separate future Stage-6 claims.
+Therefore this is the Stage-6 **uncertainty/reliability** ablation, not a semantic-evidence ablation.
 
 ## Required reading
 
@@ -44,79 +52,25 @@ Read in this exact order:
 4. `docs/PROGRESS_EN.md`
 5. `docs/plan/STAGE_6.md`
 6. `docs/NEXT_TASK_EN.md`
-7. `src/fusion/loss/r4_ramps_balance_loss.py`
-8. `src/common/callbacks/wsm_pseudo_scale_warmup_callback.py`
+7. `src/fusion/data/wsm_ramps_semantic_datamodule.py`
+8. `src/fusion/loss/r4_ramps_balance_loss.py`
 9. `src/common/callbacks/wsm_r4_balance_callback.py`
-10. `src/fusion/data/wsm_ramps_semantic_datamodule.py`
-11. `src/fusion/models/av_r3_disease_query.py`
-12. configs37/38/39.
+10. configs37/38/39.
 
 ## Allowed tracked files
 
 Codex may add/modify only:
 
-- `configs/wsm_mm_pd_dep_v1/ablations/40_no_direct_pseudo_seed42.yaml`
-- `configs/wsm_mm_pd_dep_v1/ablations/41_no_direct_pseudo_seed43.yaml`
-- `configs/wsm_mm_pd_dep_v1/ablations/42_no_direct_pseudo_seed44.yaml`
+- `scripts/common/build_ramps_uniform_reliability_ablation.py`
+- `configs/wsm_mm_pd_dep_v1/ablations/43_uniform_reliability_seed42.yaml`
+- `configs/wsm_mm_pd_dep_v1/ablations/44_uniform_reliability_seed43.yaml`
+- `configs/wsm_mm_pd_dep_v1/ablations/45_uniform_reliability_seed44.yaml`
 - `docs/PROGRESS_EN.md`
 
 No `src/*` file may change.
 No existing config may change.
-No script may change.
 
-## Frozen full reference
-
-Use configs37/38/39 as the full-method reference.
-
-### Seed42
-
-Config:
-
-    configs/wsm_mm_pd_dep_v1/fusion/37_r4_ra_stch_optuna_selected_seed42.yaml
-
-DEV D/P/Mean:
-
-    0.759025 / 0.879259 / 0.8191424538
-
-Checkpoint SHA256:
-
-    104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a
-
-### Seed43
-
-Config:
-
-    configs/wsm_mm_pd_dep_v1/fusion/38_r4_ra_stch_optuna_confirm_seed43.yaml
-
-DEV D/P/Mean:
-
-    0.718527 / 0.804363 / 0.7614450000
-
-Checkpoint SHA256:
-
-    6af4a4ed21040aff4db2906b0adc8aa5fd27a4b72c375fbb67f68de04ab8446e
-
-### Seed44
-
-Config:
-
-    configs/wsm_mm_pd_dep_v1/fusion/39_r4_ra_stch_optuna_confirm_seed44.yaml
-
-DEV D/P/Mean:
-
-    0.728217 / 0.832060 / 0.7801390000
-
-Checkpoint SHA256:
-
-    b06fec6912b27cd19d811b72b2c3c08cd1b0a6c826b637f87a314e3976b88c17
-
-Full three-seed means/sample std:
-
-- D mean `0.7352563333`, std `0.0211467766`;
-- P mean `0.8385606667`, std `0.0378688091`;
-- Mean `0.7869088179`, std `0.0294384420`.
-
-## Frozen pseudo cache
+## Frozen source pseudo cache
 
 Path:
 
@@ -126,87 +80,187 @@ SHA256:
 
     17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945
 
-Accepted missing D/P:
+Rows:
+
+    6325
+
+Missing D/P:
+
+    2665 / 3660
+
+Accepted D/P:
 
     376 / 1801
 
-Accepted class counts:
+Accepted classes:
 
 - D positive/negative: `376 / 0`
 - P positive/negative: `212 / 1589`
 
-Observed truth continues to override pseudo supervision.
+The source cache is immutable.
+
+## Derived uniform-reliability cache
+
+Create exactly one external derived cache:
+
+    /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_reliability_ablation/uniform_accepted_reliability_v1.pt
+
+The builder MUST fail rather than overwrite an existing path.
+
+Required CLI:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/common/build_ramps_uniform_reliability_ablation.py       --source /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt       --output /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_reliability_ablation/uniform_accepted_reliability_v1.pt
+
+## Exact derived-cache transformation
+
+Load the source cache read-only.
+
+Copy all fields.
+
+Modify ONLY `pseudo_reliability`:
+
+- where `pseudo_accept_mask == True`, set reliability to exactly `1.0`;
+- everywhere else, set/retain reliability exactly `0.0`.
+
+Do not modify:
+
+- `version`;
+- `task_names`;
+- `segment_ids`;
+- `observed_mask`;
+- `observed_targets`;
+- `pseudo_accept_mask`;
+- `pseudo_targets`;
+- `pseudo_class`;
+- `calibrated_audio_probs`;
+- teacher identities;
+- CLIP identity;
+- prompt-bank identity;
+- any threshold/calibration/acceptance metadata.
+
+You MAY add one top-level metadata mapping:
+
+    reliability_ablation
+
+containing:
+
+- type = `uniform_accepted_reliability`;
+- source_cache_sha256;
+- accepted_value = 1.0;
+- rejected_or_observed_value = 0.0;
+- source accepted reliability summary by task;
+- derived cache SHA256 recorded externally in PROGRESS after save.
+
+Do not change the canonical cache version.
+
+## Mandatory cache invariants
+
+Before save and after reload verify:
+
+- source SHA equals frozen SHA before generation;
+- source SHA still equals frozen SHA after generation;
+- all non-reliability top-level tensor/list fields above are exactly unchanged;
+- segment IDs identical and unique;
+- observed truth identical including NaN patterns;
+- acceptance mask identical;
+- pseudo targets identical including NaN patterns;
+- pseudo classes identical;
+- calibrated audio probabilities identical;
+- accepted counts D/P `376/1801`;
+- accepted classes D `376/0`, P `212/1589`;
+- accepted reliability exactly 1.0 for every accepted entry;
+- rejected/observed reliability exactly 0.0;
+- accepted pseudo targets still equal calibrated audio probabilities;
+- no observed row is pseudo-accepted;
+- existing semantic DataModule loads the derived cache successfully.
+
+Record source reliability min/mean/max per task over accepted rows before replacement.
+
+Record the number of accepted reliability entries that changed from source to derived per task.
+
+Record derived cache SHA256.
+
+## Frozen full reference
+
+Full optimized trial-012:
+
+| Seed | D | P | Mean |
+|---:|---:|---:|---:|
+| 42 | 0.759025 | 0.879259 | 0.8191424538 |
+| 43 | 0.718527 | 0.804363 | 0.7614450000 |
+| 44 | 0.728217 | 0.832060 | 0.7801390000 |
+
+Three-seed full:
+
+- D mean/std `0.7352563333/0.0211467766`;
+- P mean/std `0.8385606667/0.0378688091`;
+- Mean `0.7869088179/0.0294384420`.
+
+Checkpoint SHA256:
+
+- seed42 `104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a`;
+- seed43 `6af4a4ed21040aff4db2906b0adc8aa5fd27a4b72c375fbb67f68de04ab8446e`;
+- seed44 `b06fec6912b27cd19d811b72b2c3c08cd1b0a6c826b637f87a314e3976b88c17`.
+
+Verify these files/hashes before production.
 
 ## Exact ablation configs
 
-Create configs40/41/42 by copying configs37/38/39 respectively.
+Create configs43/44/45 from full configs37/38/39 respectively.
 
-Allowed semantic differences from the corresponding full config are exactly:
+Allowed semantic differences only:
 
 1. `experiment_info.params.run_name`;
-2. `wsm_pseudo_scale_warmup_callback.params.final_scale: 0.0`.
+2. `data.params.pseudo_cache_path` points to the derived uniform-reliability cache.
 
 Required run names:
 
-- seed42: `stage6_no_direct_pseudo_trial012_seed42`
-- seed43: `stage6_no_direct_pseudo_trial012_seed43`
-- seed44: `stage6_no_direct_pseudo_trial012_seed44`
+- seed42: `stage6_uniform_reliability_trial012_seed42`
+- seed43: `stage6_uniform_reliability_trial012_seed43`
+- seed44: `stage6_uniform_reliability_trial012_seed44`
 
-Keep:
-
-- `loss.params.pseudo_scale: 0.0`;
-- observed-only epochs = 3;
-- ramp epochs = 5;
-- the warm-up callback present;
-- every other config field byte/semantic-equivalent to its full reference except run_name/final_scale.
-
-With `final_scale=0.0`, callback `scale_for_epoch` must return exactly zero at every epoch.
-
-Do not remove the pseudo cache or acceptance masks.
+Everything else must be identical to the corresponding full reference config.
 
 ## Isolation contract
 
-This is specifically a **direct pseudo-loss** ablation.
+The ablation must preserve the exact accepted pseudo rows and exact pseudo targets.
 
-The accepted pseudo mask continues to affect task activity exactly as in the current loss implementation.
+Direct pseudo supervision remains enabled with the original warm-up schedule ending at scale 1.0.
 
-Pseudo reliability continues to update the RA reliability EMA/controller exactly as in the full method.
+Only reliability magnitudes are neutralized to 1.0 for accepted rows.
 
-Do not describe this variant as “no pseudo information” or “no semantic pseudo path.”
+Because the same reliability field also feeds the RA reliability EMA, this task tests the **combined graded reliability contribution** in the current implemented method.
 
-Describe it only as:
-
-    no direct pseudo-supervision loss
+Do not claim that it isolates BCE weighting separately from controller reliability. It does not.
 
 ## Mandatory pre-run firewall
 
 Before any production run:
 
-1. verify full-reference checkpoint SHAs above;
-2. validate configs40/41/42;
-3. programmatically prove each new config differs from its corresponding full config only by run_name and warm-up final_scale;
-4. prove seeds remain exactly 42/43/44;
-5. instantiate DataModule/model/loss/callbacks for all three configs;
-6. verify trainable params match the optimized trial-012 model;
-7. verify pseudo cache path/SHA/counts/class balance;
-8. prove warm-up `scale_for_epoch(e) == 0.0` for every epoch 1..30;
-9. run TRAIN-only forward/loss/backward with accepted missing pseudo rows present;
-10. verify finite nonzero observed/aux/agreement model gradients;
-11. verify the direct pseudo-loss contribution is zero:
-    - loss `pseudo_scale == 0.0`;
-    - perturb accepted `pseudo_targets` deterministically while keeping accept/reliability/observed fields fixed;
-    - total loss and model gradients must remain identical within strict numerical tolerance because the pseudo BCE is multiplied by zero;
-12. verify pseudo targets/reliability remain detached;
-13. verify RA reliability EMA still updates from accepted reliability entries;
-14. verify controller diagnostics finite;
-15. no optimizer step;
-16. no DEV/Test loader iteration;
-17. `git diff --check`;
-18. `git diff origin/main -- src` empty;
-19. append firewall evidence to PROGRESS;
-20. commit and push one firewall commit.
+1. build and audit the derived cache;
+2. verify source and derived SHA values;
+3. validate configs43/44/45;
+4. prove each differs from configs37/38/39 only by run_name/cache path;
+5. prove seeds remain 42/43/44;
+6. instantiate DataModule/model/loss/callbacks;
+7. verify the DataModule resolved the derived cache path/SHA;
+8. verify trainable params match full trial-012;
+9. verify accepted masks/targets/classes/counts are unchanged;
+10. verify accepted reliability is exactly 1.0 and rejected/observed is 0.0;
+11. run TRAIN-only forward/loss/backward with accepted pseudo rows present;
+12. verify finite nonzero observed and pseudo-supervision model gradients;
+13. verify pseudo targets/reliability are detached;
+14. verify direct pseudo loss remains active when pseudo_scale > 0;
+15. verify RA reliability EMA updates to exactly 1.0 after an accepted batch for the corresponding active task(s);
+16. verify controller diagnostics finite;
+17. no optimizer step;
+18. no DEV/Test loader iteration;
+19. `git diff --check`;
+20. `git diff origin/main -- src` empty;
+21. append firewall evidence to PROGRESS;
+22. commit and push one firewall commit.
 
-No production run before the firewall commit is visible on origin.
+No production run before the firewall commit exists on origin.
 
 ## Exactly three production runs
 
@@ -218,71 +272,71 @@ Run exactly in order:
 
 Commands:
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/ablations/40_no_direct_pseudo_seed42.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/ablations/43_uniform_reliability_seed42.yaml
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/ablations/41_no_direct_pseudo_seed43.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/ablations/44_uniform_reliability_seed43.yaml
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/ablations/42_no_direct_pseudo_seed44.yaml
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train       --config-path configs/wsm_mm_pd_dep_v1/ablations/45_uniform_reliability_seed44.yaml
 
 No sweep.
 No retry for metric improvement.
 No extra seed.
-No config modification after the firewall.
+No post-firewall config/cache change.
 
 ## Selection/Test firewall
 
 For each run:
 
-- checkpoint selection only by maximum `dev/mean_score`;
-- freeze selected checkpoint identity before reading same-epoch Test monitoring;
+- select checkpoint only by max `dev/mean_score`;
+- freeze checkpoint identity before reading same-epoch Test monitoring;
 - record checkpoint SHA256;
-- Test cannot affect interpretation or follow-up.
+- Test cannot affect interpretation.
 
 ## Three-seed comparison
 
-Compute no-direct-pseudo D/P/Mean by seed and three-seed mean/sample std/range.
+Compute uniform-reliability D/P/Mean by seed and three-seed mean/sample std/range.
 
 Compute same-seed:
 
-    full trial012 - no-direct-pseudo
+    full trial012 - uniform-reliability
 
-for D, P, and Mean.
+for D, P, Mean.
 
-Compute aggregate full-minus-ablation D/P/Mean deltas.
+Compute aggregate full-minus-ablation D/P/Mean.
 
 ## Frozen claim rule
 
 Record exactly:
 
-    DIRECT PSEUDO-SUPERVISION CONTRIBUTION SUPPORTED
+    UNCERTAINTY/RELIABILITY CONTRIBUTION SUPPORTED
 
 only if ALL conditions hold:
 
-1. full trial012 DEV Mean > no-direct-pseudo DEV Mean on at least 2/3 seeds;
-2. full trial012 three-seed Mean > no-direct-pseudo three-seed Mean;
-3. full trial012 three-seed D mean is not more than `0.010000` below no-direct-pseudo D mean;
-4. full trial012 three-seed P mean is not more than `0.010000` below no-direct-pseudo P mean.
+1. full DEV Mean > uniform-reliability DEV Mean on at least 2/3 seeds;
+2. full three-seed Mean > uniform-reliability three-seed Mean;
+3. full three-seed D mean is not more than `0.010000` below uniform-reliability D mean;
+4. full three-seed P mean is not more than `0.010000` below uniform-reliability P mean.
 
 Otherwise record exactly:
 
-    DIRECT PSEUDO-SUPERVISION CONTRIBUTION NOT SUPPORTED
+    UNCERTAINTY/RELIABILITY CONTRIBUTION NOT SUPPORTED
 
-This rule addresses only the direct pseudo BCE term.
+This claim concerns the implemented graded reliability signal as a whole.
 
-Even if supported, do not claim pseudo-label correctness, missing-label recovery, comorbidity recovery, or significance.
+Do not claim pseudo-label correctness, semantic acceptance correctness, missing-label recovery, comorbidity recovery, significance, or final promotion.
 
 ## Controller diagnostics
 
-At each DEV-selected epoch record for the no-direct-pseudo runs:
+At each DEV-selected epoch record:
 
-- pseudo scale — MUST be `0.0`;
+- pseudo scale;
 - alpha D/P;
 - progress D/P;
 - grad-norm EMA D/P;
 - grad-cosine EMA;
 - reliability EMA D/P.
 
-Explicitly record that reliability/controller information remains present despite zero direct pseudo loss.
+For the ablation, reliability EMA is expected to be 1.0 once updated from accepted entries. Record whether this occurs.
 
 ## DEV-only calibration/gate audit
 
@@ -297,47 +351,38 @@ For each seed/task report:
 
 Report three-seed means.
 
-Compare full trial012 vs no-direct-pseudo using `full - ablation` direction for Brier/ECE and gate means.
+Compare full vs uniform-reliability in `full - ablation` direction.
 
-Do not recalibrate or threshold-search.
-No Test row in post-hoc diagnostics.
-
-## Negative-transfer and pseudo diagnostics
-
-Record:
-
-- accepted pseudo counts/class balance remain frozen;
-- no-direct-pseudo vs full three-seed D/P/Mean;
-- no-direct-pseudo vs matched audio three-seed contextual means:
-  - audio D `0.7303377965`;
-  - audio P `0.8162961212`;
-  - audio Mean `0.7733169588`.
-
-Contextual audio comparison does not replace the full-vs-ablation claim gate.
+No recalibration.
+No threshold search.
+No Test rows.
 
 ## Required PROGRESS evidence
 
 Record:
 
 - task/branch;
-- configs40/41/42;
-- full-reference checkpoint SHAs;
-- config-equivalence proof;
-- pseudo cache SHA/counts/classes;
-- firewall proof including pseudo-target perturbation invariance;
-- firewall commit SHA;
+- builder path;
+- source and derived cache paths/SHA;
+- cache invariant audit;
+- source accepted reliability min/mean/max;
+- changed accepted-reliability counts D/P;
+- configs43/44/45;
+- config equivalence proof;
+- full checkpoint SHAs;
+- firewall evidence/SHA;
 - exact three production commands;
-- production count = exactly 3;
-- run dirs / MLflow IDs / status / artifact URIs;
-- selected epochs/checkpoints/SHA256;
-- full DEV D/P UAR/MF1/Score/Mean;
-- same-epoch Test monitoring after freeze only;
+- production count exactly 3;
+- run dirs / MLflow IDs / status / artifact URI;
+- selected epochs/checkpoints/SHA;
+- DEV D/P UAR/MF1/Score/Mean;
+- Test monitoring only after freeze;
 - three-seed ablation mean/std/range;
-- full-minus-ablation per-seed and aggregate deltas;
+- full-minus-ablation per-seed/aggregate deltas;
 - exact frozen claim string;
-- controller diagnostics with pseudo_scale=0;
-- DEV-only calibration/gate audit;
-- no Test-driven decision;
+- controller diagnostics;
+- DEV calibration/gate audit;
+- no Test decision;
 - no tuning/rerun;
 - no source changes.
 
@@ -351,28 +396,34 @@ Run:
     git diff --stat origin/main...HEAD
     git log -12 --oneline --decorate
 
-Only configs40/41/42 and PROGRESS may differ from origin/main.
+Only builder, configs43/44/45, and PROGRESS may differ from origin/main.
+
+The derived cache remains external and uncommitted.
 
 ## Acceptance criteria
 
-TASK-006D passes only if:
+TASK-006E passes only if:
 
-- branch exactly `codex/task-006d` from current manager main;
-- no source changes;
-- configs differ only by run_name/final_scale;
-- direct pseudo scale is exactly zero for every epoch;
-- pseudo acceptance/reliability/controller information remains otherwise intact;
+- branch exactly `codex/task-006e` from current manager main;
+- source cache unchanged;
+- derived cache changes only reliability plus explicit ablation metadata;
+- accepted rows/targets/classes/calibrated probabilities unchanged;
+- accepted reliability exactly 1.0;
+- rejected/observed reliability exactly 0.0;
+- DataModule accepts derived cache;
+- configs differ only run_name/cache path;
 - firewall pushed before production;
 - exactly three runs seeds42/43/44;
 - DEV-only selection;
 - Test monitoring only;
-- claim rule applied exactly;
-- calibration/gate/controller diagnostics recorded;
+- frozen claim applied exactly;
+- controller/calibration/gate diagnostics recorded;
 - no tuning/sweep/retry;
+- no source changes;
 - branch pushed;
 - main/master untouched.
 
-Passing TASK-006D closes only Stage-6 direct pseudo-supervision item 3. It authorizes no next task.
+Passing TASK-006E closes only Stage-6 uncertainty/reliability item 4. It authorizes no next task.
 
 ## Required handoff
 
@@ -387,22 +438,22 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch `codex/task-006d`;
+- branch `codex/task-006e`;
 - firewall SHA;
 - final evidence SHA;
 - pushed status;
 - main/master untouched;
 - source diff empty;
-- config equivalence;
+- source/derived cache SHA;
+- accepted reliability transformation/invariants;
 - exactly three production runs;
-- per-seed no-direct-pseudo D/P/Mean;
+- per-seed D/P/Mean;
 - three-seed mean/std;
 - full-minus-ablation deltas;
 - exact frozen claim string;
-- controller diagnostics and pseudo_scale=0;
+- controller reliability EMA summary;
 - calibration/gate summary;
-- explicit statement that reliability/controller information was retained;
-- no pseudo correctness/comorbidity/significance claim;
+- no pseudo correctness/semantic correctness/comorbidity/significance/final-promotion claim;
 - no Test-driven decision;
 - Stage 6 active;
 - Stage-5 optimization closed;
@@ -410,6 +461,6 @@ Explicitly include:
 
 For section 6 write only:
 
-    Manager review of TASK-006D; do not start another task.
+    Manager review of TASK-006E; do not start another task.
 
 Stop.
