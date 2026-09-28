@@ -6,13 +6,19 @@ This corrective task follows **MANAGER-DECISION-060**.
 
 Required branch:
 
-    codex/task-006a-fix1
+    codex/task-006a
 
-Start from the current manager-updated `origin/main`.
+**Reuse of the existing branch is explicitly authorized by MANAGER-OVERRIDE-061. Do not create another Codex branch.**
 
-Create exactly one fresh task branch from that `origin/main`.
+First synchronize the existing branch exactly as follows:
 
-Do **not** reuse, reset, overwrite, force-push, merge, or rebase the rejected branch `codex/task-006a`. It remains preserved as rejected evidence.
+    git fetch origin
+    git checkout codex/task-006a
+    git merge --no-edit origin/main
+
+This merge of current `origin/main` into the existing task branch is explicitly manager-authorized.
+
+Do not reset, rebase, overwrite, delete, or force-push `codex/task-006a`. Preserve its existing rejected commits/runs in history, then append the corrective FIX1 commits.
 
 Stage-5 optimization is CLOSED. Stage 6 remains ACTIVE. This is a narrow reproducibility correction to TASK-006A, not a tuning task.
 
@@ -80,7 +86,7 @@ Read in this exact order:
 
 Do not load the historical archive or closed-stage plans unless a concrete verification issue requires them.
 
-You MAY inspect the rejected `codex/task-006a` builder only to verify the manager-identified defect. Do not copy its mapping or its rejected result into the accepted evidence.
+You are already continuing on `codex/task-006a`. Preserve the existing rejected implementation/evidence for audit, but replace the tracked builder/config working state with the exact FIX1 implementation before the new firewall commit. Do not use the rejected results in the accepted claim decision.
 
 ## Allowed tracked files
 
@@ -311,7 +317,7 @@ Before any corrective production run:
 9. run `git diff --check`;
 10. run `git diff origin/main -- src` and require empty output;
 11. append exact firewall evidence to PROGRESS;
-12. commit and push one firewall commit to `origin/codex/task-006a-fix1`.
+12. commit and push one new FIX1 firewall commit to `origin/codex/task-006a`.
 
 No corrective production run may start before the firewall commit is visible on origin.
 
@@ -438,8 +444,9 @@ Only the builder, three ablation configs, and PROGRESS may differ from origin/ma
 
 FIX1 passes only if:
 
-- branch exactly `codex/task-006a-fix1` from current manager main;
-- rejected branch is untouched and unmerged;
+- branch exactly `codex/task-006a`, reused under MANAGER-OVERRIDE-061;
+- current `origin/main` was merged into the existing task branch before corrective work;
+- original rejected commits/runs remain preserved in branch history and unaccepted;
 - exact destination-order -> roll1-source-order mapping is implemented literally;
 - no fixed-point repair exists;
 - fresh external FIX1 cache is used;
@@ -474,8 +481,8 @@ Respond in English using exactly:
 
 Explicitly include:
 
-- branch `codex/task-006a-fix1`;
-- rejected branch `codex/task-006a` untouched/unmerged;
+- branch `codex/task-006a` reused under explicit manager authorization;
+- original rejected commits/runs preserved as superseded evidence;
 - firewall SHA;
 - final evidence SHA;
 - pushed status;
@@ -501,6 +508,6 @@ Explicitly include:
 
 For section 6 write only:
 
-    Manager review of TASK-006A-FIX1; do not start another task.
+    Manager review of TASK-006A-FIX1 on codex/task-006a; do not start another task.
 
 Stop.
