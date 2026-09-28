@@ -176,7 +176,7 @@ Detailed stage contracts are split so agents load only the stage relevant to the
 | 2. Video | COMPLETE | [plan/STAGE_2.md](plan/STAGE_2.md) |
 | 3. Text/description | DEFERRED | [plan/STAGE_3.md](plan/STAGE_3.md) |
 | 4. Fusion baselines | COMPLETE | [plan/STAGE_4.md](plan/STAGE_4.md) |
-| 5. RAMPS | CLOSED NEGATIVE | [plan/STAGE_5.md](plan/STAGE_5.md) |
+| 5. RAMPS | CLOSED TO OPTIMIZATION — CANDIDATE RETAINED | [plan/STAGE_5.md](plan/STAGE_5.md) |
 | 6. Ablations and claims audit | ACTIVE | [plan/STAGE_6.md](plan/STAGE_6.md) |
 | 7. Final evaluation | LOCKED | [plan/STAGE_7.md](plan/STAGE_7.md) |
 

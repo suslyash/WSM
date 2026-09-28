@@ -1,290 +1,376 @@
-# TASK-006-PRE-AUDIO-CONFIRM: Frozen Audio Robustness Confirmation on Seeds43/44
+# TASK-006A-BUNDLE: Stage-6 Shuffled Pseudo-Target Negative Control on the Equal Composition
 
 ## Authority and branch
 
-This task follows **MANAGER-OVERRIDE-058**.
+This task follows **MANAGER-DECISION-059** and resumes the previously paused TASK-006A-BUNDLE after the matched-seed frozen-audio confirmation.
 
 Required branch:
 
-    codex/task-006-pre-audio-confirm
+    codex/task-006a
 
-Start from the current manager-updated `origin/main`.
+Start from the current manager-updated `origin/main`, which includes the merged TASK-006-PRE-AUDIO-CONFIRM evidence and MANAGER-DECISION-059.
 
 Create exactly one new task branch from that `origin/main`.
 
-The previously assigned `TASK-006A-BUNDLE` is PAUSED / UNSTARTED. Do not execute any shuffled-pseudo work in this task.
-
-Stage 5 remains CLOSED NEGATIVE as a historical decision. This task audits the robustness of the comparator; it does not tune or promote a model.
+Stage-5 optimization is CLOSED. The prior negative robustness interpretation was superseded by matched-seed audio confirmation; R4 trial 012 is retained as the leading matched-seed candidate for Stage-6 audit. Do not reopen Stage-5 tuning.
 
 ## Goal
 
-Run the **exact frozen temporal-audio method** on two additional random seeds, 43 and44, so the project has matched-seed DEV evidence against the already frozen R4 RA-STCH confirmation seeds42/43/44.
+Execute the PLAN-required shuffled/mismatched pseudo-target negative control while preserving every non-semantic factor as closely as possible.
 
-This task answers one narrow question:
+Use the accepted three-seed Equal full composition as the matched-pseudo reference because:
 
-> Is the frozen audio baseline itself at least as seed-stable as the multimodal R4 confirmation, or does audio show comparable/greater seed degradation?
+- it has no dynamic/fixed balancing-controller comparison confound;
+- it uses the exact R3 model;
+- it uses the frozen R2 pseudo path and warm-up;
+- it uses the frozen R3 auxiliary/agreement terms;
+- it has valid matched-pseudo results for seeds42/43/44.
 
-Exactly **two** new production training invocations are authorized.
+Build ONE deterministic negative-control pseudo cache by permuting the complete pseudo-supervision tuple among missing rows within each task while leaving canonical rows and observed truth fixed.
 
-No sweep. No hyperparameter search. No rerun for metric improvement.
+Then run the Equal composition at seeds42/43/44 using ONLY that derived shuffled cache.
+
+Exactly three production training invocations are authorized.
+
+This task is an ablation/claims audit. It is NOT a tuning task and cannot reopen Stage 5.
 
 ## Required reading
 
 Read in this exact order:
 
-1. `AGENTS.md`
-2. `docs/README.md`
-3. `docs/PROJECT_REQUIREMENTS.md`
-4. `docs/PROGRESS_EN.md`
-5. `docs/NEXT_TASK_EN.md`
-6. `configs/wsm_mm_pd_dep_v1/audio/00_frozen_baseline.yaml`
-7. only the audio source files needed to instantiate/verify the already registered frozen method; read-only
+1. AGENTS.md
+2. docs/README.md
+3. docs/PROJECT_REQUIREMENTS.md
+4. docs/PROGRESS_EN.md
+5. docs/plan/STAGE_6.md
+6. docs/NEXT_TASK_EN.md
+7. src/fusion/data/wsm_ramps_semantic_datamodule.py
+8. src/fusion/models/av_r3_disease_query.py
+9. src/fusion/loss/r4_ramps_balance_loss.py
+10. configs/wsm_mm_pd_dep_v1/fusion/13_r4_equal_seed42.yaml
+11. configs/wsm_mm_pd_dep_v1/fusion/19_r4_equal_seed43.yaml
+12. configs/wsm_mm_pd_dep_v1/fusion/20_r4_equal_seed44.yaml
 
-Do not read historical archives or closed-stage plans unless a concrete verification issue requires them.
-
-## Frozen reference
-
-Canonical config:
-
-    configs/wsm_mm_pd_dep_v1/audio/00_frozen_baseline.yaml
-
-Historical seed42 reference:
-
-- seed: `42`
-- run: `wsm_audio_models-e0ce-006`
-- selected epoch: `4`
-- checkpoint SHA256: `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`
-- DEV D Score: `0.7479183895`
-- DEV P Score: `0.8277353635`
-- DEV Mean: `0.7878268765`
-
-Frozen R4 RA-STCH confirmation comparator:
-
-| Seed | D Score | P Score | Mean |
-|---:|---:|---:|---:|
-| 42 | 0.759025 | 0.879259 | 0.8191424538 |
-| 43 | 0.718527 | 0.804363 | 0.7614450000 |
-| 44 | 0.728217 | 0.832060 | 0.7801390000 |
-
-R4 three-seed aggregate already frozen:
-
-- D mean/std: `0.7352563333 / 0.0211467766`
-- P mean/std: `0.8385606667 / 0.0378688091`
-- Mean mean/std: `0.7869088179 / 0.0294384420`
+Do not read the historical progress archive or closed-stage plan files unless a concrete verification question requires them.
 
 ## Allowed tracked files
 
-Codex may add/modify only:
+Codex may modify/add only:
 
-- `configs/wsm_mm_pd_dep_v1/audio/01_frozen_baseline_seed43.yaml`
-- `configs/wsm_mm_pd_dep_v1/audio/02_frozen_baseline_seed44.yaml`
-- `docs/PROGRESS_EN.md`
+- scripts/common/build_ramps_shuffled_pseudo_negative_control.py
+- configs/wsm_mm_pd_dep_v1/ablations/31_shuffled_pseudo_equal_seed42.yaml
+- configs/wsm_mm_pd_dep_v1/ablations/32_shuffled_pseudo_equal_seed43.yaml
+- configs/wsm_mm_pd_dep_v1/ablations/33_shuffled_pseudo_equal_seed44.yaml
+- docs/PROGRESS_EN.md
 
 No source file may change.
 
-## Config freeze
-
-Create the two configs from `00_frozen_baseline.yaml`.
-
-Seed43 config:
-
-    configs/wsm_mm_pd_dep_v1/audio/01_frozen_baseline_seed43.yaml
-
-Required differences from config00:
-
-- `seed: 43`
-- `experiment_info.params.run_name: frozen_audio_wavlm_l9_pool4_seed43`
-
-Seed44 config:
-
-    configs/wsm_mm_pd_dep_v1/audio/02_frozen_baseline_seed44.yaml
-
-Required differences from config00:
-
-- `seed: 44`
-- `experiment_info.params.run_name: frozen_audio_wavlm_l9_pool4_seed44`
-
-There must be **no other semantic difference** from config00.
-
-In particular, do not change:
-
-- data root, task, cache, split/test filters, batch size, workers;
-- WavLM model/layer or temporal pooling;
-- model architecture or dropout;
-- loss or its coefficients;
-- optimizer, lr, weight decay;
-- epochs, mixed precision, grad clipping;
-- metrics;
-- checkpoint/early-stopping monitors;
-- callbacks/loggers/instrumentation.
-
 ## Forbidden actions
 
-- Do not modify anything under `src/audio`.
-- Do not modify any other `src/*` file.
-- Do not modify `src/chimera_plugin.py`.
-- Do not tune architecture, loss, optimizer, learning rate, regularization, patience, batch size, feature layer, temporal pool, or threshold.
-- Do not change dataset membership or feature cache.
-- Do not run seed42 again.
-- Do not run any seed other than43 and44.
-- Do not run R4 or any multimodal system.
-- Do not perform a sweep.
-- Do not rerun a failed/weak seed for metric improvement.
-- Do not use Test metrics for checkpoint selection, comparison, ranking, interpretation, or deciding follow-up work.
-- Do not resume `TASK-006A-BUNDLE`.
-- Do not start another Stage-6 task.
-- Do not start Text/Description, Stage 7, or Final Test.
+- Do not modify src/audio.
+- Do not modify src/video.
+- Do not modify src/fusion.
+- Do not modify src/common.
+- Do not modify src/chimera_plugin.py.
+- Do not modify the original semantic pseudo cache.
+- Do not regenerate teachers, semantic embeddings, thresholds, calibration, or acceptance rules.
+- Do not change accepted counts, pseudo class balance, or the multiset of pseudo target/reliability values.
+- Do not change R3 architecture.
+- Do not change Equal loss/formula, auxiliary/agreement coefficients, optimizer, warm-up, or instrumentation.
+- Do not run Static, Progress, RA-STCH, Candidate B, or another Stage-5 model.
+- Do not tune based on negative-control results.
+- Do not use Test for selection, ranking, interpretation, or branching.
+- Do not start another Stage-6 ablation.
+- Do not start Stage 7, Text/Description, or Final Test.
+- Do not claim missing-label correctness, comorbidity, significance, or final-model superiority.
+- Do not reopen Stage-5 optimization or tune against confirmation seeds.
 
-## Mandatory pre-run firewall
+## Frozen source cache
 
-Before either production run:
+Source:
 
-1. validate both new configs with Chimera;
-2. programmatically prove each resolved config is identical to config00 except the authorized `seed` and `run_name`;
-3. instantiate the existing DataModule/model/loss from each config;
-4. verify the model/loss build and a tiny TRAIN-only forward/loss/backward smoke test succeeds with finite loss and finite/non-zero trainable gradients;
-5. perform no optimizer step;
-6. do not iterate DEV or Test during this smoke;
-7. run:
-   - `git diff --check`
-   - `git diff origin/main -- src` — MUST be empty;
-8. append the firewall evidence to `docs/PROGRESS_EN.md`;
-9. commit and push a **firewall commit** to `origin/codex/task-006-pre-audio-confirm`.
+    /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt
 
-No production training may begin before that firewall commit exists on origin.
+Required SHA256:
 
-## Exact production sequence
+    17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945
 
-Run exactly:
+Required rows:
 
-1. seed43;
-2. seed44.
+    6325
 
-Commands:
+Required accepted counts D/P:
+
+    376 / 1801
+
+Required accepted positive/negative counts:
+
+- depression: 376 / 0
+- Parkinson: 212 / 1589
+
+The source cache is immutable.
+
+## 1. Negative-control cache builder
+
+Implement:
+
+    scripts/common/build_ramps_shuffled_pseudo_negative_control.py
+
+This is an executable/reproducibility helper, not reusable training code.
+
+CLI arguments:
+
+    --source
+    --output
+    --shuffle-seed
+
+Frozen invocation:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 \
+      scripts/common/build_ramps_shuffled_pseudo_negative_control.py \
+      --source /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt \
+      --output /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001.pt \
+      --shuffle-seed 6001
+
+The script MUST fail rather than overwrite an existing output path.
+
+### Frozen permutation contract
+
+Load the source cache read-only on CPU.
+
+For each task independently:
+
+1. identify rows where `observed_mask[:, task] == False`;
+2. use a deterministic `torch.Generator`:
+   - depression seed = `6001`;
+   - Parkinson seed = `6002`;
+3. generate a random ordering of the missing row indices;
+4. create a derangement by circularly shifting that random ordering by exactly one position;
+5. every missing destination row receives the pseudo tuple from a DIFFERENT missing source row;
+6. observed rows are never sources or destinations.
+
+Permute the following fields together as one aligned tuple for that task:
+
+- `pseudo_accept_mask`;
+- `pseudo_targets`;
+- `pseudo_reliability`;
+- `pseudo_class`;
+- `calibrated_audio_probs`.
+
+Do not permute:
+
+- `segment_ids`;
+- `observed_mask`;
+- `observed_targets`;
+- corpus/split identity;
+- teacher/prompt/cache provenance metadata.
+
+The derived cache MUST retain the original required `version`, task names, teacher identities, prompt SHA, and other fields needed by `wsm_ramps_semantic_datamodule`.
+
+Add an extra metadata mapping that does not alter training, for example:
+
+    negative_control:
+      type: within_task_missing_row_tuple_derangement
+      source_cache_sha256: <exact source SHA>
+      shuffle_seed: 6001
+      depression_permutation_sha256: ...
+      parkinson_permutation_sha256: ...
+      permuted_fields: [...]
+
+Do not change the canonical cache version solely for this negative control.
+
+## 2. Mandatory cache invariant audit
+
+Before saving, and again after loading the derived file, prove:
+
+- source SHA256 is exactly the frozen SHA;
+- `segment_ids` unchanged exactly;
+- `observed_mask` unchanged exactly;
+- `observed_targets` unchanged exactly including NaN pattern/finite values;
+- no observed row has pseudo acceptance;
+- each task permutation has zero fixed points among missing-row source/destination identities;
+- missing counts remain `2665/3660`;
+- accepted counts remain `376/1801`;
+- accepted class balance remains D `376/0`, P `212/1589`;
+- pseudo target/reliability/class/calibrated-probability tuple multiset over missing rows is preserved exactly per task;
+- rejected entries still have pseudo_target NaN, reliability 0, pseudo_class -1;
+- accepted pseudo targets remain equal to calibrated_audio_probs at accepted entries;
+- accepted reliability remains finite in [0,1];
+- source file SHA is unchanged after generation;
+- derived cache SHA256 is recorded;
+- derived cache loads successfully through the existing `wsm_ramps_semantic_datamodule`.
+
+Record per-task permutation SHA256 and the number of rows whose acceptance assignment differs from the original.
+
+The purpose is to break sample-to-pseudo alignment while preserving coverage/class/reliability distributions.
+
+## 3. Frozen matched reference
+
+Use these accepted matched-pseudo Equal results:
+
+| Seed | D Score | P Score | Mean |
+|---|---:|---:|---:|
+| 42 | 0.712498 | 0.843342 | 0.777920 |
+| 43 | 0.703299 | 0.856043 | 0.779671 |
+| 44 | 0.707977 | 0.851878 | 0.779927 |
+
+Matched three-seed means:
+
+- D `0.707925`
+- P `0.850421`
+- Mean `0.779173`
+
+Matched three-seed sample std:
+
+- D `0.004600`
+- P `0.006475`
+- Mean `0.001092`
+
+## 4. Freeze three negative-control configs before training
+
+Create:
+
+    configs/wsm_mm_pd_dep_v1/ablations/31_shuffled_pseudo_equal_seed42.yaml
+    configs/wsm_mm_pd_dep_v1/ablations/32_shuffled_pseudo_equal_seed43.yaml
+    configs/wsm_mm_pd_dep_v1/ablations/33_shuffled_pseudo_equal_seed44.yaml
+
+For each seed, copy the corresponding matched Equal config semantics exactly:
+
+- seed42 from config 13;
+- seed43 from config 19;
+- seed44 from config 20.
+
+The ONLY semantic changes are:
+
+1. `data.params.pseudo_cache_path` points to the derived shuffled cache;
+2. `run_name` identifies the Stage-6 shuffled negative control.
+
+Required run names:
+
+- `stage6_shuffled_pseudo_equal_seed42`
+- `stage6_shuffled_pseudo_equal_seed43`
+- `stage6_shuffled_pseudo_equal_seed44`
+
+All other data/model/loss/optimizer/train/callback/logging settings MUST be identical to the matched Equal config for that seed.
+
+## 5. Mandatory pre-run firewall commit
+
+Before any production run:
+
+1. build and audit the derived negative-control cache;
+2. validate all three configs;
+3. programmatically prove config equivalence to matched Equal except cache path/run_name;
+4. build DataModule/model/loss for each seed config;
+5. verify R3 trainable parameter count `403079`;
+6. verify derived cache accepted counts/class balance;
+7. run a tiny TRAIN-only forward/loss/backward at `pseudo_scale=1.0`:
+   - finite loss;
+   - observed gradients non-zero;
+   - accepted missing-head pseudo gradients non-zero;
+   - pseudo target/reliability receive no gradients;
+   - main heads, projections, task queries, and gate have finite gradients;
+   - no optimizer step;
+   - no DEV/Test loader iteration;
+8. append exact evidence to PROGRESS_EN.md;
+9. commit and push one firewall commit.
+
+No production run may begin before that firewall commit exists on origin.
+
+## 6. Exact production sequence
+
+Run exactly three new production invocations:
+
+1. shuffled Equal seed42;
+2. shuffled Equal seed43;
+3. shuffled Equal seed44.
+
+Use exactly:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/audio/01_frozen_baseline_seed43.yaml
+      --config-path <authorized-config>
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/audio/02_frozen_baseline_seed44.yaml
+No sweep.
 
-No third production invocation.
+No rerun for metric improvement.
 
-## Checkpoint selection and Test firewall
+## 7. Selection and Test firewall
 
 For each run:
 
-- select the checkpoint/epoch only by maximum `dev/mean_score`;
-- freeze the selected epoch/checkpoint identity before inspecting its same-epoch Test monitoring values;
-- record selected checkpoint SHA256;
-- TEST_NONE/SOFT/HARD remain mandatory monitoring outputs because the project stack emits them, but they must not affect any conclusion in this task.
+- checkpoint/epoch selected only by maximum `dev/mean_score`;
+- freeze selected checkpoint before reading same-epoch Test monitoring;
+- TEST_NONE/SOFT/HARD remain mandatory monitoring only;
+- Test must not affect interpretation of the negative control.
 
-All seed-robustness comparisons in this task use **DEV only**.
+Record selected checkpoint SHA256.
 
-## Required DEV evidence per new seed
+## 8. Frozen negative-control interpretation
 
-For seed43 and seed44 record:
+After all three shuffled runs, compute:
 
-- selected epoch;
-- checkpoint path and SHA256;
-- DEV depression UAR, MF1, Score;
-- DEV Parkinson UAR, MF1, Score;
-- DEV Mean_Score;
-- training stop reason / total epochs;
-- run directory;
-- MLflow run ID/status/artifact URI;
-- resolved config / commit identity.
+- shuffled D/P/Mean per seed;
+- shuffled three-seed mean/sample std;
+- same-seed `matched - shuffled` deltas;
+- three-seed matched-minus-shuffled deltas.
 
-After checkpoint freeze, record same-epoch TEST_NONE/SOFT/HARD monitoring separately and explicitly label it non-decision evidence.
+Evidence SUPPORTS sample-specific pseudo alignment only if BOTH are true:
 
-## Frozen matched-seed analysis
+1. matched Equal DEV Mean > shuffled Equal DEV Mean on at least 2 of 3 seeds;
+2. matched Equal three-seed Mean > shuffled Equal three-seed Mean.
 
-Using historical audio seed42 plus new audio seeds43/44, compute:
+If either condition fails, record exactly:
 
-### Audio three-seed table
+    SAMPLE-SPECIFIC PSEUDO ALIGNMENT CLAIM NOT SUPPORTED BY THIS NEGATIVE CONTROL
 
-For each seed42/43/44:
+This interpretation is about sample-specific semantic alignment only.
 
-- D Score;
-- P Score;
-- Mean.
+Do NOT claim correctness of the missing disease labels.
 
-### Audio aggregate
+## 9. DEV-only calibration audit
 
-Compute sample mean and sample standard deviation across seeds42/43/44 for:
+After all selected checkpoints are frozen, compare matched Equal vs shuffled Equal on identical DEV rows/masks for each seed.
 
-- D Score;
-- P Score;
-- Mean.
+For D/P record:
 
-Also report min, max, and range for DEV Mean.
+- observed count;
+- Brier;
+- ECE-15.
 
-### Matched R4-vs-audio deltas
+Compute three-seed mean calibration deltas:
 
-For each seed42/43/44 compute:
+    matched - shuffled
 
-    R4 - audio
+Diagnostics only.
 
-for:
+No recalibration, threshold changes, or reruns.
 
-- D Score;
-- P Score;
-- Mean.
+## 10. Required evidence
 
-Count how many of the three seeds have:
+Record in PROGRESS_EN.md:
 
-    R4 DEV Mean > audio DEV Mean
+- source cache SHA;
+- derived cache absolute path/SHA;
+- negative-control metadata;
+- permutation hashes;
+- zero-fixed-point proof;
+- original-vs-derived invariant table;
+- acceptance-assignment Hamming differences;
+- exact three configs and validation;
+- firewall command/results;
+- exact three production commands;
+- run directories;
+- MLflow IDs/status/artifact URI;
+- epochs/early stopping;
+- selected DEV-only epoch/checkpoint;
+- checkpoint SHA256;
+- full DEV D/P UAR/MF1/Score and Mean;
+- same-epoch TEST_NONE/SOFT/HARD monitoring only after DEV freeze;
+- three-seed matched/shuffled tables;
+- frozen negative-control interpretation;
+- calibration audit;
+- explicit no-Test-driven-decision statement.
 
-### Variability comparison
-
-Place the frozen R4 and new audio three-seed statistics side by side:
-
-- D mean/std;
-- P mean/std;
-- Mean mean/std;
-- Mean min/max/range.
-
-Do not perform statistical significance testing from only three seeds.
-
-Do not alter, tune, rerun, or choose a model based on these results.
-
-## Interpretation boundary
-
-Codex must report the facts, but **must not**:
-
-- reopen Stage 5;
-- promote R4;
-- demote audio;
-- choose the next Stage-6 ablation;
-- change a config after seeing seed43/44;
-- turn seed43/44 into tuning targets.
-
-The manager will decide after reviewing the branch whether the phrase "strongest robust audio reference" remains justified and how the matched-seed evidence affects Stage-6 comparisons.
-
-## Required evidence in PROGRESS_EN.md
-
-Record:
-
-- task ID and branch;
-- config paths;
-- exact proof that configs differ from config00 only by seed/run_name;
-- firewall commands/results;
-- firewall commit SHA and pushed status;
-- exact two production commands;
-- run directories / MLflow identities;
-- selected DEV-only epochs/checkpoints and checkpoint SHA256;
-- complete DEV metrics;
-- same-epoch Test monitoring only after freeze;
-- audio seed42/43/44 table;
-- audio three-seed mean/std and Mean range;
-- matched R4-audio deltas;
-- R4-vs-audio variability table;
-- production invocation count = exactly 2;
-- explicit statement: no Test-driven decision, no tuning, no rerun;
-- explicit statement: `src/audio` and all `src/*` unchanged;
-- `TASK-006A-BUNDLE` remains paused/unstarted.
-
-## Final scope checks
+## 11. Scope checks
 
 Run exactly:
 
@@ -296,30 +382,38 @@ Run exactly:
 
 The source diff MUST be empty.
 
-Only the two authorized configs and `docs/PROGRESS_EN.md` may differ from `origin/main`.
+The generated negative-control cache is an external artifact and MUST NOT be committed to Git.
 
 ## Acceptance criteria
 
-This task passes only if:
+TASK-006A-BUNDLE passes only if:
 
-- branch is exactly `codex/task-006-pre-audio-confirm` from current manager-updated `origin/main`;
-- only the two authorized audio configs and PROGRESS change;
-- config equivalence proof passes;
-- firewall commit is pushed before production;
-- exactly two production runs occur, in order seed43 then seed44;
+- branch is exactly `codex/task-006a` from current manager-updated `origin/main`;
+- only the script, three ablation configs, and PROGRESS change;
+- original cache remains byte-identical;
+- derived cache is deterministic and clearly marked as a negative control;
+- row/observed-truth identity is unchanged;
+- pseudo tuple is deranged only within each task's missing rows;
+- coverage/class balance/value multisets are preserved;
+- existing semantic DataModule accepts the derived cache;
+- all three configs differ from matched Equal only by cache path/run_name;
+- firewall commit exists before production;
+- exactly three production runs occur;
 - no source changes;
-- no tuning/sweep/rerun;
-- DEV-only checkpoint selection;
-- Test monitoring only after checkpoint freeze and never used in interpretation;
-- checkpoint SHA256 values recorded;
-- complete three-seed audio aggregate computed using historical seed42 + new seeds43/44;
-- matched-seed R4-audio deltas and variability comparison recorded;
+- no tuning/reruns;
+- DEV-only selection;
+- Test monitoring only;
+- selected checkpoint SHA256 recorded;
+- three-seed negative-control interpretation applied exactly;
+- DEV-only calibration audit complete;
 - branch pushed;
-- main/master untouched by Codex.
+- main/master untouched.
+
+Passing TASK-006A-BUNDLE closes Stage-6 negative-control item 8 for the matched Equal reference. It does not authorize another Stage-6 task.
 
 ## Required handoff
 
-Respond in English using exactly these six sections:
+Respond in English using exactly:
 
 1. Outcome
 2. Changed files
@@ -330,28 +424,30 @@ Respond in English using exactly these six sections:
 
 Explicitly include:
 
-- branch `codex/task-006-pre-audio-confirm`;
+- branch `codex/task-006a`;
 - firewall commit SHA;
 - final evidence commit SHA;
 - pushed-to-origin status;
 - main/master untouched;
 - source diff empty;
-- production runs = exactly 2;
-- seed43 and seed44 selected checkpoint SHA256;
-- audio seed42/43/44 D/P/Mean table;
-- audio three-seed mean/std and Mean range;
-- frozen R4 three-seed mean/std;
-- matched R4-audio deltas for each seed;
-- count of seeds where R4 Mean > matched audio Mean;
+- source and derived cache SHA256;
+- permutation hashes/fixed-point counts;
+- preserved coverage/class balance;
+- acceptance-assignment Hamming differences;
+- number of production runs = 3;
+- matched vs shuffled seed42/43/44 D/P/Mean table;
+- three-seed mean/std and deltas;
+- frozen sample-specific-pseudo interpretation result;
+- calibration summary;
 - no Test-driven decision;
-- no post-hoc tuning/rerun;
-- TASK-006A-BUNDLE still paused/unstarted;
+- no post-hoc tuning;
+- no missing-label correctness/comorbidity claim;
 - Stage 6 active;
-- Stage 5 closed negative historically;
+- Stage-5 optimization closed; prior negative robustness interpretation superseded by matched-seed audio confirmation;
 - no Stage7/Text/Final Test.
 
 For section 6 write only:
 
-    Manager review of TASK-006-PRE-AUDIO-CONFIRM; do not start another task.
+    Manager review of TASK-006A-BUNDLE; do not start another task.
 
-Stop after this task.
+Stop after TASK-006A-BUNDLE.
