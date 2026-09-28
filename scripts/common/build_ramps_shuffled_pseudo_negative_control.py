@@ -8,7 +8,6 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import torch
 
 PERMUTED_FIELDS = (
@@ -45,12 +44,17 @@ def tuple_counter(cache: dict[str, Any], task: int, rows: torch.Tensor) -> Count
     return result
 
 
+def permutation_sha(destination_order: torch.Tensor, source_order: torch.Tensor) -> str:
+    pairs = torch.stack([destination_order, source_order], dim=1).to(torch.int64).contiguous()
+    return hashlib.sha256(pairs.numpy().tobytes()).hexdigest()
+
+
 def assert_cache_invariants(
     source: dict[str, Any],
     derived: dict[str, Any],
     source_sha: str,
     derived_sha: str | None = None,
-    permutations: dict[str, torch.Tensor] | None = None,
+    permutations: dict[str, tuple[torch.Tensor, torch.Tensor]] | None = None,
 ) -> dict[str, Any]:
     assert source_sha == EXPECTED_SOURCE_SHA, source_sha
     assert len(source["segment_ids"]) == EXPECTED_ROWS
@@ -62,16 +66,13 @@ def assert_cache_invariants(
     observed = source["observed_mask"]
     accept = source["pseudo_accept_mask"]
     derived_accept = derived["pseudo_accept_mask"]
-    missing_counts = []
-    accepted_counts = []
-    class_counts = []
-    hamming = []
-    fixed_points = []
-    permutation_hashes = {}
+    missing_counts, accepted_counts, class_counts = [], [], []
+    hamming, fixed_points, permutation_hashes = [], [], {}
     for task, task_name in enumerate(("depression", "parkinson")):
         missing = (~observed[:, task]).nonzero(as_tuple=False).flatten()
         missing_counts.append(int(missing.numel()))
         assert int(missing.numel()) == EXPECTED_MISSING[task]
+        assert not bool((observed[:, task] & derived_accept[:, task]).any())
         accepted = derived_accept[missing, task]
         accepted_counts.append(int(accepted.sum().item()))
         assert int(accepted.sum().item()) == EXPECTED_ACCEPTED[task]
@@ -81,13 +82,16 @@ def assert_cache_invariants(
         assert (pos, neg) == EXPECTED_CLASS_COUNTS[task]
         hamming.append(int((accept[missing, task] != derived_accept[missing, task]).sum().item()))
         if permutations is not None:
-            mapping = permutations[task_name]
-            assert mapping.shape == missing.shape
-            assert int((mapping == missing).sum().item()) == 0
-            fixed_points.append(int((mapping == missing).sum().item()))
-            permutation_hashes[task_name] = hashlib.sha256(
-                np.stack([missing.numpy(), mapping.numpy()], axis=1).astype(np.int64).tobytes()
-            ).hexdigest()
+            destination_order, source_order = permutations[task_name]
+            assert destination_order.shape == missing.shape
+            assert source_order.shape == missing.shape
+            assert torch.equal(torch.sort(destination_order).values, torch.sort(missing).values)
+            assert torch.equal(torch.sort(source_order).values, torch.sort(missing).values)
+            assert torch.equal(source_order, torch.roll(destination_order, shifts=1, dims=0))
+            assert torch.all(destination_order != source_order)
+            fixed_points.append(int((destination_order == source_order).sum().item()))
+            assert fixed_points[-1] == 0
+            permutation_hashes[task_name] = permutation_sha(destination_order, source_order)
         assert tuple_counter(source, task, missing) == tuple_counter(derived, task, missing)
         rejected = ~derived_accept[:, task]
         assert torch.isnan(derived["pseudo_targets"][rejected, task]).all()
@@ -97,14 +101,11 @@ def assert_cache_invariants(
         assert torch.isfinite(derived["pseudo_targets"][accepted_rows, task]).all()
         assert torch.isfinite(derived["pseudo_reliability"][accepted_rows, task]).all()
         assert ((derived["pseudo_reliability"][accepted_rows, task] >= 0) & (derived["pseudo_reliability"][accepted_rows, task] <= 1)).all()
-        assert torch.equal(
-            derived["pseudo_targets"][accepted_rows, task],
-            derived["calibrated_audio_probs"][accepted_rows, task],
-        )
+        assert torch.equal(derived["pseudo_targets"][accepted_rows, task], derived["calibrated_audio_probs"][accepted_rows, task])
     assert tuple(missing_counts) == EXPECTED_MISSING
     assert tuple(accepted_counts) == EXPECTED_ACCEPTED
     assert tuple(class_counts) == EXPECTED_CLASS_COUNTS
-    assert (~derived["observed_mask"] & derived["pseudo_accept_mask"]).sum().item() == sum(EXPECTED_ACCEPTED)
+    assert int((~derived["observed_mask"] & derived["pseudo_accept_mask"]).sum().item()) == sum(EXPECTED_ACCEPTED)
     if derived_sha is not None:
         assert derived.get("negative_control", {}).get("source_cache_sha256") == source_sha
     return {
@@ -128,22 +129,16 @@ def build(source_path: Path, output_path: Path, shuffle_seed: int) -> dict[str, 
     assert isinstance(source, dict)
     assert len(source["segment_ids"]) == EXPECTED_ROWS
     derived = copy.deepcopy(source)
-    permutations: dict[str, torch.Tensor] = {}
+    permutations: dict[str, tuple[torch.Tensor, torch.Tensor]] = {}
     for task, task_name in enumerate(("depression", "parkinson")):
         missing = (~source["observed_mask"][:, task]).nonzero(as_tuple=False).flatten()
         generator = torch.Generator(device="cpu").manual_seed(int(shuffle_seed + task))
-        random_order = missing[torch.randperm(missing.numel(), generator=generator)]
-        source_rows = random_order.roll(shifts=1, dims=0)
-        # Repair rare fixed points deterministically while preserving the
-        # permutation of missing-row source tuples.
-        fixed = source_rows == missing
-        if fixed.any():
-            fixed_indices = fixed.nonzero(as_tuple=False).flatten()
-            source_rows[fixed_indices] = source_rows[fixed_indices].roll(shifts=1, dims=0)
-        assert not torch.any(source_rows == missing)
-        permutations[task_name] = source_rows
+        order = missing[torch.randperm(missing.numel(), generator=generator)]
+        source_order = torch.roll(order, shifts=1, dims=0)
+        assert torch.all(order != source_order)
+        permutations[task_name] = (order, source_order)
         for field in PERMUTED_FIELDS:
-            derived[field][missing, task] = source[field][source_rows, task].clone()
+            derived[field][order, task] = source[field][source_order, task].clone()
     audit = assert_cache_invariants(source, derived, source_sha, permutations=permutations)
     derived["negative_control"] = {
         "type": "within_task_missing_row_tuple_derangement",
@@ -154,13 +149,17 @@ def build(source_path: Path, output_path: Path, shuffle_seed: int) -> dict[str, 
         "permuted_fields": list(PERMUTED_FIELDS),
         "fixed_points": audit["fixed_points"],
         "acceptance_assignment_hamming_differences": audit["acceptance_hamming_differences"],
+        "mapping": "destination_order_to_roll1_source_order",
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(derived, output_path)
+    assert sha256_file(source_path) == EXPECTED_SOURCE_SHA
     derived_sha = sha256_file(output_path)
     reloaded = torch.load(output_path, map_location="cpu", weights_only=False)
     post = assert_cache_invariants(source, reloaded, source_sha, derived_sha=derived_sha, permutations=permutations)
     post["derived_sha256"] = derived_sha
+    post["source_sha256_after_generation"] = sha256_file(source_path)
+    assert post["source_sha256_after_generation"] == EXPECTED_SOURCE_SHA
     return post
 
 

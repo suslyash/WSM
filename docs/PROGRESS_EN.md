@@ -409,3 +409,30 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-pat
 ```
 
 No Test protocol was used for selection, comparison, calibration, or interpretation. No Stage-5 optimization was reopened; no Stage-7, Text/Description, or Final Test work started. Stage 6 remains active for the remaining manager-assigned claims audit.
+
+
+### TASK-006A-FIX1   corrective pre-training firewall
+
+Status: firewall complete; corrective production has not started. The existing `codex/task-006a` branch was reused under explicit manager authorization. Current `origin/main` `3c413acd7b0f9c7c909f944d611650224bab0c38` was merged first in merge commit `9e6b6aa`. The original TASK-006A implementation and three runs remain in history as NOT MERGED / superseded diagnostic evidence and are excluded from the FIX1 claim decision.
+
+The rejected builder/config working state was corrected before this firewall commit. The exact mapping is: for each task, `order = missing[torch.randperm(...)]`, `source_order = torch.roll(order, shifts=1, dims=0)`, then each permuted field is assigned exactly as `derived[field][order, task] = source[field][source_order, task].clone()`. D uses generator seed `6001`; P uses `6002`. No fixed-point repair, swap, sorting, rejection sampling, remapping, or post-hoc permutation change exists.
+
+Fresh cache command:
+
+```bash
+PATH=/media/maxim/Programs/Projects/WSM/.venv/bin:$PATH PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 scripts/common/build_ramps_shuffled_pseudo_negative_control.py --source /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt --output /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1_negative_control/shuffled_missing_targets_seed6001_exact_fix1.pt --shuffle-seed 6001
+```
+
+Result: `RAMPS_SHUFFLED_NEGATIVE_CONTROL_PASS`. Source SHA before generation and after generation: `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`. Fresh FIX1 cache SHA256: `e4baf2a2eea9dc7703e73b7956971b0d571eedda55fc8e6984750270712cf0f9`. Rows `6325`; missing D/P `2665/3660`; accepted D/P `376/1801`; class counts D `376/0`, P `212/1589`; acceptance Hamming D/P `646/1788`. Destination/source sets each equal the complete missing-row set; source equals exact roll-1 destination order; fixed points D/P `0/0`. Permutation SHA256 over ordered int64 `[destination_order, source_order]` pairs: D `1dcfde36463f21d2d2d525d70f6642c6b599cc23534f3cb47ffc41953ec4d4b8`; P `847f8e2cf156cd0d4ecb28f5269d5cc79fd5943c6605f44c57c78528ecc6d767`. Segment IDs, observed masks/targets, tuple multisets, neutral rejected fields, accepted target/probability equality, and observed-truth precedence all passed. The rejected external cache was untouched.
+
+All three FIX1 configs passed `chimera-ml validate-config`. Programmatic equivalence passed for each matched Equal reference: only `data.params.pseudo_cache_path` and `run_name` differ; seeds, architecture, Equal loss, optimizer, warm-up, callbacks, logging, and all other semantics are unchanged. The FIX1 cache loads through the existing semantic DataModule.
+
+TRAIN-only firewall smoke was run for each config at `pseudo_scale=1.0`, with no DEV/Test loader iteration and no optimizer step:
+
+- seed42: `FIX1_CONFIG_FIREWALL_SMOKE_PASS`, trainable params `403079`, finite loss `0.7784184813`;
+- seed43: `FIX1_CONFIG_FIREWALL_SMOKE_PASS`, trainable params `403079`, finite loss `0.7689405670`;
+- seed44: `FIX1_CONFIG_FIREWALL_SMOKE_PASS`, trainable params `403079`, finite loss `0.8094737520`.
+
+For each smoke, observed supervision and accepted missing-head pseudo supervision produced non-zero finite model gradients; pseudo target/reliability gradients were `None`; main heads, audio/video projections, task queries, and gate gradients were finite and non-zero. `git diff --check` passed and `git diff origin/main -- src` was empty.
+
+No corrective production run may start before this firewall is committed and pushed. The only authorized subsequent commands are the three FIX1 production commands in order: seeds42, 43, 44.
