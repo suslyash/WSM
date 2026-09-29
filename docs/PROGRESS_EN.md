@@ -1391,3 +1391,47 @@ Diagnostic A reconstructed the exact TASK-004H AV path using WSMAVFusionDataModu
 Correct audio42 DEV calibration from raw logits: counts D/P 621/312; Brier 0.2117752880/0.1241006106; ECE-15 0.1664041658/0.1066767589. All 15 checkpoint identities are frozen (14 previously verified plus recovered audio42). Five-seed calibration summaries were finalized with the frozen Student-t multiplier 2.7764451051977987; full values are in the Stage-7 evidence dossier. Runtime: Python 3.12.3, torch 2.10.0+cu128, NumPy 2.5.1, CPU float32, CUDA 12.8/cuDNN 91002.
 
 The prior 0.4367 attempt is superseded as an evaluation-path failure; its calibration values are discarded. Exact narrower mechanism was not claimed because the prior temporary code was unavailable. No training, production rerun, source/config/cache/environment change, or Test loader/Test metric query occurred in this correction. The prior procedural exception remains documented: FINAL TEST VALUES NOT USED FOR TASK-007B SELECTION OR RECOVERY. Stage 7 remains active pending manager review; Final Test remains locked.
+
+
+### TASK-007C — DEV firewall blocked before Final Test
+
+Status incomplete. Exact result: STAGE-7 FINAL TEST EVALUATION INCOMPLETE. Branch: codex/task-007c.
+
+The evaluator scripts/common/evaluate_stage7_final_test.py was implemented with the frozen 15-entry ledger, checkpoint/config/pseudo-cache SHA verification, raw-logit metrics, historical audio42 margin/argmax checks, sparse-mask semantics, synthetic arithmetic checks, DEV-only preflight, overwrite refusal, and atomic output. Static checks, --help, synthetic checks, 15-entry count, and overwrite refusal passed.
+
+The mandatory all-15 DEV preflight was attempted using the exact semantic RAMPS DataModule. It stopped before any Test loader or Test dataset iteration at shared-fusion seed43: checkpoint SHA ec746e519e551d69d59954dffff0a73968fb4ab555d43020b7722e635cc477ee, config configs/wsm_mm_pd_dep_v1/ablations/56_shared_fusion_seed43.yaml, frozen DEV D/P/Mean 0.724496/0.818152/0.771324, reproduced 0.7229314130/0.8181521375/0.7705417752; D/Mean absolute mismatches 0.0015645870/0.0007822248, exceeding 0.0005. The configured shared mode and a narrow task-aware diagnostic both failed the frozen ledger, so no source/config/checkpoint/cache correction is authorized.
+
+Final Test invocation count: 0. External report was not created. No training, Test loader iteration, Test metrics, recalibration, threshold fitting, role revision, or retry occurred. Pre-Test roles remain shared primary, full R4 secondary, audio baseline. Stage 7 remains active; Final Test remains locked pending manager review.
+
+
+### TASK-007C corrective config-native DEV firewall
+
+Status: corrective DEV firewall passed; Final Test remains pending the pushed firewall. Branch: `codex/task-007c`. The initial incomplete result remains preserved above; its Test invocation count was 0 and no external report existed.
+
+Installed Chimera semantics were inspected read-only: `device = cuda` falls back to CPU only when CUDA is unavailable, and `mixed_precision: true` enables `torch.amp.autocast(device_type=device.type, enabled=use_amp)` with the default CUDA autocast dtype. In this environment the dtype is `torch.float16`; model parameters remain float32 and evaluator outputs are accumulated/cast to CPU float32 for metrics.
+
+DEV-only A/B/C diagnostic for shared seed43 used canonical DEV rows only and the verified checkpoint SHA256 `ec746e519e551d69d59954dffff0a73968fb4ab555d43020b7722e635cc477ee`. A CPU float32/no-autocast reproduced `0.7229314130/0.8181521375/0.7705417752`; B CUDA float32/no-autocast reproduced the same scores with zero sign disagreements and max raw-logit delta `1.9669533e-06`; C CUDA config-native float16 autocast reproduced `0.7244960383/0.8181521375/0.7713240879`, matching frozen `0.724496/0.818152/0.771324` within `0.0005`. C-vs-A had one sign disagreement and max raw-logit delta `0.0028064251`.
+
+Shared controls passed with config-native semantics: seed42 `0.7653242327/0.8836056059/0.8244649193` versus frozen `0.765324/0.883606/0.824465`; seed44 `0.7314476158/0.8383722433/0.7849099296` versus frozen `0.731448/0.838372/0.784910`; every component stayed within `0.0005`. The evaluator now reads each frozen fusion config's `train.device` and `train.mixed_precision`, mirrors Chimera's CUDA fallback/autocast gate, and casts fusion outputs to CPU float32 before metrics. No model/config/cache/source change was made.
+
+Corrective firewall checks passed: evaluator `--help`; metric/raw-threshold/margin-argmax/sparse-mask/Student-t synthetic checks; 15 unique frozen entries; overwrite refusal; all 15 checkpoint/config SHA checks; pseudo-cache SHA check; and full evaluator DEV preflight. All 15 DEV D/P/Mean values matched the frozen ledger within `0.0005`; audio42 compatibility equivalence passed; preflight reported `test_iteration: false`; `git diff --check` passed; forbidden `src`, config, cache, dependency, and audio scopes are unchanged. The corrective firewall must be committed and pushed before the single authorized Final Test invocation.
+
+No Test loader/dataset was constructed or iterated during the corrective diagnostics or full preflight; Test invocation count remains exactly `0`; external report remains absent. Stage 7 remains active pending the pushed firewall and one authorized Final Test run.
+
+
+### TASK-007C — corrected firewall and standardized Final Test evidence
+
+Status: complete. Exact result: `STAGE-7 FINAL TEST EVALUATION COMPLETE`. Branch: `codex/task-007c`. Corrective firewall commit `bfaae7f812904dd9ae9a7460b394117867db5439` was pushed before Test; evaluator SHA256 `b691c9563bb6ffd63316b664949dcf1bef02d8d3f4e770110c2e70adbc4cee1e`; report `/media/maxim/Programs/Features/WSM/stage7_final_test/final_test_v1.json` SHA256 `59f763f04843c8e54d5d3f9893d3abe0530b47a32ea11f5b9585390edeb515bc`.
+
+The config-native corrective firewall passed all 15 DEV reproductions within `0.0005`, including shared seed43 C-mode `0.7244960383/0.8181521375/0.7713240879`, shared42/44 controls, all frozen checkpoint/config/pseudo-cache SHA checks, audio42 equivalence, synthetic checks, overwrite refusal, and `test_iteration: false`. Exactly one Final Test invocation then completed; protocol counts are TEST_NONE `1364`, TEST_SOFT `1208`, TEST_HARD `1014`.
+
+Five-seed Test D/P/Mean means with frozen two-sided Student-t 95% CIs are:
+- TEST_NONE: audio `0.752954/0.848230/0.800592` CI Mean `[0.781012,0.820172]`; R4 `0.790977/0.816028/0.803502` CI `[0.780018,0.826987]`; shared `0.799233/0.812774/0.806003` CI `[0.794417,0.817590]`.
+- TEST_SOFT: audio `0.775925/0.850212/0.813068` CI Mean `[0.793383,0.832754]`; R4 `0.802296/0.820389/0.811343` CI `[0.785432,0.837253]`; shared `0.812757/0.817941/0.815349` CI `[0.801248,0.829450]`.
+- TEST_HARD: audio `0.788289/0.860246/0.824268` CI Mean `[0.808625,0.839910]`; R4 `0.806044/0.837490/0.821767` CI `[0.790908,0.852626]`; shared `0.815916/0.837049/0.826483` CI `[0.810207,0.842758]`.
+
+Paired Mean mean deltas (95% CI), in order R4−audio, shared−audio, shared−R4: TEST_NONE `+0.002910[-0.021829,+0.027649]`, `+0.005411[-0.014285,+0.025108]`, `+0.002501[-0.013563,+0.018565]`; TEST_SOFT `-0.001726[-0.029386,+0.025934]`, `+0.002281[-0.014017,+0.018578]`, `+0.004006[-0.014503,+0.022516]`; TEST_HARD `-0.002501[-0.029933,+0.024931]`, `+0.002215[-0.013123,+0.017553]`, `+0.004716[-0.015705,+0.025137]`. All paired Mean CIs include zero; no statistical superiority claim.
+
+Descriptive Test−frozen-DEV five-seed Mean deltas (audio/R4/shared): TEST_NONE `+0.035448/+0.013446/+0.015089`; TEST_SOFT `+0.047924/+0.021286/+0.024435`; TEST_HARD `+0.059123/+0.031710/+0.035568`. Full per-seed D/P UAR/MF1/Score, summary min/max/range/std/CI, paired D/P/Mean deltas, and all traceability rows are in [STAGE7_FINAL_TEST_EVIDENCE_EN.md](STAGE7_FINAL_TEST_EVIDENCE_EN.md).
+
+Frozen roles remain unchanged: shared primary, full R4 secondary multimodal reference, temporal audio baseline. No post-Test role/config/checkpoint/threshold revision, training, recalibration, tuning, retry, or further experiment occurred. Main/master untouched; Stage 7 is pending manager closure.
