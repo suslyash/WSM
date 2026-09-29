@@ -1,404 +1,372 @@
-# TASK-006K: Stage-6 Evidence Synthesis and Claim-Freeze Dossier
+# TASK-003A: Transcript Source, Alignment, and Language Audit
 
 ## Authority and branch
 
-This task follows **MANAGER-DECISION-072**.
+This task follows **MANAGER-DECISION-073**.
 
 Required branch:
 
-    codex/task-006k
+    codex/task-003a
 
 Start from current manager-updated `origin/main`.
 
-Create exactly one new task branch from that main.
+This is the first active Stage-3 task after core Stage-6 completion.
 
-This task is **documentation-only**.
+It is **audit-only**. No model training or encoder implementation is authorized.
 
-No training, probing, model execution, cache build, metric recomputation from Test, source edit, config edit, or model-selection experiment is authorized.
+## Why this task comes first
 
-## Goal
+Stage 1 intentionally left:
 
-Produce one authoritative, compact, traceable Stage-6 dossier that answers:
+    text_available = false
 
-1. Which Stage-6 claims are supported?
-2. Which are not supported?
-3. Which findings are diagnostic-only?
-4. Has every required Stage-6 plan item received its required evidence?
-5. Are there any genuine remaining core A+V evidence gaps?
-6. What do the results imply for candidate complexity and scientific claims?
-7. What remains required before Stage 7 can be unlocked?
+for every canonical row.
 
-Do NOT promote or select a final method. Manager retains that decision.
+The canonical manifest builder found video-level files at the conceptual location:
+
+    <data_root>/<corpus>/<split>_labels/<video_id>/<video_id>.txt
+
+but explicitly recorded:
+
+    segment_text_alignment_established = false
+
+Stage 3 T1 requires an audited-language transcript encoder. Before building it, determine what these transcript files actually contain and what text granularity is scientifically defensible.
+
+Do not invent segment-level transcript labels.
 
 ## Required reading
 
-Read in this order:
+Read exactly:
 
 1. `AGENTS.md`
 2. `docs/README.md`
 3. `docs/PROJECT_REQUIREMENTS.md`
 4. `docs/PROGRESS_EN.md`
-5. `docs/plan/STAGE_6.md`
-6. `docs/plan/STAGE_3.md`
-7. `docs/plan/STAGE_7.md`
-8. `docs/NEXT_TASK_EN.md`
+5. `docs/plan/STAGE_3.md`
+6. `docs/NEXT_TASK_EN.md`
+7. `src/common/data/wsm_manifest.py`
+8. `scripts/common/build_wsm_manifest.py`
 
-Read source/config files only when needed to resolve an evidence identity already recorded in PROGRESS. Do not execute training or evaluation.
-
-The Stage-5 archive may be read only when needed to verify frozen references already cited by Stage-6 evidence.
+Do not load closed-stage source/config history unless needed to verify the canonical manifest contract.
 
 ## Allowed tracked files
 
 Only:
 
-- `docs/STAGE6_CLAIM_LEDGER_EN.md`
+- `scripts/text/audit_transcript_sources.py`
+- `docs/STAGE3_TRANSCRIPT_AUDIT_EN.md`
 - `docs/PROGRESS_EN.md`
 
-No other tracked file may change.
+No `src/*` changes.
+No config changes.
+No dependency changes.
 
-## Mandatory evidence policy
+## Inputs
 
-GitHub-committed Stage-6 PROGRESS evidence is authoritative.
+Data root:
 
-Do not invent missing metrics.
-Do not infer significance.
-Do not reinterpret Test monitoring.
-Do not reopen failed gates.
-Do not convert “NOT SUPPORTED” into “harmful”, “useless”, or “proven unnecessary”.
+    /media/maxim/Databases/WSM_NEW
 
-Use exact frozen claim strings where they exist.
+Use the current canonical manifest implementation:
 
-## Required claim ledger
+    common.data.wsm_manifest.build_manifest
 
-Create `docs/STAGE6_CLAIM_LEDGER_EN.md`.
+Do not modify dataset files.
 
-It must contain a table with at least:
+Do not write inside the dataset root.
 
-- Stage-6 plan item;
-- accepted task / PR;
-- comparator/control;
-- seed count;
-- key DEV evidence;
-- exact frozen claim/result;
-- status: SUPPORTED / NOT SUPPORTED / DIAGNOSTIC ONLY;
-- interpretation boundary.
+## External machine-readable report
 
-At minimum include all of the following accepted results.
+Write exactly one external report:
 
-### Sparse MTL
+    /media/maxim/Programs/Features/WSM/stage3_text_audit/transcript_source_audit_v1.json
 
-Exact result:
+The script MUST fail rather than overwrite an existing output path.
 
-    SPARSE MTL JOINT-TRAINING CONTRIBUTION NOT SUPPORTED
+The report must contain no raw transcript text.
 
-Accepted paired task-isolated three-seed:
-- D `0.717846`
-- P `0.881495`
-- Mean `0.799671`
+Record its SHA256 in PROGRESS and in the human-readable audit document.
 
-Full-minus-isolated:
-- D `+0.017410`
-- P `-0.042935`
-- Mean `-0.012762`
+## Canonical mapping
 
-Record TASK-006J procedural exception:
-- total invocations = 7;
-- first D42 failed in TRAIN epoch1 before DEV/Test evaluation;
-- corrective firewall preceded the accepted six completed runs;
-- accepted completed run count = 6;
-- no metric-driven retry/tuning.
+For every canonical manifest row:
 
-### Task-aware fusion
+- parse `segment_id` exactly as the JSON array `[corpus, video_id, segment_file]`;
+- group by canonical `(corpus, split, video_id)`;
+- derive the transcript path only as:
 
-Exact result:
+      data_root / corpus / f"{split}_labels" / video_id / f"{video_id}.txt"
 
-    TASK-AWARE FUSION CONTRIBUTION NOT SUPPORTED
+- do not search arbitrary alternative transcript files;
+- missing files are legitimate missing text availability and must be counted, not guessed.
 
-Shared equal-parameter three-seed:
-- D `0.7407873333`
-- P `0.8467100000`
-- Mean `0.7935663333`
+Verify every grouped video maps to exactly one derived transcript path.
 
-Full-minus-shared:
-- D `-0.0055310000`
-- P `-0.0081493333`
-- Mean `-0.0066575154`
+## Structural transcript audit
 
-Both variants: `295239` trainable parameters.
+For every unique canonical video, record machine-readably:
 
-### Direct pseudo supervision
+- corpus;
+- split;
+- video_id;
+- number of canonical segments;
+- derived transcript path;
+- exists;
+- non-empty;
+- byte size;
+- SHA256 if present;
+- UTF-8/UTF-8-SIG decode success;
+- line count;
+- nonblank line count;
+- Unicode character count;
+- whitespace-token count;
+- deterministic format classification.
 
-Exact result:
+Allowed format classes:
 
-    DIRECT PSEUDO-SUPERVISION CONTRIBUTION SUPPORTED
+- `plain_text`
+- `webvtt`
+- `srt_like`
+- `timestamped_lines`
+- `json_like`
+- `unknown_text`
+- `missing`
+- `decode_error`
 
-No-direct-pseudo three-seed:
-- D `0.7134376667`
-- P `0.8263193333`
-- Mean `0.7698780000`
+Implement deterministic local classification; no network and no LLM.
 
-Full-minus-ablation:
-- D `+0.0218186667`
-- P `+0.0122413333`
-- Mean `+0.0170308179`
+Record aggregate counts by corpus and split.
 
-Boundary: direct pseudo BCE term only.
+## Timestamp and segment-alignment audit
 
-### Uncertainty / reliability
+The central scientific question is whether text can be aligned to canonical segment files.
 
-Exact result:
+Inspect only canonical source metadata and the derived transcript file.
 
-    UNCERTAINTY/RELIABILITY CONTRIBUTION SUPPORTED
+For every source CSV used by the manifest, record its column names and whether it provides explicit segment timing fields such as start/end/offset/time.
 
-Uniform-reliability three-seed:
-- D `0.7352583333`
-- P `0.8345853333`
-- Mean `0.7849220000`
+For transcript files, record counts of parseable timestamp spans/lines using deterministic regex/parsers for common SRT/VTT/timestamp forms.
 
-Full-minus-ablation:
-- D `-0.0000020000`
-- P `+0.0039753333`
-- Mean `+0.0019868179`
+Do NOT infer a segment start time from a suffix like `_005` unless source metadata explicitly establishes the mapping.
 
-Boundary: small effect; combined graded reliability in pseudo BCE weighting + RA-controller reliability signal, not separately identified.
+Do NOT assume fixed segment duration.
 
-### Semantic evidence
+Do NOT use video duration plus ordinal arithmetic as a substitute for explicit segment offsets.
 
-Exact result:
+Record exactly one global alignment conclusion:
 
-    SEMANTIC-EVIDENCE CONTRIBUTION VIA DEPRESSION PSEUDO ACCEPTANCE NOT SUPPORTED
+    SEGMENT TEXT ALIGNMENT ESTABLISHED
 
-No-semantic-depression three-seed:
-- D `0.714447`
-- P `0.868369`
-- Mean `0.791408`
-
-Full-minus-ablation:
-- D `+0.020809`
-- P `-0.029808`
-- Mean `-0.004499`
-
-Boundary: tests the semantic-enabled depression pseudo-acceptance path only.
-
-### RA-STCH balancing
-
-Record both exact results:
-
-    RA-STCH BALANCING CONTRIBUTION OVER EQUAL NOT SUPPORTED
-
-    RA-STCH ADVANTAGE OVER SIMPLER BALANCING NOT SUPPORTED
-
-Fixed-composition RA three-seed:
-- D `0.6931503333`
-- P `0.8519640000`
-- Mean `0.7725573333`
-
-Equal Mean `0.7791726667`.
-Corrected Progress Mean `0.7847510000`.
-RA minus best-simple Mean by seed:
-- `-0.004654`
-- `-0.010530`
-- `-0.024654`
-
-Boundary: this isolates balancing/controller contribution; it does not automatically demote the separately optimized trial-012 composition.
-
-### Modality removal
-
-Video exact result:
-
-    VIDEO MODALITY CONTRIBUTION NOT SUPPORTED
-
-No-video three-seed:
-- D `0.749645`
-- P `0.783216`
-- Mean `0.766431`
-
-Full-minus-no-video:
-- D `-0.014389`
-- P `+0.055344`
-- Mean `+0.020478`
-
-Boundary: frozen claim fails due D non-regression criterion; do not say video is universally useless.
-
-Online audio exact result:
-
-    ONLINE AUDIO INPUT MODALITY CONTRIBUTION SUPPORTED
-
-No-audio three-seed:
-- D `0.653375`
-- P `0.792030`
-- Mean `0.722703`
-
-Full-minus-no-audio:
-- D `+0.081881`
-- P `+0.046531`
-- Mean `+0.064206`
-
-Boundary: online student audio branch only; frozen pseudo cache still contains historical audio-derived teacher information.
-
-### Shuffled/mismatched pseudo negative control
-
-Exact accepted result:
-
-    SAMPLE-SPECIFIC PSEUDO ALIGNMENT CLAIM SUPPORTED BY THIS NEGATIVE CONTROL
-
-Matched Equal Mean `0.7791726667`.
-Exact shuffled FIX2 Mean `0.7371180000`.
-Matched-minus-shuffled Mean `+0.0420546667`.
-Matched > shuffled on 3/3 seeds.
-
-Boundary: no pseudo-label correctness, missing-label recovery, comorbidity, or significance claim.
-
-### Corpus probe
-
-Record exact flags:
-
-    STRONG CORPUS-ID DECODABILITY FLAG NOT TRIGGERED
-
-    FUSION AMPLIFICATION OF CORPUS DECODABILITY NOT SUPPORTED
-
-Three-seed true AUROC means:
-- audio `0.791292`
-- video `0.705505`
-- projected A+V `0.750650`
-- task-fused `0.759832`
-- gates `0.551605`
-- logits `0.575197`
-
-Task-fused minus projected-A+V AUROC deltas:
-- `+0.024588`
-- `-0.000165`
-- `+0.003123`
-- mean `+0.009182`
-
-Boundary: corpus identity is structurally coupled to observed-task identity; no causal shortcut claim.
-
-## Stage-6 completeness matrix
-
-Map every current `docs/plan/STAGE_6.md` item 1–10 to accepted evidence.
-
-Required conclusions to check, not assume:
-
-1. sparse MTL — TASK-006J;
-2. task-aware fusion — TASK-006I;
-3. direct pseudo — TASK-006D;
-4. uncertainty/reliability — TASK-006E;
-5. semantic evidence — TASK-006F;
-6. RA-STCH — TASK-006C;
-7. remove each modality — TASK-006G/H;
-8. shuffled/mismatched pseudo negative control — TASK-006A/FIX2;
-9. corpus probe — TASK-006B;
-10. equal-parameter control if size grows materially — TASK-006I provides an explicit equal-parameter architectural control; additionally state whether the conditional requirement is otherwise triggered.
-
-Also assess required diagnostics:
-- DEV UAR/MF1/Score;
-- ECE/Brier;
-- pseudo coverage/class balance;
-- task gradient norms/cosines;
-- negative-transfer deltas;
-- gate distributions.
-
-If all are represented by accepted evidence, record exactly:
-
-    CORE STAGE-6 A+V EVIDENCE MATRIX COMPLETE
+only if every text-available canonical segment can be mapped deterministically to a transcript span from explicit metadata.
 
 Otherwise record exactly:
 
-    CORE STAGE-6 A+V EVIDENCE MATRIX INCOMPLETE
+    SEGMENT TEXT ALIGNMENT NOT ESTABLISHED
 
-and name the specific missing item. Do not create a new experiment.
+If alignment is not established, record:
 
-## Candidate implications section
+    T1 TEXT UNIT SHOULD BE VIDEO-LEVEL TRANSCRIPT
 
-This section must be descriptive, not a promotion decision.
+This means a future T1 must treat one transcript as one video-level text unit; it may later broadcast a frozen video prediction/feature to segment rows for metric compatibility, but training must not silently multiply one transcript by segment count without an explicit weighting policy.
 
-Record the frozen full trial-012 reference:
-- D `0.7352563333`
-- P `0.8385606667`
-- Mean `0.7869088179`
-- Mean std `0.0294384420`.
+Do not implement that future policy in TASK-003A.
 
-Record matched temporal audio:
-- Mean `0.7733169588`
-- Mean std `0.0138512531`.
+## Exact-duplicate / leakage audit
 
-Record that full R4 > matched audio Mean on 3/3 seeds but audio is more seed-stable.
+Using transcript SHA256 only:
 
-Also record materially relevant Stage-6 comparator facts:
-- shared-fusion equal-parameter Mean `0.7935663333`, above full on 3/3 seeds;
-- no-semantic-depression Mean `0.791408`, above full aggregate but with a D/P trade-off;
-- paired task-isolated Mean `0.799671`, but it is a two-model comparator and not equal total deployment size;
-- no-video Mean `0.766431`, below full aggregate but with higher D;
-- no-audio Mean `0.722703`, substantially below full.
+- count duplicate transcript contents within each split;
+- count identical transcript contents across train/dev;
+- count identical transcript contents across train/test;
+- count identical transcript contents across dev/test;
+- list only video IDs/hashes, never raw text.
 
-Required interpretation:
-- Stage-6 evidence does **not** justify claiming that every component of full trial-012 is necessary;
-- multiple complexity/mechanism claims are not supported;
-- direct pseudo supervision, graded reliability, sample-specific pseudo alignment, and the online audio branch have positive support under their exact gates;
-- no final method promotion/demotion or Stage-7 candidate selection is made in TASK-006K.
+Any cross-split exact duplicate must be highlighted as a leakage risk.
 
-## Deferred Stage-3 / Stage-7 boundary
+Do not use diagnosis labels in duplicate analysis.
 
-PROJECT_REQUIREMENTS requires deferred Text/Description to be completed before paper-ready freeze.
+## TRAIN/DEV language audit
 
-Therefore the dossier must state:
+Language/model-family decisions must not use Test lexical content.
 
-- even if core Stage-6 A+V evidence is complete, Stage 7 remains LOCKED;
-- Final Test remains unauthorized;
-- the next programme-level phase after manager acceptance should be the deferred Stage-3 Text/Description study, unless the manager identifies a genuine Stage-6 documentation/evidence gap;
-- no new A+V tuning should be proposed.
+For TRAIN and DEV only:
 
-Do not edit Stage-3 or Stage-7 plans in this task.
+1. compute aggregate Unicode-script character counts and proportions at least for:
+   - Latin;
+   - Cyrillic;
+   - Greek;
+   - Arabic;
+   - Han;
+   - Hiragana/Katakana;
+   - Hangul;
+   - digits;
+   - other letters;
+2. create a deterministic manual-audit sample of up to 24 unique videos:
+   - stratify by corpus x split over TRAIN and DEV;
+   - use stable SHA256 ordering of `corpus|split|video_id`;
+   - target up to 6 videos per stratum;
+3. Codex may inspect those local transcript files manually to assign a coarse language label per sampled video.
 
-## PROGRESS update
+Do NOT commit transcript snippets or verbatim phrases.
 
-Append a compact TASK-006K synthesis entry that includes:
+The committed report/document may contain only:
 
-- branch;
-- claim-ledger path;
-- exact completeness string;
-- supported claim list;
-- not-supported claim list;
-- diagnostic-only findings;
-- TASK-006J procedural exception;
-- candidate-implication boundaries;
-- Stage-3 requirement;
-- Stage-7 lock;
-- statement that no run/source/config/Test decision occurred.
+- sampled video IDs;
+- coarse language label;
+- mixed-language yes/no;
+- unreadable/empty status;
+- aggregate counts.
 
-Do not mark Stage 6 COMPLETE yourself.
-Do not activate Stage 3 yourself.
-Manager will do that after review.
+No external language-ID service/model download is authorized.
+
+If an already-installed offline language-ID package happens to exist, do not make the task depend on it; manual + Unicode-script audit remains authoritative.
+
+## Test-content firewall
+
+For TEST:
+
+Allowed:
+- path existence;
+- byte size;
+- hash;
+- decode success;
+- line/character/token counts;
+- structural format class;
+- timestamp-pattern counts;
+- duplicate-hash checks.
+
+Forbidden:
+- manual lexical reading;
+- language-based model choice;
+- vocabulary analysis;
+- label association;
+- performance analysis.
+
+No Test prediction or metric may be read.
+
+## Coverage and readiness conclusions
+
+Report canonical segment-level and unique-video-level transcript coverage for TRAIN/DEV/TEST and by corpus.
+
+Missing transcripts remain a future availability-mask case; do not fabricate text.
+
+Record exactly one readiness string:
+
+    T1 TRANSCRIPT DATA CONTRACT READY
+
+if all of the following hold:
+
+1. canonical video-to-transcript path derivation is deterministic;
+2. existing TRAIN/DEV transcript files are auditable without uncontrolled decode ambiguity;
+3. language/granularity evidence is sufficient to specify a T1 input contract;
+4. any duplicate/leakage risk is explicitly enumerated.
+
+Otherwise record exactly:
+
+    T1 TRANSCRIPT DATA CONTRACT BLOCKED
+
+and name the concrete blocker.
+
+This readiness result does NOT authorize training automatically.
+
+## Human-readable audit document
+
+Create `docs/STAGE3_TRANSCRIPT_AUDIT_EN.md` containing:
+
+- scope and no-Test-selection boundary;
+- canonical counts;
+- transcript coverage by split/corpus at video and segment level;
+- format/encoding audit;
+- timestamp/source-metadata audit;
+- exact alignment conclusion;
+- duplicate/leakage audit;
+- TRAIN/DEV Unicode-script summary;
+- deterministic manual sample IDs and coarse language labels;
+- exact readiness string;
+- recommended **data granularity only** for T1;
+- explicit statement that no encoder/model was selected or downloaded.
+
+Do not include raw transcript text.
+
+## Pre-execution firewall
+
+Before running the full audit:
+
+1. implement the script;
+2. run `--help`;
+3. run synthetic parser tests in a temporary directory for:
+   - plain text;
+   - SRT-like;
+   - WebVTT;
+   - timestamped lines;
+   - invalid UTF-8;
+   - missing file;
+4. verify output schema contains no raw text fields;
+5. verify script refuses overwrite;
+6. `git diff --check`;
+7. `git diff origin/main -- src configs pyproject.toml` must be empty;
+8. append firewall evidence to PROGRESS;
+9. commit and push the firewall.
+
+No full dataset audit before the firewall commit is visible on origin.
+
+## Execute the full audit once
+
+Run exactly:
+
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/text/audit_transcript_sources.py       --data-root /media/maxim/Databases/WSM_NEW       --output /media/maxim/Programs/Features/WSM/stage3_text_audit/transcript_source_audit_v1.json
+
+Do not rerun to change conclusions.
+
+A runtime/parser bug may be corrected only if documented, with a new corrective firewall before a replacement full audit. No data/content-driven tuning.
+
+## Final evidence
+
+After the full audit:
+
+- verify report SHA256;
+- create the human-readable audit document;
+- append compact final evidence to PROGRESS;
+- record whether the report inspected Test lexical content: must be `false`;
+- record no Test metrics/predictions inspected;
+- record no model/encoder selected;
+- commit and push.
 
 ## Final scope checks
 
 Run:
 
     git diff --check
+    git diff origin/main -- src
+    git diff origin/main -- configs
+    git diff origin/main -- pyproject.toml
     git status --short
     git diff --stat origin/main...HEAD
-    git log -12 --oneline --decorate
+    git log -10 --oneline --decorate
 
-Only `docs/STAGE6_CLAIM_LEDGER_EN.md` and `docs/PROGRESS_EN.md` may differ.
+Only the three authorized tracked files may differ.
 
 ## Acceptance criteria
 
-TASK-006K passes only if:
+TASK-003A passes only if:
 
-- branch exactly `codex/task-006k`;
-- no source/config/script changes;
-- no training/probe/cache generation;
-- no Test-based analysis beyond restating already accepted monitoring boundaries;
-- all Stage-6 claim strings and key values match accepted evidence;
-- TASK-006J exception is represented accurately as 7 total invocations / 6 accepted completed runs;
-- completeness matrix covers all Stage-6 items and required diagnostics;
-- candidate implications are descriptive only;
-- Stage 3 remains deferred pending manager activation;
-- Stage 7/Final Test remain locked;
+- branch exactly `codex/task-003a`;
+- no source/config/dependency change;
+- canonical path mapping is deterministic and audited;
+- full transcript coverage/format/decode audit is complete;
+- segment alignment conclusion follows explicit metadata only;
+- no ordinal/fixed-duration alignment is invented;
+- exact duplicate cross-split audit is complete;
+- TRAIN/DEV language audit is deterministic and no raw text is committed;
+- Test lexical content is not manually inspected or used for model choice;
+- external JSON contains no raw transcript text and has a recorded SHA;
+- exact readiness string is recorded;
+- firewall precedes the one full audit;
+- no training/model download/encoder selection occurs;
 - branch pushed;
 - main/master untouched.
 
-Passing TASK-006K authorizes no next task automatically.
+Passing TASK-003A closes only the Stage-3 text data-contract audit. It authorizes no T1 implementation automatically.
 
 ## Required handoff
 
@@ -412,21 +380,28 @@ Respond in English using exactly:
 6. Next atomic step
 
 Include:
+
 - branch;
-- final commit SHA;
+- firewall/final commit SHAs;
 - pushed status;
 - main/master untouched;
-- claim-ledger path;
-- exact completeness string;
-- supported/not-supported/diagnostic-only counts and lists;
-- TASK-006J procedural exception;
-- no run/source/config changes;
-- Stage 6 still pending manager closure;
-- Stage 3 still deferred pending manager activation;
-- Stage 7 and Final Test locked.
+- report path/SHA;
+- canonical coverage;
+- format/decode summary;
+- exact alignment string;
+- duplicate/leakage summary;
+- TRAIN/DEV language/script summary;
+- exact readiness string;
+- explicit no raw text committed;
+- Test lexical inspection = false;
+- no Test metrics/predictions;
+- no model/encoder selected;
+- Stage 3 active;
+- Stage 6 complete;
+- Stage 7/Final Test locked.
 
 For section 6 write only:
 
-    Manager review of TASK-006K; do not start another task.
+    Manager review of TASK-003A; do not start another task.
 
 Stop.
