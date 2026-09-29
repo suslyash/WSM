@@ -58,3 +58,20 @@ FINAL TEST VALUES NOT USED FOR TASK-007B SELECTION OR RECOVERY.
 
 Stage 7 remains active pending manager review. Final Test remains locked by the
 failed pre-Test DEV gate.
+
+
+## Corrective config-native DEV firewall
+
+The first preflight blocker is resolved at the evaluator runtime layer only. Installed Chimera semantics were inspected read-only: `cuda` is selected when available, `mixed_precision=true` enables `torch.amp.autocast(device_type="cuda", enabled=True)`, and the environment's default CUDA autocast dtype is float16. The corrected evaluator reads the frozen fusion config's `train.device` and `train.mixed_precision`, mirrors that gate, and converts outputs to CPU float32 before metric calculation. No model, config, cache, source, or dependency was changed.
+
+For shared seed43, canonical DEV-only A/B/C results were:
+
+- A CPU float32/no autocast: `0.7229314130 / 0.8181521375 / 0.7705417752`.
+- B CUDA float32/no autocast: `0.7229314130 / 0.8181521375 / 0.7705417752`; zero sign disagreements vs A, max raw-logit delta `1.9669533e-06`.
+- C CUDA config-native float16 autocast: `0.7244960383 / 0.8181521375 / 0.7713240879`; one sign disagreement vs A, max raw-logit delta `0.0028064251`.
+
+C matches the accepted frozen seed43 DEV triple within `0.0005`, while A retains the mismatch. Shared seed42 and seed44 controls also passed under config-native semantics: `0.7653242327 / 0.8836056059 / 0.8244649193` and `0.7314476158 / 0.8383722433 / 0.7849099296`, respectively, each within `0.0005` of frozen evidence.
+
+The mandatory full evaluator DEV preflight then passed all 15 frozen entries (3 methods × 5 seeds), all checkpoint/config/pseudo-cache SHA checks, audio42 margin/argmax equivalence, synthetic checks, and overwrite refusal. All reproduced D/P/Mean triples were within `0.0005`; the evaluator reported `test_iteration: false`. The corrected firewall is now eligible for commit/push.
+
+Final Test remains unrun: invocation count `0`, no Test loader/dataset iteration, and no external report. The final Test command is authorized only after this corrective firewall commit is visible on `origin`; no Test result or method claim exists yet.

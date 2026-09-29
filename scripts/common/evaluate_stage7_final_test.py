@@ -16,6 +16,7 @@ from typing import Any
 
 import numpy as np
 import torch
+import yaml
 from torch.utils.data import DataLoader
 
 from audio.data.wsm_audio_segment_datamodule import WSMAudioSegmentDataModule
@@ -151,6 +152,21 @@ def load_fusion(repo: Path, e: dict[str,Any]) -> torch.nn.Module:
     payload=torch.load(repo/e["checkpoint"],map_location="cpu",weights_only=False); m.load_state_dict(payload["model_state_dict"],strict=True); m.eval()
     return m
 
+def config_runtime(repo: Path, config: str) -> tuple[torch.device, bool]:
+    """Mirror Chimera's device fallback and mixed-precision gate."""
+    payload = yaml.safe_load((repo / config).read_text(encoding="utf-8"))
+    train = payload.get("train", {}).get("params", {})
+    requested = torch.device(str(train.get("device", "cpu")))
+    device = requested if requested.type != "cuda" or torch.cuda.is_available() else torch.device("cpu")
+    return device, bool(train.get("mixed_precision", False)) and device.type == "cuda"
+
+def move_batch_to_device(batch: Any, device: torch.device) -> Any:
+    batch.inputs = {key: value.to(device) if torch.is_tensor(value) else value for key, value in batch.inputs.items()}
+    if batch.targets is not None:
+        batch.targets = batch.targets.to(device)
+    batch.masks = {key: value.to(device) if torch.is_tensor(value) else value for key, value in batch.masks.items()}
+    return batch
+
 @torch.no_grad()
 def evaluate_audio(repo: Path, dm: WSMAudioSegmentDataModule, e: dict[str,Any], protocol: str, dev: bool) -> dict[str,Any]:
     model,legacy=load_audio(repo,e); rows={}
@@ -177,11 +193,15 @@ def evaluate_audio(repo: Path, dm: WSMAudioSegmentDataModule, e: dict[str,Any], 
 
 @torch.no_grad()
 def evaluate_fusion(repo: Path, dm: WSMRampsSemanticDataModule, e: dict[str,Any], protocol: str, dev: bool) -> dict[str,Any]:
-    model=load_fusion(repo,e); ds=dm.val_dataset if dev else dm.test_dataset[protocol]
+    device, use_amp = config_runtime(repo, e["config"])
+    model=load_fusion(repo,e).to(device); ds=dm.val_dataset if dev else dm.test_dataset[protocol]
     loader=DataLoader(ds,batch_size=32,shuffle=False,drop_last=False,collate_fn=dm.collate_fn,num_workers=0)
     ls=[]; ts=[]; ms=[]
     for batch in loader:
-        ls.append(model(batch).preds); ts.append(batch.targets); ms.append(batch.masks["observed_mask"])
+        batch = move_batch_to_device(batch, device)
+        with torch.amp.autocast(device_type=device.type, enabled=use_amp):
+            out = model(batch)
+        ls.append(out.preds.detach().float().cpu()); ts.append(batch.targets.detach().float().cpu()); ms.append(batch.masks["observed_mask"].detach().cpu())
     return sparse_metrics(torch.cat(ls),torch.cat(ts),torch.cat(ms))
 
 def evaluate_all(repo: Path, entries: list[dict[str,Any]], data_root: Path, audio_root: Path, video_root: Path, pseudo: Path, dev: bool) -> tuple[list[dict[str,Any]],dict[str,int]]:
