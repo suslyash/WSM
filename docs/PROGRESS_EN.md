@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-003B — freeze and implement the T1 video-level transcript pipeline/cache**.
+Current atomic task: **TASK-003C — frozen T1 three-seed production evaluation**.
 
-Expected Codex branch: `codex/task-003b`.
+Expected Codex branch: `codex/task-003c`.
 
-`TASK-003A` is accepted and merged after manager-requested TEST-firewall correction. The transcript data contract is READY at video-level granularity. TASK-003B is implementation/cache-only; no T1 production training is authorized yet.
+`TASK-003B` is accepted and merged. The single T1 video-level XLM-R pipeline, cache, architecture, and seed configs are frozen. TASK-003C may execute the three existing production configs only; no source/config/cache change or text-family tuning is authorized.
 
 ## 2. Default Context Policy
 
@@ -141,34 +141,22 @@ Authoritative synthesis:
 
 No further core A+V tuning, Stage-5 reopening, or Stage-6 mechanism search is authorized.
 
-## 7. Active Task — TASK-003B
+## 7. Active Task — TASK-003C
 
-Purpose: implement and freeze the first bounded text family **T1** without running production training.
+Purpose: obtain the first production evidence for the frozen **T1 text-only family**.
 
-Frozen transcript contract from TASK-003A:
+Frozen T1 identity:
 
-- authoritative audit report SHA256: `4254d81281522015d0633d6534e1616e925a2bf0130f67a37b541a2aacc2ed78`;
-- `SEGMENT TEXT ALIGNMENT NOT ESTABLISHED`;
-- `T1 TEXT UNIT SHOULD BE VIDEO-LEVEL TRANSCRIPT`;
-- `T1 TRANSCRIPT DATA CONTRACT READY`;
-- 8,622 canonical segments, 755 corpus/split/video groups, 754 plain-text transcript files, 1 missing TRAIN transcript, no decode errors;
-- no cross-split exact transcript hash duplicates; three within-TRAIN duplicate hashes;
-- TEST language/lexical audit remained disabled.
+- encoder: `FacebookAI/xlm-roberta-base`, requested revision `e73636d`, resolved commit `e73636d4f797dec63c3081bb6ed5c7b0bb3f2089`;
+- model weight SHA256: `6fd4797bc397c3b8b55d6bb5740366b57e6a3ce91c04c77f22aafc0c128e6feb`;
+- cache index SHA256: `4f276b60e8e423a1eab2d69a02782daa274fb183ae028a525f16df3adcf83ea8`;
+- TRAIN units: 553 unique video transcripts, D287/P266;
+- downstream trainable parameters: `447746`;
+- configs: text/00, 01, 02 for seeds42/43/44.
 
-TASK-003B freezes one T1 model family before any DEV performance evidence:
+Exactly three production runs are authorized, in seed order 42 → 43 → 44. Checkpoint selection remains DEV/Mean_Score only. Test protocol metrics are mandatory monitoring outputs but cannot influence selection, interpretation, or follow-up.
 
-- frozen encoder: `FacebookAI/xlm-roberta-base`, revision `e73636d`;
-- encoder remains frozen;
-- full video transcript is tokenized into non-overlapping 510-content-token chunks with model special tokens, no truncation and no overlap;
-- each chunk is encoded once and mask-aware mean-pooled over valid non-special final-layer token states;
-- cached chunk sequence becomes the text feature stream;
-- a lightweight trainable chunk-sequence Transformer with mask-aware pooling and two independent disease heads is the sole T1 downstream model.
-
-Training unit later will be one unique `(corpus, video_id)` transcript, never one copy per segment. DEV/Test evaluation rows remain canonical segment rows loading the shared video-level cached representation, so primary segment metrics remain protocol-compatible without multiplying TRAIN gradients by segment count.
-
-TASK-003B may build the frozen external feature cache and run smoke/firewall checks, but MUST NOT run a production training epoch or inspect DEV/Test performance.
-
-Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
+TASK-003C is an evidence task, not a tuning task. It may update PROGRESS only.
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -433,6 +421,19 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - to avoid an encoder sweep, manager freezes one pretrained multilingual encoder family before DEV performance evidence: `FacebookAI/xlm-roberta-base` revision `e73636d`;
 - T1 uses frozen video-level transcript features plus one lightweight two-head chunk-sequence model; no segment-level transcript is invented;
 - TASK-003B is implementation/cache-only. Production T1 training is reserved for a later manager-authorized task after pipeline review.
+
+### MANAGER-DECISION-075 — Accept TASK-003B; authorize frozen T1 three-seed evidence
+
+- TASK-003B passed manager review and was merged via PR #79;
+- firewall `40ee994`, tokenizer runtime correction `305a3e4`, and final evidence `b10bb12ba6103d54db75879c312c3c74d7f5700b` remain traceable;
+- one T1 family only was implemented; no encoder search or production performance evidence occurred;
+- frozen encoder identity is `FacebookAI/xlm-roberta-base` revision `e73636d`, resolved commit `e73636d4f797dec63c3081bb6ed5c7b0bb3f2089`, model SHA `6fd4797bc397c3b8b55d6bb5740366b57e6a3ce91c04c77f22aafc0c128e6feb`;
+- frozen cache index SHA256 is `4f276b60e8e423a1eab2d69a02782daa274fb183ae028a525f16df3adcf83ea8`;
+- cache has 755 entries / 754 available artifacts / one unavailable TRAIN depression transcript;
+- T1 TRAIN has exactly 553 unique video-level units (D287/P266); evaluation broadcast remains segment-level only;
+- frozen T1 downstream model has `447746` trainable parameters;
+- smoke forward/loss/backward and masked-unknown invariance passed; no DEV/Test performance metric was inspected;
+- next sole atomic task is TASK-003C: run the already frozen seeds42/43/44 configs exactly once each and record DEV-selected T1 evidence.
 
 ## 10. Historical Evidence
 
