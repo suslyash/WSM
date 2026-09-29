@@ -4,19 +4,19 @@
 
 Plan initialized: 2026-09-23.
 
-Current stage: **Stage 7 — ACTIVE (final candidate/config/seed freeze before final multi-seed evaluation)**.
+Current stage: **Stage 7 — ACTIVE (complete five-seed DEV evidence and checkpoint freeze; Final Test locked)**.
 
 Stage 5: **CLOSED TO OPTIMIZATION — R4 RETAINED AS LEADING MATCHED-SEED CANDIDATE**.
 
-Stage 7: **ACTIVE — FREEZE/PREFLIGHT ONLY; FINAL TEST STILL LOCKED**.
+Stage 7: **ACTIVE — MISSING-SEED PRODUCTION AUTHORIZED; FINAL TEST STILL LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-007A — final candidate/config/seed/statistical freeze and preflight**.
+Current atomic task: **TASK-007B — six missing seed45/46 production runs and five-seed DEV checkpoint freeze**.
 
-Expected Codex branch: `codex/task-007a`.
+Expected Codex branch: `codex/task-007b`.
 
-`TASK-003E` is accepted and merged. Stage 3 is COMPLETE. Manager has frozen the Stage-7 compared-method set from DEV-only evidence: frozen temporal audio, full R4 trial012, and equal-parameter shared fusion. TASK-007A must create/validate only the missing seed45/46 configs and a final evaluation freeze dossier. No production training and no Final Test inspection are authorized yet.
+`TASK-007A` is accepted and merged. The compared-method set, seeds42-46, six seed45/46 configs, statistical plan, paired-comparison plan, and Final-Test firewall are frozen. TASK-007B is authorized to run exactly the six missing jobs and to compute DEV-only five-seed evidence. Final Test remains locked and its epoch-level monitoring values must not be inspected.
 
 ## 2. Default Context Policy
 
@@ -141,23 +141,36 @@ Authoritative synthesis:
 
 No further core A+V tuning, Stage-5 reopening, or Stage-6 mechanism search is authorized.
 
-## 7. Active Task — TASK-007A
+## 7. Active Task — TASK-007B
 
-Purpose: freeze and verify the **final Stage-7 compared-method set, seeds, configs, statistics, and Test firewall** before any new production run.
+Purpose: complete the frozen Stage-7 five-seed DEV evidence for all three compared methods and freeze all fifteen selected checkpoint identities before any final Test reporting.
 
-Manager-selected final compared methods, using DEV-only pre-final evidence:
+Frozen compared methods:
 
-1. frozen temporal audio baseline;
-2. full optimized R4 trial012;
-3. equal-parameter shared-fusion trial012 candidate.
+1. frozen temporal audio;
+2. full R4 trial012;
+3. equal-parameter shared fusion.
 
-Frozen final seeds for every method:
+Frozen seeds: `42,43,44,45,46`.
 
-`42, 43, 44, 45, 46`.
+Seeds42-44 remain accepted historical evidence and MUST NOT be retrained. Exactly six new jobs are authorized in the frozen order:
 
-Accepted existing seeds42-44 are reused and MUST NOT be rerun. TASK-007A creates only seed45/46 clones and verifies all frozen identities.
+1. audio45;
+2. full-R4-45;
+3. shared-45;
+4. audio46;
+5. full-R4-46;
+6. shared-46.
 
-Final Test remains unauthorized in TASK-007A. The next production task, if this freeze passes manager review, will run exactly six missing seed45/46 trainings. A later separate task will inspect/run final TEST_NONE/SOFT/HARD only after all five selected checkpoints per method are frozen.
+No source/config/cache/dependency change is authorized. Checkpoint selection is DEV/Mean_Score only. Mandatory epoch-level Test monitoring may be computed by the existing stack, but its values must not be inspected, transcribed, queried, compared, or used in TASK-007B.
+
+After all six jobs complete, freeze all fifteen checkpoint paths/SHA256 values, run one DEV-only evaluation/calibration pass per checkpoint, and apply the already-frozen five-seed Student-t and paired-comparison plan.
+
+Exact completion string on success:
+
+`STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE COMPLETE`.
+
+Final Test remains locked until manager reviews TASK-007B.
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -481,6 +494,22 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - paired task-isolated is not selected because it is a two-model, non-equal-deployment-size diagnostic control;
 - frozen final seeds are `42,43,44,45,46`; accepted existing seeds42-44 are reused, not rerun;
 - TASK-007A is freeze/preflight only: create seed45/46 config clones, verify existing seed42-44 artifacts, freeze the statistical plan and Test firewall; no production training or Test inspection.
+
+### MANAGER-DECISION-079 — Accept TASK-007A; authorize six missing final-seed runs
+
+- TASK-007A passed manager review and was merged via PR #87;
+- diff was exactly six new seed45/46 configs plus `docs/STAGE7_FINAL_FREEZE_EN.md` and PROGRESS;
+- every new config is machine-identical to its required reference after removing only `seed` and `run_name`;
+- frozen finalists remain exactly temporal audio, full R4 trial012, and equal-parameter shared fusion;
+- frozen seeds remain exactly `42,43,44,45,46`; accepted seeds42-44 will not be rerun;
+- audio trainable parameter count is `3033416`; full R4/shared are each `295239`;
+- existing seed42-44 checkpoint identities are traceable; shared-fusion accepted seed42/43/44 selected epochs are `11/10/11` with checkpoint SHA256 `21504702976a960ffea02a68778ebc3bf7e6cc15ea8c9866f182ff04cbd30785`, `ec746e519e551d69d59954dffff0a73968fb4ab555d43020b7722e635cc477ee`, and `215e3a61c5dcb8ff7dd92ed5ca9336d66405c3f1ba6cc045841f08ec990d10a8`;
+- five-seed mean/std/range/95% Student-t CI and paired same-seed delta plans are frozen with multiplier `2.7764451051977987`;
+- DEV-only Brier/ECE-15 calibration reporting is frozen;
+- Final Test remains locked; no Test metric was inspected in TASK-007A;
+- TASK-007B is authorized to run exactly six missing jobs in order audio45, R4-45, shared45, audio46, R4-46, shared46, with no retry, extra seed, config change, or metric-driven stopping;
+- after the six jobs, TASK-007B must freeze all fifteen selected checkpoints and compute final five-seed DEV evidence only;
+- a separate manager-reviewed TASK-007C will be required before any final TEST_NONE/SOFT/HARD reporting.
 
 ## 10. Historical Evidence
 
