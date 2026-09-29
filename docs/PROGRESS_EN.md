@@ -4,7 +4,7 @@
 
 Plan initialized: 2026-09-23.
 
-Current stage: **Stage 6 — ACTIVE (ablations and claims audit)**.
+Current stage: **Stage 3 — ACTIVE (deferred Text/Description study)**.
 
 Stage 5: **CLOSED TO OPTIMIZATION — R4 RETAINED AS LEADING MATCHED-SEED CANDIDATE**.
 
@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-006K — Stage-6 evidence synthesis and claim-freeze dossier**.
+Current atomic task: **TASK-003A — transcript source/alignment/language audit**.
 
-Expected Codex branch: `codex/task-006k`.
+Expected Codex branch: `codex/task-003a`.
 
-`TASK-006J` is complete and merged with a documented manager procedural exception. The remaining work is synthesis only: no further Stage-6 A+V training or tuning is authorized.
+`TASK-006K` is accepted and merged. Core A+V Stage-6 evidence is COMPLETE and frozen; no further Stage-6 A+V training or tuning is authorized. Deferred Stage 3 Text/Description is now ACTIVE.
 
 ## 2. Default Context Policy
 
@@ -46,10 +46,10 @@ Optional historical evidence:
 | 0. Reproducible base | COMPLETE | Freeze and validate the historical audio baseline and instrumentation contract. | [plan/STAGE_0.md](plan/STAGE_0.md) |
 | 1. Manifest / partial labels | COMPLETE | Canonical sparse-label manifest, split contract, masking, and evaluation separation. | [plan/STAGE_1.md](plan/STAGE_1.md) |
 | 2. Video | COMPLETE | Compare the bounded video families and establish the accepted V2 video reference. | [plan/STAGE_2.md](plan/STAGE_2.md) |
-| 3. Text / description | DEFERRED | Bounded text/description study after the core Stage-6 research cycle. | [plan/STAGE_3.md](plan/STAGE_3.md) |
+| 3. Text / description | ACTIVE | Bounded text/description study after completed core Stage-6 A+V research. | [plan/STAGE_3.md](plan/STAGE_3.md) |
 | 4. Fusion baselines | COMPLETE | Honest A+V baselines and strong-audio fusion search; no safe robust winner. | [plan/STAGE_4.md](plan/STAGE_4.md) |
 | 5. RAMPS | CLOSED TO OPTIMIZATION | Optimization/search is complete. Matched-seed audio confirmation superseded the prior negative robustness interpretation; R4 is retained as the leading Stage-6 candidate, not yet a final promoted method. | [plan/STAGE_5.md](plan/STAGE_5.md) |
-| 6. Ablations / claims audit | ACTIVE | Determine which component/causal claims are supported; retain negative controls. | [plan/STAGE_6.md](plan/STAGE_6.md) |
+| 6. Ablations / claims audit | COMPLETE | Core A+V evidence matrix complete; claims frozen in STAGE6_CLAIM_LEDGER_EN.md. | [plan/STAGE_6.md](plan/STAGE_6.md) |
 | 7. Final evaluation | LOCKED | Final multi-seed evaluation only after configuration/claim freeze and manager authorization. | [plan/STAGE_7.md](plan/STAGE_7.md) |
 
 ## 4. Frozen Scientific References
@@ -125,54 +125,51 @@ Manager interpretation: the **negative robustness verdict is superseded**, but S
 
 Candidate B and corrected R3-B remain non-substitutes under their frozen Stage-5 evidence. Seeds43/44 remain confirmation evidence, not tuning targets.
 
-## 6. Stage-6 General Plan
+## 6. Stage-6 Closure and Frozen Claim Ledger
 
-Stage 6 is a **claims/ablation audit, not a tuning stage**.
+Core A+V Stage 6 is **COMPLETE**.
 
-The detailed contract is in [plan/STAGE_6.md](plan/STAGE_6.md). At high level it covers:
+Authoritative synthesis:
 
-1. sparse MTL / task-aware fusion contribution;
-2. direct pseudo-supervision contribution;
-3. uncertainty/reliability contribution;
-4. semantic-evidence contribution;
-5. balancing/RA-STCH contribution;
-6. modality removals;
-7. shuffled/mismatched pseudo-target negative control;
-8. corpus probe;
-9. equal-parameter control if model size becomes a confound;
-10. calibration, gradient, negative-transfer, coverage, and gate diagnostics.
+- [STAGE6_CLAIM_LEDGER_EN.md](STAGE6_CLAIM_LEDGER_EN.md)
+- exact completeness result: `CORE STAGE-6 A+V EVIDENCE MATRIX COMPLETE`;
+- supported claims: 4;
+- unsupported claims: 7;
+- diagnostic-only findings: 2;
+- TASK-006J procedural exception remains part of the record: 7 total invocations, 1 pre-DEV failed D42 attempt, 6 accepted completed runs;
+- no final method promotion or Stage-7 selection was made.
 
-Each scientific claim must map to an ablation or negative control. Negative results are retained. Test protocols remain monitoring-only and cannot drive decisions.
+No further core A+V tuning, Stage-5 reopening, or Stage-6 mechanism search is authorized.
 
-## 7. Active Task — TASK-006K
+## 7. Active Task — TASK-003A
 
-Purpose: create the **authoritative Stage-6 evidence synthesis / claim-freeze dossier**.
+Purpose: establish the **transcript source, granularity/alignment, language, coverage, and leakage contract** required before implementing the first bounded text family T1.
 
-TASK-006K is documentation-only. It must:
+Stage-1 deliberately kept `text_available=false`: it found video-level `<video_id>.txt` transcript files but did not establish segment-level text alignment.
 
-- map every required Stage-6 item to its accepted task evidence;
-- freeze the exact supported / not-supported / diagnostic-only claim ledger;
-- preserve all interpretation boundaries;
-- record the TASK-006J procedural exception honestly;
-- identify any remaining evidence gap, if one truly exists;
-- assess whether the **core A+V Stage-6 research cycle is evidence-complete**;
-- summarize candidate implications without promoting or selecting a final method;
-- prepare the manager handoff for the required deferred Stage-3 Text/Description work.
+TASK-003A is an audit-only data-contract task:
 
-No new training, probing, cache generation, Test analysis, source change, config change, or model selection is authorized.
+- no text model training;
+- no model download;
+- no config creation;
+- no source package creation;
+- no Test performance inspection;
+- no encoder selection by Test content.
 
-Stage 7 and Final Test remain locked. The project requirements still require deferred Text/Description before paper-ready freeze.
+The audit must determine whether text can be aligned to canonical segments from explicit metadata. If not, T1 must later use a truthful video-level transcript unit rather than inventing segment text.
+
+Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
 ## 8. Non-Negotiable Current Boundaries
 
 - Do not tune or modify `src/audio`.
-- Do not reopen Stage-5 optimization or tune against confirmation seeds.
-- Seeds43/44 from R4 confirmation are not tuning targets.
+- Do not reopen Stage-5 optimization or Stage-6 A+V tuning.
+- Frozen Stage-5/6 seeds and A+V evidence are not Text/Description tuning targets beyond contextual comparison.
 - Unknown labels remain masked, never converted to negative.
 - Observed ground truth overrides pseudo labels.
 - Test metrics cannot drive epoch, architecture, hyperparameter, threshold, ablation, or follow-up selection.
-- General Text/Description remains deferred.
-- Stage 7 and Final Test remain locked.
+- Text/Description is now ACTIVE but bounded to the Stage-3 two-family budget.
+- Stage 7 and Final Test remain locked until Stage 3 is complete and manager authorizes final evaluation.
 - Do not claim verified recovery of genuinely missing disease labels or comorbidity without dual-annotated evidence.
 
 ## 9. Recent Authoritative Manager Decisions
@@ -398,6 +395,21 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - next sole atomic task is TASK-006K, a documentation-only Stage-6 evidence synthesis / claim-freeze dossier;
 - Stage 6 remains ACTIVE pending manager review of that dossier; Stage 7 and Final Test remain locked;
 - deferred Stage 3 Text/Description remains required before paper-ready/final evaluation freeze.
+
+### MANAGER-DECISION-073 — Accept TASK-006K; close Stage 6; activate deferred Stage 3
+
+- TASK-006K passed manager review and was merged via PR #75;
+- its only changes were `docs/STAGE6_CLAIM_LEDGER_EN.md` and PROGRESS;
+- exact synthesis result: `CORE STAGE-6 A+V EVIDENCE MATRIX COMPLETE`;
+- all Stage-6 plan items 1–10 and required diagnostics map to accepted evidence;
+- the frozen claim ledger retains 4 supported claims, 7 unsupported claims, and 2 diagnostic-only findings with their exact interpretation boundaries;
+- TASK-006J remains explicitly recorded as 7 total invocations / 6 accepted completed runs; the failed first D42 attempt occurred before DEV/Test evaluation and was not metric-driven;
+- no final method was promoted or selected;
+- core A+V Stage 6 is CLOSED and no further Stage-6 A+V tuning is authorized;
+- PROJECT_REQUIREMENTS still requires the deferred Text/Description work before paper-ready freeze;
+- Stage 3 Text/Description is therefore ACTIVATED;
+- Stage 7 and Final Test remain LOCKED;
+- next sole atomic task is TASK-003A: transcript source/alignment/language audit before any T1 encoder implementation or training.
 
 ## 10. Historical Evidence
 
