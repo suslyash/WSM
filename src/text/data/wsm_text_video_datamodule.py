@@ -67,14 +67,14 @@ def _filter_value(value: Any) -> bool:
 
 
 def _filter_map(root: Path) -> dict[tuple[str, str, str], dict[str, bool]]:
-    result: dict[tuple[str, str, str], dict[str, bool]] = {}
+    result: dict[tuple[str, str, str, str], dict[str, bool]] = {}
     for corpus in TASKS:
         for split in ("train", "dev", "test"):
             suffix = "_mishas" if split == "test" else ""
             path = root / corpus / f"{split}_labels_segments_min_filtered{suffix}.csv"
             with path.open(encoding="utf-8-sig", newline="") as handle:
                 for row in csv.DictReader(handle, delimiter=";" if suffix else ","):
-                    result[(corpus, split, row["video_id"])] = {"soft": _filter_value(row.get("soft_filter")), "hard": _filter_value(row.get("hard_filter"))}
+                    result[(corpus, split, row["video_id"], row["segment_file"])] = {"soft": _filter_value(row.get("soft_filter")), "hard": _filter_value(row.get("hard_filter"))}
     return result
 
 
@@ -112,7 +112,7 @@ class WSMTextT1DataModule(DataModule):
                 else:
                     assert row["y_parkinson"] == row_group[0]["y_parkinson"]
             first = row_group[0]
-            targets = [first["y_depression"], first["y_parkinson"]]
+            targets = [float(first["y_depression"]) if first["y_depression"] is not None else float("nan"), float(first["y_parkinson"]) if first["y_parkinson"] is not None else float("nan")]
             observed = [first["observed_depression"], first["observed_parkinson"]]
             chosen = segment or first
             return {"artifact_path": entry["artifact_path"], "targets": targets, "observed": observed, "meta": {"corpus": key[0], "split": key[1], "video_id": key[2], "segment_id": chosen["segment_id"], "unit": "video" if segment is None else "segment"}}
@@ -121,7 +121,7 @@ class WSMTextT1DataModule(DataModule):
         self.train_dataset = _TextDataset(train, root)
         self.train_unit_counts = {corpus: sum(item["meta"]["corpus"] == corpus for item in train) for corpus in TASKS}
         eval_sets: dict[str, Dataset] = {}
-        dev = [sample for key, group in grouped.items() if key[1] == "dev" for sample in [make_sample(key, group, segment=group[0])] if sample is not None]
+        dev = [sample for key, group in grouped.items() if key[1] == "dev" for row in group for sample in [make_sample(key, group, segment=row)] if sample is not None]
         eval_sets["dev"] = _TextDataset(dev, root)
         for name in ("none", "soft", "hard"):
             selected = []
@@ -129,7 +129,8 @@ class WSMTextT1DataModule(DataModule):
                 if key[1] != "test":
                     continue
                 for row in group:
-                    if name == "none" or filters.get(key, {}).get(name, False):
+                    segment_file = json.loads(row["segment_id"])[2]
+                    if name == "none" or filters.get((key[0], key[1], key[2], segment_file), {}).get(name, False):
                         sample = make_sample(key, group, segment=row)
                         if sample is not None:
                             selected.append(sample)
