@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-003A — transcript source/alignment/language audit**.
+Current atomic task: **TASK-003B — freeze and implement the T1 video-level transcript pipeline/cache**.
 
-Expected Codex branch: `codex/task-003a`.
+Expected Codex branch: `codex/task-003b`.
 
-`TASK-006K` is accepted and merged. Core A+V Stage-6 evidence is COMPLETE and frozen; no further Stage-6 A+V training or tuning is authorized. Deferred Stage 3 Text/Description is now ACTIVE.
+`TASK-003A` is accepted and merged after manager-requested TEST-firewall correction. The transcript data contract is READY at video-level granularity. TASK-003B is implementation/cache-only; no T1 production training is authorized yet.
 
 ## 2. Default Context Policy
 
@@ -141,22 +141,32 @@ Authoritative synthesis:
 
 No further core A+V tuning, Stage-5 reopening, or Stage-6 mechanism search is authorized.
 
-## 7. Active Task — TASK-003A
+## 7. Active Task — TASK-003B
 
-Purpose: establish the **transcript source, granularity/alignment, language, coverage, and leakage contract** required before implementing the first bounded text family T1.
+Purpose: implement and freeze the first bounded text family **T1** without running production training.
 
-Stage-1 deliberately kept `text_available=false`: it found video-level `<video_id>.txt` transcript files but did not establish segment-level text alignment.
+Frozen transcript contract from TASK-003A:
 
-TASK-003A is an audit-only data-contract task:
+- authoritative audit report SHA256: `4254d81281522015d0633d6534e1616e925a2bf0130f67a37b541a2aacc2ed78`;
+- `SEGMENT TEXT ALIGNMENT NOT ESTABLISHED`;
+- `T1 TEXT UNIT SHOULD BE VIDEO-LEVEL TRANSCRIPT`;
+- `T1 TRANSCRIPT DATA CONTRACT READY`;
+- 8,622 canonical segments, 755 corpus/split/video groups, 754 plain-text transcript files, 1 missing TRAIN transcript, no decode errors;
+- no cross-split exact transcript hash duplicates; three within-TRAIN duplicate hashes;
+- TEST language/lexical audit remained disabled.
 
-- no text model training;
-- no model download;
-- no config creation;
-- no source package creation;
-- no Test performance inspection;
-- no encoder selection by Test content.
+TASK-003B freezes one T1 model family before any DEV performance evidence:
 
-The audit must determine whether text can be aligned to canonical segments from explicit metadata. If not, T1 must later use a truthful video-level transcript unit rather than inventing segment text.
+- frozen encoder: `FacebookAI/xlm-roberta-base`, revision `e73636d`;
+- encoder remains frozen;
+- full video transcript is tokenized into non-overlapping 510-content-token chunks with model special tokens, no truncation and no overlap;
+- each chunk is encoded once and mask-aware mean-pooled over valid non-special final-layer token states;
+- cached chunk sequence becomes the text feature stream;
+- a lightweight trainable chunk-sequence Transformer with mask-aware pooling and two independent disease heads is the sole T1 downstream model.
+
+Training unit later will be one unique `(corpus, video_id)` transcript, never one copy per segment. DEV/Test evaluation rows remain canonical segment rows loading the shared video-level cached representation, so primary segment metrics remain protocol-compatible without multiplying TRAIN gradients by segment count.
+
+TASK-003B may build the frozen external feature cache and run smoke/firewall checks, but MUST NOT run a production training epoch or inspect DEV/Test performance.
 
 Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
@@ -410,6 +420,19 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - Stage 3 Text/Description is therefore ACTIVATED;
 - Stage 7 and Final Test remain LOCKED;
 - next sole atomic task is TASK-003A: transcript source/alignment/language audit before any T1 encoder implementation or training.
+
+### MANAGER-DECISION-074 — Accept corrected TASK-003A; freeze T1 implementation contract
+
+- corrected TASK-003A passed manager review and was merged via PR #77;
+- original firewall `35a50c8`, first field-name runtime fix `f54649f`, manager corrective firewall `b9a2d85`, and final evidence `2e1609fa4c641c8f09153444d4da984f1d78ab53` remain traceable;
+- rejected report SHA `2dc2064aca131da0e80c103df1b8dd7a19d9735aa8c183e149392f7aafd1206b` is superseded;
+- authoritative corrected report SHA is `4254d81281522015d0633d6534e1616e925a2bf0130f67a37b541a2aacc2ed78`;
+- TEST records contain no language-analysis outputs; TEST lexical inspection/language audit/prediction-metric inspection are all false;
+- exact accepted conclusions are `SEGMENT TEXT ALIGNMENT NOT ESTABLISHED`, `T1 TEXT UNIT SHOULD BE VIDEO-LEVEL TRANSCRIPT`, and `T1 TRANSCRIPT DATA CONTRACT READY`;
+- Stage 3 therefore advances to T1 implementation;
+- to avoid an encoder sweep, manager freezes one pretrained multilingual encoder family before DEV performance evidence: `FacebookAI/xlm-roberta-base` revision `e73636d`;
+- T1 uses frozen video-level transcript features plus one lightweight two-head chunk-sequence model; no segment-level transcript is invented;
+- TASK-003B is implementation/cache-only. Production T1 training is reserved for a later manager-authorized task after pipeline review.
 
 ## 10. Historical Evidence
 
