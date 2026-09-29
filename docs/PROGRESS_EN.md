@@ -1355,3 +1355,14 @@ Status: firewall complete; no production run has started. Branch: `codex/task-00
 No-training instantiation passed for the audio, full R4, and shared-fusion families with registered DataModule context: audio trainable parameters `3033416`; full R4 `295239`; shared fusion `295239`; required callbacks instantiated. The semantic pseudo cache SHA256 remains `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`; frozen feature/cache roots and audio feature contract remain unchanged. No Test loader was iterated and no metric was computed.
 
 Firewall scope checks passed: `git diff --check`; `src`, scripts, configs relative to origin/main, and the frozen dossier are clean before production. This firewall evidence is committed and pushed before any training. The only authorized next actions are exactly six commands in order: audio45, R4-45, shared45, audio46, R4-46, shared46. No retry, sweep, extra seed, config change, or metric-driven stopping is authorized.
+
+
+### TASK-007B — final DEV-only production evidence
+
+Status: incomplete. Exact result: `STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE INCOMPLETE`. Branch: `codex/task-007b`. Firewall commit `e5043f6` was pushed before production.
+
+Exactly six production invocations completed once and in order: audio45, full R4-45, shared fusion-45, audio46, full R4-46, shared fusion-46. New DEV-selected checkpoint paths, SHAs, MLflow identities, epochs, DEV D/P/Mean scores, and calibration values are recorded in [docs/STAGE7_FINAL_DEV_EVIDENCE_EN.md](STAGE7_FINAL_DEV_EVIDENCE_EN.md). Selection used only `dev/mean_score`; Test inspection is explicitly `false`.
+
+The exact blocking evidence is the accepted audio seed42 checkpoint SHA `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`: no full local checkpoint path or historical run identity is available in this workspace, so its SHA cannot be reverified and its DEV re-evaluation/calibration cannot be completed. No replacement run is authorized. The five-seed DEV score summaries and descriptive paired Mean deltas are recorded, but the all-15 checkpoint freeze and complete five-seed calibration gate remain incomplete.
+
+No Test loader was called, no Test metric key was queried, and no raw production output or Test log was opened. A historical PROGRESS search incidentally displayed pre-existing Test lines; those values were not used or transcribed into evidence. No retry, tuning, extra seed, config/source/cache/dependency change occurred. Main/master remain untouched; Stage 7 remains active and Final Test remains locked.
