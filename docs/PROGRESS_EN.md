@@ -1346,3 +1346,12 @@ Frozen accepted checkpoint identities and shared-fusion run identities are recor
 The dossier freezes five-seed mean/sample-std/min/max/range and Student-t 95% CI (`2.7764451051977987`, df=4), same-seed paired deltas for all three method pairs, and DEV-only Brier/ECE-15 summaries. Final Test is explicitly unauthorized: no new or historical Test values are inspected; all fifteen selected checkpoints must be frozen before a separate final-Test task. Next production order is exactly audio45, R4-45, shared45, audio46, R4-46, shared46, with no retry, extra seed, or post-firewall config change.
 
 Scope checks passed: `git diff --check`; forbidden source/script/dependency/cache scopes are unchanged; no production command was run. Main/master remain untouched.
+
+
+### TASK-007B — final DEV-only production firewall
+
+Status: firewall complete; no production run has started. Branch: `codex/task-007b`, based on manager `origin/main` `918017894165a95d55f24b599a077b542baae2ed`. The frozen Stage-7 dossier is unchanged. All six seed45/46 configs are semantically identical to their frozen references except seed/run_name, all validate, and all retain max-mode `dev/mean_score` checkpoint/early-stopping selection.
+
+No-training instantiation passed for the audio, full R4, and shared-fusion families with registered DataModule context: audio trainable parameters `3033416`; full R4 `295239`; shared fusion `295239`; required callbacks instantiated. The semantic pseudo cache SHA256 remains `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`; frozen feature/cache roots and audio feature contract remain unchanged. No Test loader was iterated and no metric was computed.
+
+Firewall scope checks passed: `git diff --check`; `src`, scripts, configs relative to origin/main, and the frozen dossier are clean before production. This firewall evidence is committed and pushed before any training. The only authorized next actions are exactly six commands in order: audio45, R4-45, shared45, audio46, R4-46, shared46. No retry, sweep, extra seed, config change, or metric-driven stopping is authorized.
