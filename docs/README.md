@@ -21,6 +21,7 @@ The default context intentionally does **not** include the full historical ledge
 - [plan/STAGE_7.md](plan/STAGE_7.md) — completed Stage-7 final-evaluation plan and closure status.
 - [STAGE3_CLAIM_LEDGER_EN.md](STAGE3_CLAIM_LEDGER_EN.md) — frozen Stage-3 Text/Description claim ledger.
 - [STAGE6_CLAIM_LEDGER_EN.md](STAGE6_CLAIM_LEDGER_EN.md) — frozen core A+V Stage-6 claim ledger.
+- [FINAL_RESEARCH_LEDGER_EN.md](FINAL_RESEARCH_LEDGER_EN.md) — primary final-results and claims entrypoint for programme closure.
 
 Closed-stage plan files are optional. Do not load them unless the task requires historical plan detail.
 
