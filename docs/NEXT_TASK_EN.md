@@ -1,324 +1,336 @@
-# TASK-003D: T2 Observable-Description Generator / Source / Prompt Preflight
+# TASK-003E: Stage-3 Text/Description Synthesis and Closure Dossier
 
 ## Authority and branch
 
-This task follows **MANAGER-DECISION-076**.
+This task follows **MANAGER-DECISION-077**.
 
 Required branch:
 
-    codex/task-003d
+    codex/task-003e
 
 Start from current manager-updated `origin/main`.
 
-This is a Stage-3 T2 preflight only.
+This task is **documentation-only**.
 
-No production description cache and no T2 training are authorized.
+No training, inference, generation, cache build, model download, probing, Test analysis, source/config/script change, or hyperparameter/model selection is authorized.
 
-## Why T2 remains in scope
+## Goal
 
-Stage-3 allows at most two text/description families:
+Create one authoritative Stage-3 dossier that answers:
 
-- T1: transcript encoder;
-- T2: T1 + cached observable description/semantic feature + simple T/D gating.
+1. What transcript/data contract was established?
+2. What did T1 demonstrate as a standalone text baseline?
+3. Why was T2 stopped before implementation/training?
+4. Has the Stage-3 two-family budget been completely and honestly exercised?
+5. What Stage-3 claims are supported, unsupported, blocked, or diagnostic-only?
+6. Which frozen methods remain relevant for a separate Stage-7 candidate-freeze decision?
 
-T1 is complete as a standalone three-seed baseline. T2 is the second and final allowed family, not a hyperparameter/model sweep.
+Do NOT select the final Stage-7 methods yourself.
 
-## Frozen description generator
+## Required reading
 
-Use exactly:
+Read:
 
-    Qwen/Qwen3-VL-8B-Instruct
+1. `AGENTS.md`
+2. `docs/README.md`
+3. `docs/PROJECT_REQUIREMENTS.md`
+4. `docs/PROGRESS_EN.md`
+5. `docs/plan/STAGE_3.md`
+6. `docs/plan/STAGE_7.md`
+7. `docs/STAGE3_TRANSCRIPT_AUDIT_EN.md`
+8. `docs/STAGE3_T2_DESCRIPTION_PREFLIGHT_EN.md`
+9. `docs/STAGE6_CLAIM_LEDGER_EN.md`
+10. `docs/NEXT_TASK_EN.md`
 
-Requested revision:
-
-    1dd1e02d981403da25ed73d43430e4ef598cb94b
-
-Do not try another VLM in this task.
-
-Do not change dependencies.
-
-The task must determine whether the current project environment can load and run this frozen revision. If not, record a blocker and stop; do not silently upgrade packages or switch models.
-
-Record:
-
-- resolved Hugging Face commit;
-- config/tokenizer/processor identities;
-- safetensors index SHA256;
-- every model shard SHA256;
-- package versions;
-- device;
-- dtype;
-- peak allocated/reserved GPU memory when applicable;
-- wall-clock generation time per audited sample.
-
-## Frozen input source
-
-The semantic description source is **visual-only canonical segment video**.
-
-For every canonical segment row, the candidate source is exactly its existing canonical `segment_path` from `build_manifest`.
-
-Do not use:
-
-- transcript text;
-- audio waveform;
-- disease labels;
-- task labels;
-- pseudo labels;
-- corpus name;
-- split name;
-- video ID/segment ID in the prompt;
-- prior model predictions.
-
-The VLM may receive only the segment video plus the frozen neutral prompt.
-
-Audit all canonical segment paths structurally and record:
-
-- total rows;
-- existing/missing files by split/corpus;
-- file extensions;
-- zero-byte files;
-- decode/open failures under the chosen processor path.
-
-Do not manually inspect TEST video content.
-
-## Frozen prompt
-
-Use exactly this user prompt for every generated description:
-
-    Describe only directly observable visual behavior in this short video clip.
-    Focus on facial movement or expression, gaze and head motion, hand or body movement,
-    posture, interaction or engagement, and recording/view conditions when they are visible.
-    Do not infer or mention any diagnosis, disease, health condition, neurological or psychiatric
-    state, medication, cause, identity, age, sex or gender, race or ethnicity, or dataset,
-    corpus, task, label, score, or prediction.
-    Do not guess unobservable facts. Use concise neutral factual language.
-    If an aspect is not visible, omit it.
-
-No system prompt may add disease/task context.
-
-If the model framework requires a generic system role, it must be a neutral non-medical assistant identity and must be recorded verbatim.
-
-## Frozen generation settings
-
-Use deterministic generation:
-
-- `do_sample = false`;
-- `max_new_tokens = 120`;
-- one output sequence;
-- no beam search;
-- no temperature/top-p tuning;
-- no prompt variants.
-
-Use the model/processor's documented video preprocessing defaults except for any deterministic frame/FPS argument that is strictly required by the current API. If such an argument is required, record and freeze it before sample generation; do not search alternatives.
-
-## Deterministic TRAIN/DEV manual-audit sample
-
-Generate descriptions only for a deterministic sample of at most 24 canonical segment rows.
-
-Strata:
-
-- depression TRAIN;
-- depression DEV;
-- Parkinson TRAIN;
-- Parkinson DEV.
-
-Target 6 rows per stratum.
-
-Selection:
-
-- stable SHA256 ordering of `corpus|split|video_id|segment_file`;
-- take the first 6 unique segment rows in each stratum;
-- no label/class balancing;
-- no performance information.
-
-TEST is excluded completely from generation in TASK-003D.
-
-## External preflight report
-
-Write exactly:
-
-    /media/maxim/Programs/Features/WSM/stage3_t2_preflight/qwen3vl8b_observable_preflight_v1.json
-
-Refuse overwrite.
-
-The external report may contain generated descriptions for the 24 TRAIN/DEV audit items because manual review is required, but no raw description text may be committed to GitHub.
-
-Record report SHA256 in PROGRESS and the human-readable audit doc.
-
-## Manual description audit
-
-For every sampled output, manually record:
-
-- nonempty: yes/no;
-- visually grounded / mostly observable: yes/no;
-- major unsupported/hallucinated fact: yes/no;
-- diagnosis/disease/health-state inference: yes/no;
-- demographic/identity inference: yes/no;
-- causal/medication inference: yes/no;
-- dataset/task/label leakage: yes/no;
-- concise enough for semantic encoding: yes/no.
-
-Do not use disease labels to judge whether a description is “correct”.
-
-The reviewer may look at the sampled TRAIN/DEV video clip and generated description only.
-
-Do not inspect Test video content.
-
-## Frozen preflight gate
-
-Record exactly:
-
-    T2 DESCRIPTION GENERATION CONTRACT READY
-
-only if all are true:
-
-1. all canonical segment source paths are deterministically mapped and structural availability is recorded;
-2. the frozen Qwen3-VL revision loads and generates under the current environment with no dependency change;
-3. all 24 sampled descriptions are nonempty;
-4. zero sampled descriptions contain diagnosis/disease/health-state inference;
-5. zero sampled descriptions contain demographic/identity inference;
-6. zero sampled descriptions contain causal/medication inference;
-7. zero sampled descriptions contain dataset/task/label leakage;
-8. at least 22/24 are judged visually grounded / mostly observable;
-9. at least 22/24 are concise enough for semantic encoding;
-10. no TEST content was generated or manually inspected.
-
-Otherwise record exactly:
-
-    T2 DESCRIPTION GENERATION CONTRACT BLOCKED
-
-and name every failed condition.
-
-Do not switch model or prompt in the same task if blocked.
-
-## Reproducibility / deterministic check
-
-Before accepting the sample generation contract:
-
-- choose the lexicographically first sampled item;
-- run the exact frozen generation twice from a fresh generation call without changing model/prompt/settings;
-- require exact generated-text equality;
-- record hashes, not the repeated text, in PROGRESS.
-
-If exact equality fails, record BLOCKED.
+Use existing committed evidence only.
 
 ## Allowed tracked files
 
 Only:
 
-- `scripts/description/preflight_qwen3vl_observable.py`
-- `docs/STAGE3_T2_DESCRIPTION_PREFLIGHT_EN.md`
+- `docs/STAGE3_CLAIM_LEDGER_EN.md`
 - `docs/PROGRESS_EN.md`
 
-No `src/*` changes.
-No configs.
-No dependencies.
-No T1 cache changes.
-No description production cache.
+No other tracked file may change.
 
-## Pre-execution firewall
+## Mandatory Stage-3 evidence ledger
 
-Before loading the full VLM or generating sampled descriptions:
+Create `docs/STAGE3_CLAIM_LEDGER_EN.md`.
 
-1. implement the preflight script;
-2. run `--help`;
-3. synthetic/test-mode checks prove:
-   - prompt is exactly frozen;
-   - no label/task/corpus/split/video/segment metadata enters prompt;
-   - sample selection is deterministic TRAIN/DEV only;
-   - TEST is excluded from generation;
-   - report refuses overwrite;
-4. structural source-path audit may run without model generation;
-5. verify no source/config/dependency diffs;
-6. `git diff --check`;
-7. append firewall evidence to PROGRESS;
-8. commit and PUSH firewall.
+### A. Transcript contract
 
-No VLM sample generation before firewall is visible on origin.
+Record exact accepted TASK-003A conclusions:
 
-## Execute preflight exactly once
+    SEGMENT TEXT ALIGNMENT NOT ESTABLISHED
+    T1 TEXT UNIT SHOULD BE VIDEO-LEVEL TRANSCRIPT
+    T1 TRANSCRIPT DATA CONTRACT READY
 
-After firewall push:
+Authoritative report SHA256:
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
-      scripts/description/preflight_qwen3vl_observable.py \
-      --data-root /media/maxim/Databases/WSM_NEW \
-      --output /media/maxim/Programs/Features/WSM/stage3_t2_preflight/qwen3vl8b_observable_preflight_v1.json
+    4254d81281522015d0633d6534e1616e925a2bf0130f67a37b541a2aacc2ed78
 
-A pure runtime/API defect may be corrected transparently with a pushed corrective firewall before one replacement preflight. No prompt/model/source changes are allowed as a “runtime correction”.
+Key facts:
 
-## Human-readable document
+- 8,622 canonical segments;
+- 755 unique corpus/split/video groups;
+- 754 available plain-text transcript files;
+- 1 missing TRAIN transcript;
+- no decode errors;
+- no cross-split exact transcript-hash duplicates;
+- three within-TRAIN exact duplicate hashes;
+- no explicit source timing metadata;
+- no parseable transcript timestamps;
+- TEST lexical/language audit was disabled in the corrected authoritative report.
 
-Create `docs/STAGE3_T2_DESCRIPTION_PREFLIGHT_EN.md` with:
+Boundary:
+there is no scientifically established segment-level transcript alignment. T1 uses video-level transcript units; segment broadcast is evaluation-only.
 
-- exact model/revision/resolved commit;
-- prompt and generation settings;
-- canonical structural source audit;
-- sample IDs only, not labels and not generated text;
-- manual audit flags/counts;
-- reproducibility result;
-- memory/runtime profile;
-- exact READY/BLOCKED string;
-- explicit no TEST generation/manual inspection;
-- explicit no training/model-performance metric.
-
-Do not include generated descriptions verbatim.
-
-## PROGRESS evidence
+### B. T1 frozen family identity
 
 Record:
 
+- encoder `FacebookAI/xlm-roberta-base`;
+- requested revision `e73636d`;
+- resolved commit `e73636d4f797dec63c3081bb6ed5c7b0bb3f2089`;
+- model weight SHA256 `6fd4797bc397c3b8b55d6bb5740366b57e6a3ce91c04c77f22aafc0c128e6feb`;
+- cache index SHA256 `4f276b60e8e423a1eab2d69a02782daa274fb183ae028a525f16df3adcf83ea8`;
+- 553 unique TRAIN video-level units: D287/P266;
+- downstream trainable parameter count `447746`;
+- one frozen family only; no encoder search.
+
+### C. T1 evidence
+
+Exact completion:
+
+    T1 THREE-SEED TEXT BASELINE COMPLETE
+
+Per-seed primary DEV D/P/Mean:
+
+- seed42: `0.721153/0.899381/0.810267`;
+- seed43: `0.562911/0.825768/0.694339`;
+- seed44: `0.596355/0.809025/0.702690`.
+
+Three-seed mean:
+
+- D `0.6268063333`;
+- P `0.8447246667`;
+- Mean `0.7357653333`.
+
+Sample std:
+
+- D `0.0834002123`;
+- P `0.0480683689`;
+- Mean `0.0646553057`.
+
+Range:
+
+- D `0.158242`;
+- P `0.090356`;
+- Mean `0.115928`.
+
+Contextual deltas:
+
+versus matched audio:
+- D `-0.1035314632`;
+- P `+0.0284285455`;
+- Mean `-0.0375516255`.
+
+versus full R4:
+- D `-0.1084500000`;
+- P `+0.0061640000`;
+- Mean `-0.0511434846`.
+
+Interpretation boundary:
+
+- T1 is a standalone text-stream baseline;
+- it does NOT show that text improves A+V;
+- P is strong relative to audio/R4 context while D is materially weaker and seed-sensitive;
+- no three-seed significance claim;
+- unique-video DEV diagnostics were secondary and lower than primary segment-weighted metrics on all seeds;
+- Test monitoring did not drive selection.
+
+### D. T2 observable-description preflight
+
+Exact result:
+
+    T2 DESCRIPTION GENERATION CONTRACT BLOCKED
+
+Frozen generator:
+
+- `Qwen/Qwen3-VL-8B-Instruct`;
+- revision `1dd1e02d981403da25ed73d43430e4ef598cb94b`;
+- prompt SHA256 `118b93ba090af2b4ce755d9da1476e073cab0624760e9aa4c347faad8750ee4d`;
+- deterministic uniform `num_frames=8` after documented CUDA-memory correction;
+- report SHA256 `767d687e2f857938fa882555250d7a4be4159556e49537377967d82c36407930`.
+
+Manual audit:
+
+- nonempty `24/24`;
+- visually grounded/mostly observable `24/24`;
+- major unsupported/hallucinated `0/24`;
+- diagnosis/disease/health-state inference `0/24`;
+- demographic/identity inference `4/24`;
+- causal/medication inference `0/24`;
+- dataset/task/label leakage `0/24`;
+- concise enough `18/24`.
+
+Failed frozen conditions:
+- zero demographic/identity inference;
+- at least 22/24 concise.
+
+Boundary:
+
+- T2 did not reach cache construction, model implementation, training, DEV performance, or Test generation;
+- therefore there is no T2 performance claim;
+- no prompt/model remediation is authorized inside Stage 3 because that would exceed the frozen second-family preflight/search contract.
+
+## Stage-3 completeness matrix
+
+Map the active Stage-3 plan and PROJECT_REQUIREMENTS to evidence.
+
+At minimum verify:
+
+1. transcript coverage/encoding/language/leakage audit — TASK-003A;
+2. no invented segment alignment — TASK-003A/T1 contract;
+3. T1 pretrained transcript family implemented — TASK-003B;
+4. T1 three-seed standalone evidence — TASK-003C;
+5. second allowed family T2 attempted as transcript+observable-description concept — TASK-003D;
+6. description prompt/model revision fingerprinted — TASK-003D;
+7. diagnosis-free prompt/manual audit — TASK-003D;
+8. no broad text/description search — family/model/prompt budgets respected;
+9. no Test-driven text/description selection;
+10. description sanity check occurred but failed its frozen gate, so implementation correctly stopped.
+
+If all required Stage-3 work is represented, record exactly:
+
+    STAGE-3 TEXT/DESCRIPTION EVIDENCE MATRIX COMPLETE
+
+Otherwise record:
+
+    STAGE-3 TEXT/DESCRIPTION EVIDENCE MATRIX INCOMPLETE
+
+and name the exact missing item. Do not propose an experiment.
+
+## Family-budget conclusion
+
+Record exactly:
+
+    STAGE-3 TWO-FAMILY BUDGET EXHAUSTED
+
+if:
+
+- T1 is the sole implemented pretrained transcript family;
+- T2 is the sole second-family observable-description attempt;
+- no third encoder/generator/prompt-remediation family was tried.
+
+Clarify that a blocked T2 preflight is a valid bounded-study outcome and does not require forcing T2 training.
+
+## Pre-Stage-7 candidate inventory
+
+Create a descriptive inventory, not a ranking or final selection.
+
+Include at least:
+
+### Frozen temporal audio
+- D/P/Mean `0.7303377965/0.8162961212/0.7733169588`;
+- Mean std `0.0138512531`;
+- strong stability reference.
+
+### Full R4 trial012
+- D/P/Mean `0.7352563333/0.8385606667/0.7869088179`;
+- Mean std `0.0294384420`;
+- beats matched audio Mean on 3/3 seeds;
+- multiple Stage-6 component claims are unsupported, so complexity necessity is not established.
+
+### Equal-parameter shared-fusion Stage-6 comparator
+- D/P/Mean `0.7407873333/0.8467100000/0.7935663333`;
+- full-minus-shared Mean `-0.0066575154`;
+- same `295239` trainable parameters as full;
+- this is a relevant simplified single-model candidate for later manager freeze, but TASK-003E does not select it.
+
+### No-semantic-depression comparator
+- D/P/Mean `0.714447/0.868369/0.791408`;
+- full-minus-ablation D/P/Mean `+0.020809/-0.029808/-0.004499`;
+- higher aggregate Mean than full but material D/P trade-off;
+- relevant contextual candidate, not automatically final.
+
+### Paired task-isolated comparator
+- D/P/paired Mean `0.717846/0.881495/0.799671`;
+- two separately trained models;
+- NOT equal total deployment size;
+- diagnostic/upper-control candidate, not a like-for-like single-model finalist.
+
+### T1 text-only
+- D/P/Mean `0.6268063333/0.8447246667/0.7357653333`;
+- standalone contextual baseline;
+- not evidence that text should be added to A+V.
+
+### T2
+- blocked before implementation/training;
+- ineligible for Stage-7 performance comparison under current evidence.
+
+Do not label a winner.
+Do not choose the Stage-7 set.
+Do not assign ranks/scores/tiers.
+
+## Stage boundary
+
+The dossier must state:
+
+- Stage 3 remains ACTIVE until manager accepts TASK-003E;
+- Stage 7 remains LOCKED;
+- Final Test remains unauthorized;
+- no further Stage-3 text/description family is justified under the frozen programme budget;
+- after manager acceptance, the next programme-level action should be a separate Stage-7 candidate/config/seed freeze task, not immediate training.
+
+Do not edit Stage-3 or Stage-7 plan files.
+
+## PROGRESS update
+
+Append a compact TASK-003E evidence section with:
+
 - branch;
-- firewall/final SHA;
-- external report path/SHA;
-- model/revision/resolved commit;
-- model shard hashes;
-- environment/package identity;
-- exact prompt hash and generation settings;
-- source structural counts;
-- deterministic sample IDs;
-- manual audit aggregate counts;
-- repeat-generation hash equality;
-- memory/time profile;
-- exact preflight gate string;
-- no Test content generation/inspection;
-- no performance metrics;
-- no training;
-- Stage 3 active;
+- ledger path;
+- exact Stage-3 completeness string;
+- exact two-family budget string;
+- T1 exact completion and aggregate evidence;
+- T2 exact blocked result and failed gate counts;
+- pre-Stage-7 candidate inventory boundary;
+- no run/source/config/cache/Test analysis;
+- Stage 3 pending manager closure;
 - Stage 7/Final Test locked.
+
+Do not mark Stage 3 COMPLETE yourself.
+Do not activate Stage 7 yourself.
 
 ## Final scope checks
 
 Run:
 
     git diff --check
-    git diff origin/main -- src
-    git diff origin/main -- configs
-    git diff origin/main -- pyproject.toml
     git status --short
     git diff --stat origin/main...HEAD
     git log -10 --oneline --decorate
 
-Only the three authorized tracked files may differ.
+Only `docs/STAGE3_CLAIM_LEDGER_EN.md` and `docs/PROGRESS_EN.md` may differ.
 
 ## Acceptance criteria
 
-TASK-003D passes only if:
+TASK-003E passes only if:
 
-- branch exactly `codex/task-003d`;
-- one frozen Qwen3-VL model/revision only;
-- one exact prompt only;
-- visual canonical segment source only;
-- no labels/task/transcript/audio enter generation;
-- deterministic TRAIN/DEV sample only;
-- Test generation/manual inspection = false;
-- external report traceable;
-- manual audit gate applied exactly;
-- no source/config/dependency/model-training changes;
+- branch exactly `codex/task-003e`;
+- documentation-only scope;
+- all Stage-3 values and hashes match accepted evidence;
+- T1 and T2 interpretation boundaries are preserved;
+- completeness matrix is explicit;
+- family-budget exhaustion is explicit;
+- candidate inventory is descriptive only;
+- no final method selection/ranking;
+- no Stage-7 activation;
 - branch pushed;
 - main/master untouched.
 
-Passing TASK-003D authorizes no full description cache or T2 training automatically.
+Passing TASK-003E authorizes no Stage-7 run automatically.
 
 ## Required handoff
 
@@ -331,10 +343,10 @@ Respond in English using exactly:
 5. Blockers and risks
 6. Next atomic step
 
-Include branch, firewall/final SHA, pushed status, report path/SHA, model/revision/resolved commit, shard hashes, source structural audit, sample count, manual audit gate counts, deterministic-repeat result, memory/runtime profile, exact READY/BLOCKED string, Test generation/manual inspection false, no training/performance metrics, Stage 3 active, Stage 7/Final Test locked.
+Include branch, final commit SHA, pushed status, main/master untouched, ledger path, exact Stage-3 completeness string, exact family-budget string, T1/T2 status summary, candidate-inventory summary, no compute/source/config/cache/Test analysis, Stage 3 pending manager closure, Stage 7/Final Test locked.
 
 For section 6 write only:
 
-    Manager review of TASK-003D; do not start another task.
+    Manager review of TASK-003E; do not start another task.
 
 Stop.
