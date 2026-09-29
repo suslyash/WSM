@@ -1125,3 +1125,15 @@ Branch: `codex/task-003a`. Implemented only [scripts/text/audit_transcript_sourc
 Firewall checks passed before the full dataset audit: `--help`; synthetic plain-text, SRT-like, WebVTT, timestamped-line, JSON-like, invalid-UTF8, and empty-file parser cases; existing-output overwrite refusal; raw-text output-schema guard; `py_compile`; `git diff --check`; and `git diff origin/main -- src configs pyproject.toml` empty. No source, config, dependency, training, model, cache, or Test inspection occurred.
 
 The firewall commit must precede the single full audit invocation. The external report path is `/media/maxim/Programs/Features/WSM/stage3_text_audit/transcript_source_audit_v1.json`; the full audit will fail rather than overwrite it.
+
+### TASK-003A — transcript source, alignment, and language audit
+
+Status: complete audit-only. Branch: `codex/task-003a`. Added [docs/STAGE3_TRANSCRIPT_AUDIT_EN.md](STAGE3_TRANSCRIPT_AUDIT_EN.md). External report: `/media/maxim/Programs/Features/WSM/stage3_text_audit/transcript_source_audit_v1.json`. Report SHA256: `2dc2064aca131da0e80c103df1b8dd7a19d9735aa8c183e149392f7aafd1206b`.
+
+The pushed firewall commit was `35a50c8`; it passed help, synthetic parser cases, overwrite refusal, raw-text schema guard, syntax, diff check, and empty `src`/config/dependency diff. The first full invocation stopped before output creation on a script field-name defect; the narrow correction was pushed as `f54649f`, and the corrected successful audit completed without changing data or conclusions.
+
+Canonical coverage: 8,622 segments and 755 unique corpus/split/video groups. Non-empty transcript coverage was depression TRAIN 287/288 videos and 3,587/3,660 segments; depression DEV 56/56 and 621/621; depression TEST 55/55 and 827/827; Parkinson TRAIN 266/266 and 2,665/2,665; Parkinson DEV 44/44 and 312/312; Parkinson TEST 46/46 and 537/537. The report found 754 plain-text files and 1 missing file, with no decode errors.
+
+No source CSV had explicit segment timing columns; transcript timestamp parsing found zero spans/lines. Exact conclusion: `SEGMENT TEXT ALIGNMENT NOT ESTABLISHED`; required granularity conclusion: `T1 TEXT UNIT SHOULD BE VIDEO-LEVEL TRANSCRIPT`. TRAIN/DEV Unicode audit found only Latin letters and digits. The 24-video deterministic manual sample had coarse `English_or_other_Latin` labels, no mixed-language flags, and no committed snippets. Duplicate-hash audit found no cross-split duplicates and three within-TRAIN duplicate hashes, explicitly listed in the audit document.
+
+Exact readiness result: `T1 TRANSCRIPT DATA CONTRACT READY`. No encoder, model, dependency, config, source package, training, Test prediction/metric inspection, or Test lexical inspection occurred. T1 implementation remains unauthorized until manager review.
