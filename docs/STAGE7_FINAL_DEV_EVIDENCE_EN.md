@@ -4,11 +4,13 @@
 
 `STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE INCOMPLETE`
 
-The exact missing evidence is the accepted temporal-audio seed42 checkpoint
-with SHA256 `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`:
-its full local checkpoint path and historical run identity are not present in
-this workspace, so its SHA cannot be reverified and its required DEV-only
-reevaluation/calibration cannot be completed. No replacement run is authorized.
+The recovered accepted temporal-audio seed42 checkpoint is present at the
+historical path below and its SHA256 was verified. The existing adapter strict-
+loaded the epoch-4 payload with the archived graph compatibility path, all
+adapter parameters remained frozen, and evaluation mode was retained. However,
+the corrected canonical DEV-only reproduction materially failed the accepted
+TASK-004H DEV scores, so the unified freeze remains incomplete. No replacement
+run or source/config/model change is authorized.
 
 TASK-007B otherwise preserved the frozen method set (temporal audio, full R4
 trial012, equal-parameter shared fusion) and seeds 42–46. The six authorized
@@ -32,9 +34,9 @@ inspected.
 ## Existing accepted identities
 
 The following accepted identities were not retrained. Full paths and SHA256
-were verified locally for all listed entries except the missing audio seed42:
+were verified locally for all listed entries, including the recovered audio seed42:
 
-- audio seed42: accepted SHA above; local path/run identity unavailable — blocking item.
+- audio seed42: `logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt`; SHA `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`; historical run `multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77`; MLflow ID `not recorded`.
 - audio seed43: `logs/wsm_mm_pd_dep_v1/frozen_audio_wavlm_l9_pool4_seed43_2026-09-28_13-12_audio_mamba_segment_model_08192c1b/checkpoints/epoch=5_dev_mean_score=0.7602.pt`; SHA `1a65f8dd605a6d942bed828f126e79a1f02930dd578176ba31f49c4dc10899dd`; MLflow `4119e9a654ec481ca42606f7f207b969`.
 - audio seed44: `logs/wsm_mm_pd_dep_v1/frozen_audio_wavlm_l9_pool4_seed44_2026-09-28_13-21_audio_mamba_segment_model_8720f109/checkpoints/epoch=4_dev_mean_score=0.7719.pt`; SHA `7832d20a5431666365e2214423633f2be87bb27f37406d5a5dda8adda21e9852`; MLflow `ab9a3a73a0e94a2c889a69b25038d141`.
 - full R4 seed42: `logs/wsm_mm_pd_dep_v1/optuna_r4_ra_stch_base_seed42_2026-09-28_01-54_wsm_av_r3_disease_query_model_r4-ra-stch-optuna-v1-18c6-012_0ce9c7a4/checkpoints/epoch=11_dev_mean_score=0.8191.pt`; SHA `104b79e409832839502b4d20a98c054f5efda633930e313ce74f34327e668b2a`; MLflow ID not recorded in accepted evidence.
@@ -78,12 +80,26 @@ These are descriptive only and do not change the finalist set.
 
 ## Calibration and closure
 
-DEV calibration was computed with observed rows only, sigmoid probabilities,
-15 equal-width bins, no threshold fitting, and no recalibration. New-seed
-Brier/ECE-15 values are recorded in the run evidence; complete five-seed
-calibration summaries cannot be finalized because the accepted audio seed42
-checkpoint and its DEV probabilities are unavailable locally. Therefore the
-15-checkpoint freeze and exact completion gate remain incomplete.
+The corrective audio42 DEV reproduction used observed rows only, sigmoid
+probabilities, 15 equal-width bins, no threshold fitting, and no recalibration.
+The recovered checkpoint SHA was exact and strict loading passed, but the
+reproduced DEV result was D UAR/MF1/Score
+`0.5047152194/0.3433026030/0.4240089112`, P UAR/MF1/Score
+`0.5000000000/0.3988439306/0.4494219653`, Mean
+`0.4367154383`, versus accepted D/P/Mean
+`0.7480392157/0.8277353635/0.7878268765`. This exceeds the required absolute
+tolerance `0.0005`, so the recovery stopped and the audio42 calibration is
+diagnostic-only, not accepted for finalization: observed D/P `621/312`,
+Brier D/P `0.4688533750/0.3203929081`, ECE-15 D/P
+`0.4694130072/0.3149863942`. Consequently all-15 final verification and the
+complete five-seed calibration summaries remain blocked; no new summary is
+claimed. The six seed45/46 production runs were not rerun.
+
+The original TASK-007B pass incidentally surfaced pre-existing historical Test
+lines through a broad PROGRESS search. This corrective action performed no Test
+loader construction or iteration and no Test metric query. The values were not
+used for selection, checkpoint choice, statistics, calibration, or recovery:
+`FINAL TEST VALUES NOT USED FOR TASK-007B SELECTION OR RECOVERY`.
 
 No method, config, threshold, source, cache, or family changed after TASK-007A.
 Stage 7 remains active. Final Test remains locked.
