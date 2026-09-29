@@ -1190,3 +1190,10 @@ Cache facts: 755 canonical entries; 754 available plain-text transcripts; one un
 Registrations and config construction passed for `wsm_text_t1_datamodule` and `wsm_text_t1_chunk_transformer`; all three seed-clone configs validated and instantiated with seeds 42/43/44 and identical semantics otherwise. Fixed T1 model trainable parameter count is 447746. TRAIN forward/loss/backward smoke passed with finite loss 0.7279856205, finite nonzero gradients, and masked unknown-target invariance. Shape-only loads passed for DEV and all three Test streams; no performance metrics were computed or inspected.
 
 Two pure runtime corrections were handled transparently after pushed firewalls: tokenizer special-token API correction commit `305a3e4`, then the DataModule per-segment protocol/NaN-mask correction in the final evidence commit. The first cache attempt produced no artifacts before the tokenizer correction; the incomplete empty cache root was removed only for the authorized replacement build. Stage 3 remains active; Stage 7 and Final Test remain locked.
+
+
+### TASK-003C pre-production firewall
+
+Branch: codex/task-003c. Frozen cache identity verified: index SHA256 4f276b60e8e423a1eab2d69a02782daa274fb183ae028a525f16df3adcf83ea8; 755 entries; all 754 referenced artifacts exist; encoder/revision/resolved commit/model SHA match the accepted TASK-003B identity. All three frozen configs validate, instantiate, and differ only by seed/run_name. The fixed model has 447746 trainable parameters.
+
+TRAIN membership is exactly D287/P266/total553 unique video units. Evaluation membership is DEV933/TEST_NONE1364/TEST_SOFT1208/TEST_HARD1014. Shape-only TRAIN and DEV batches passed. No DEV/Test performance metric was computed or inspected. git diff --check and forbidden src, config, script, and dependency diffs are clean. No production run has started before this firewall commit.
