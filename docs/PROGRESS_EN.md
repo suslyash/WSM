@@ -1190,3 +1190,37 @@ Cache facts: 755 canonical entries; 754 available plain-text transcripts; one un
 Registrations and config construction passed for `wsm_text_t1_datamodule` and `wsm_text_t1_chunk_transformer`; all three seed-clone configs validated and instantiated with seeds 42/43/44 and identical semantics otherwise. Fixed T1 model trainable parameter count is 447746. TRAIN forward/loss/backward smoke passed with finite loss 0.7279856205, finite nonzero gradients, and masked unknown-target invariance. Shape-only loads passed for DEV and all three Test streams; no performance metrics were computed or inspected.
 
 Two pure runtime corrections were handled transparently after pushed firewalls: tokenizer special-token API correction commit `305a3e4`, then the DataModule per-segment protocol/NaN-mask correction in the final evidence commit. The first cache attempt produced no artifacts before the tokenizer correction; the incomplete empty cache root was removed only for the authorized replacement build. Stage 3 remains active; Stage 7 and Final Test remain locked.
+
+
+### TASK-003C pre-production firewall
+
+Branch: codex/task-003c. Frozen cache identity verified: index SHA256 4f276b60e8e423a1eab2d69a02782daa274fb183ae028a525f16df3adcf83ea8; 755 entries; all 754 referenced artifacts exist; encoder/revision/resolved commit/model SHA match the accepted TASK-003B identity. All three frozen configs validate, instantiate, and differ only by seed/run_name. The fixed model has 447746 trainable parameters.
+
+TRAIN membership is exactly D287/P266/total553 unique video units. Evaluation membership is DEV933/TEST_NONE1364/TEST_SOFT1208/TEST_HARD1014. Shape-only TRAIN and DEV batches passed. No DEV/Test performance metric was computed or inspected. git diff --check and forbidden src, config, script, and dependency diffs are clean. No production run has started before this firewall commit.
+
+
+### TASK-003C  final T1 three-seed text baseline evidence
+
+Status: complete. Exact result: `T1 THREE-SEED TEXT BASELINE COMPLETE`. Branch: `codex/task-003c`. Only the three frozen production commands were executed, exactly once and in order, after firewall commit `6af94e4` was pushed: seed42, seed43, seed44. No sweep, tuning, retry, extra seed, cache/config/source/dependency change, or Test-driven decision occurred.
+
+Production commands:
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/text/00_t1_xlmr_seed42.yaml`
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/text/01_t1_xlmr_seed43.yaml`
+- `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train --config-path configs/wsm_mm_pd_dep_v1/text/02_t1_xlmr_seed44.yaml`
+
+Frozen DEV-only checkpoint selection by maximum `dev/mean_score`:
+- seed42: epoch16, D/P/Mean `0.721153/0.899381/0.810267`; checkpoint `logs/wsm_mm_pd_dep_v1/stage3_t1_xlmr_video_text_seed42_2026-09-29_12-15_wsm_text_t1_chunk_transformer_cdf61d2c/checkpoints/epoch=16_dev_mean_score=0.8103.pt`; SHA256 `151b6a4ede993f25d168f669711a0a35545958b9ed0a32772e58a11b3db13536`; MLflow run `4f9638ac06c648a59e626eac066679f0`.
+- seed43: epoch7, D/P/Mean `0.562911/0.825768/0.694339`; checkpoint `logs/wsm_mm_pd_dep_v1/stage3_t1_xlmr_video_text_seed43_2026-09-29_12-17_wsm_text_t1_chunk_transformer_b850ebcc/checkpoints/epoch=7_dev_mean_score=0.6943.pt`; SHA256 `25f89cdc487c9094c4f6511d760c67c133c3891b302cf75ccf96294f44469f2e`; MLflow run `f52995473b374d8eaf7e589d0262165f`.
+- seed44: epoch2, D/P/Mean `0.596355/0.809025/0.702690`; checkpoint `logs/wsm_mm_pd_dep_v1/stage3_t1_xlmr_video_text_seed44_2026-09-29_12-18_wsm_text_t1_chunk_transformer_2523c8b6/checkpoints/epoch=2_dev_mean_score=0.7027.pt`; SHA256 `fbd337609fe9c38eb09c3614ffd0bc2ee56801b271cc420ec692610eaeb1ab1b`; MLflow run `7c2b84a965984daba286707fcf55169e`.
+
+Three-seed primary DEV D/P/Mean mean, sample std, range: mean `0.626806/0.844725/0.735765`; std `0.083400/0.048068/0.064655`; range `0.158242/0.090356/0.115928`. Per-seed selected DEV D UAR/MF1/Score and P UAR/MF1/Score: seed42 `0.721802/0.720505/0.721153`, `0.904072/0.894689/0.899381`; seed43 `0.571102/0.554720/0.562911`, `0.823119/0.828417/0.825768`; seed44 `0.597712/0.594997/0.596355`, `0.815390/0.802661/0.809025`.
+
+DEV-only secondary audit deduplicated canonical `(corpus, video_id)`: 100 unique videos per seed. Segment-minus-unique D/P/Mean deltas: seed42 `+0.023759/+0.106582/+0.065170`; seed43 `+0.009376/+0.077403/+0.043390`; seed44 `+0.054893/+0.086415/+0.070654`. Unique-video D/P/Mean: seed42 `0.697394/0.792799/0.745097`; seed43 `0.553534/0.748365/0.650950`; seed44 `0.541461/0.722611/0.632036`. Unique metrics were not used for selection.
+
+DEV-only calibration used observed D=621 and P=312 per seed, with no recalibration or threshold search. Per-seed Brier/ECE-15: seed42 D `0.179343/0.198466`, P `0.108042/0.208747`; seed43 D `0.247784/0.234108`, P `0.136693/0.169739`; seed44 D `0.244794/0.177437`, P `0.211774/0.253974`. Three-seed means: D `0.223973/0.203336`, P `0.152170/0.210820`.
+
+Same-epoch TEST_NONE/SOFT/HARD monitoring was inspected only after each DEV checkpoint freeze and did not affect selection or claims. D/P/Mean: seed42 NONE `0.831266/0.722989/0.777127`, SOFT `0.815629/0.712308/0.763968`, HARD `0.812956/0.699957/0.756456`; seed43 NONE `0.729547/0.679297/0.704422`, SOFT `0.723828/0.669494/0.696661`, HARD `0.720002/0.661341/0.690671`; seed44 NONE `0.702429/0.743890/0.723159`, SOFT `0.709882/0.750566/0.730224`, HARD `0.707727/0.699957/0.703842`. No Test rows entered post-hoc diagnostics.
+
+Context only, not an additive or promotion claim: matched-audio three-seed D/P/Mean `0.7303377965/0.8162961212/0.7733169588`; full R4 `0.7352563333/0.8385606667/0.7869088179`; accepted V2 video single-run `0.6201013364/0.7930427585/0.7065720475`. T1 is a standalone text baseline only; no three-seed significance claim.
+
+Final scope checks passed: only `docs/PROGRESS_EN.md` differs from `origin/main`; `src`, configs, scripts, cache/dependency files remain unchanged; `src/audio` stayed unchanged; `git diff --check` passed; main/master was not modified. Stage 3 remains active; Stage 6 is complete; Stage 7 and Final Test remain locked. Manager review is required before any next task.
