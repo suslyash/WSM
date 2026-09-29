@@ -1346,3 +1346,44 @@ Frozen accepted checkpoint identities and shared-fusion run identities are recor
 The dossier freezes five-seed mean/sample-std/min/max/range and Student-t 95% CI (`2.7764451051977987`, df=4), same-seed paired deltas for all three method pairs, and DEV-only Brier/ECE-15 summaries. Final Test is explicitly unauthorized: no new or historical Test values are inspected; all fifteen selected checkpoints must be frozen before a separate final-Test task. Next production order is exactly audio45, R4-45, shared45, audio46, R4-46, shared46, with no retry, extra seed, or post-firewall config change.
 
 Scope checks passed: `git diff --check`; forbidden source/script/dependency/cache scopes are unchanged; no production command was run. Main/master remain untouched.
+
+
+### TASK-007B — final DEV-only production firewall
+
+Status: firewall complete; no production run has started. Branch: `codex/task-007b`, based on manager `origin/main` `918017894165a95d55f24b599a077b542baae2ed`. The frozen Stage-7 dossier is unchanged. All six seed45/46 configs are semantically identical to their frozen references except seed/run_name, all validate, and all retain max-mode `dev/mean_score` checkpoint/early-stopping selection.
+
+No-training instantiation passed for the audio, full R4, and shared-fusion families with registered DataModule context: audio trainable parameters `3033416`; full R4 `295239`; shared fusion `295239`; required callbacks instantiated. The semantic pseudo cache SHA256 remains `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`; frozen feature/cache roots and audio feature contract remain unchanged. No Test loader was iterated and no metric was computed.
+
+Firewall scope checks passed: `git diff --check`; `src`, scripts, configs relative to origin/main, and the frozen dossier are clean before production. This firewall evidence is committed and pushed before any training. The only authorized next actions are exactly six commands in order: audio45, R4-45, shared45, audio46, R4-46, shared46. No retry, sweep, extra seed, config change, or metric-driven stopping is authorized.
+
+
+### TASK-007B — final DEV-only production evidence
+
+Status: incomplete. Exact result: `STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE INCOMPLETE`. Branch: `codex/task-007b`. Firewall commit `e5043f6` was pushed before production.
+
+Exactly six production invocations completed once and in order: audio45, full R4-45, shared fusion-45, audio46, full R4-46, shared fusion-46. New DEV-selected checkpoint paths, SHAs, MLflow identities, epochs, DEV D/P/Mean scores, and calibration values are recorded in [docs/STAGE7_FINAL_DEV_EVIDENCE_EN.md](STAGE7_FINAL_DEV_EVIDENCE_EN.md). Selection used only `dev/mean_score`; Test inspection is explicitly `false`.
+
+The exact blocking evidence is the accepted audio seed42 checkpoint SHA `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`: no full local checkpoint path or historical run identity is available in this workspace, so its SHA cannot be reverified and its DEV re-evaluation/calibration cannot be completed. No replacement run is authorized. The five-seed DEV score summaries and descriptive paired Mean deltas are recorded, but the all-15 checkpoint freeze and complete five-seed calibration gate remain incomplete.
+
+No Test loader was called, no Test metric key was queried, and no raw production output or Test log was opened. A historical PROGRESS search incidentally displayed pre-existing Test lines; those values were not used or transcribed into evidence. No retry, tuning, extra seed, config/source/cache/dependency change occurred. Main/master remain untouched; Stage 7 remains active and Final Test remains locked.
+
+### TASK-007B — corrective audio42 recovery
+
+Status remains incomplete. Exact result: `STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE INCOMPLETE`. Branch: `codex/task-007b`. Original firewall commit: `e5043f62d6e836c2074fa16b2e5e7b03b813905a`; prior incomplete evidence commit: `54c9547331e90658332ad905bf6c1c9a9cb62457`.
+
+The accepted historical audio42 checkpoint was recovered read-only at `logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt`, run identity `multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77`, and SHA256 `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`. The existing `FrozenAudioTemporalAdapter` strict-loaded epoch 4, with frozen parameters and eval mode; no source or `src/audio` change occurred.
+
+The corrected canonical DEV-only reproduction did not agree with accepted TASK-004H evidence within `0.0005`: reproduced D/P/Mean `0.5047152194/0.4494219653/0.4367154383` versus accepted `0.7480392157/0.8277353635/0.7878268765`. Attempted observed-only audio42 calibration was D/P counts `621/312`, Brier `0.4688533750/0.3203929081`, ECE-15 `0.4694130072/0.3149863942`; these are not finalized because the score reproduction failed. The all-15 checkpoint freeze and complete five-seed calibration summaries remain blocked.
+
+All six seed45/46 production runs were NOT rerun; no training occurred in this correction; no Test loader was constructed/iterated and no Test metric query occurred. The prior broad historical PROGRESS search incidentally surfaced pre-existing Test lines, but `FINAL TEST VALUES NOT USED FOR TASK-007B SELECTION OR RECOVERY`. No config/source/cache/finalist/stat-plan change occurred. Stage 7 remains active and Final Test remains locked.
+
+
+### TASK-007B — corrective evaluation-path diagnostic
+
+Status complete. Exact result: STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE COMPLETE. Branch: codex/task-007b. Prior recovery commit: b892ff0eef4e932e5214dfb818aecc2a502042b8.
+
+Diagnostic A reconstructed the exact TASK-004H AV path using WSMAVFusionDataModule.val_dataset only across 933 DEV rows. Raw base logits matched the legacy two-class difference with max absolute difference 0.0; argmax mismatch count was 0; raw-logit helper metrics and independent legacy-argmax metrics matched within 1e-12, reproducing D/P/Mean 0.7480392157/0.8277353635/0.7878268765. Diagnostic B native-vs-adapter logit difference was 0.0 for both tasks and reproduced the same metrics. Diagnostic C matched all 12 deterministic AV/native rows: task IDs, labels, observed targets, feature paths/SHA256, sanitized tensor shapes/contents, and masks. Diagnostic D seed43/44 controls reproduced accepted D/P/Mean 0.7086990/0.8117710/0.7602350 and 0.7343964/0.8093819/0.7718891 within 0.0005.
+
+Correct audio42 DEV calibration from raw logits: counts D/P 621/312; Brier 0.2117752880/0.1241006106; ECE-15 0.1664041658/0.1066767589. All 15 checkpoint identities are frozen (14 previously verified plus recovered audio42). Five-seed calibration summaries were finalized with the frozen Student-t multiplier 2.7764451051977987; full values are in the Stage-7 evidence dossier. Runtime: Python 3.12.3, torch 2.10.0+cu128, NumPy 2.5.1, CPU float32, CUDA 12.8/cuDNN 91002.
+
+The prior 0.4367 attempt is superseded as an evaluation-path failure; its calibration values are discarded. Exact narrower mechanism was not claimed because the prior temporary code was unavailable. No training, production rerun, source/config/cache/environment change, or Test loader/Test metric query occurred in this correction. The prior procedural exception remains documented: FINAL TEST VALUES NOT USED FOR TASK-007B SELECTION OR RECOVERY. Stage 7 remains active pending manager review; Final Test remains locked.
