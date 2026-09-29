@@ -243,8 +243,7 @@ def audit(data_root: Path) -> dict[str, Any]:
             "whitespace_token_count": 0,
             "format_class": "missing",
             "timestamp_counts": {"srt_vtt_spans": 0, "timestamped_lines": 0},
-            "coarse_language": "unreadable_or_empty",
-            "mixed_language": False,
+            "language_audit_performed": split in ("train", "dev"),
         }
         if path.is_file():
             data = path.read_bytes()
@@ -262,14 +261,19 @@ def audit(data_root: Path) -> dict[str, Any]:
                 record["unicode_character_count"] = len(decoded)
                 record["whitespace_token_count"] = len(decoded.split())
                 record["timestamp_counts"] = timestamp_counts(decoded)
-                record["coarse_language"], record["mixed_language"] = _coarse_language(decoded, True)
+                if record["language_audit_performed"]:
+                    record["coarse_language"], record["mixed_language"] = _coarse_language(decoded, True)
         records.append(record)
 
     source_audit = _source_audit(data_root, manifest_audit)
     explicit_timing = any(item["explicit_segment_timing_available"] for item in source_audit.values())
     timestamp_total = sum(item["timestamp_counts"]["srt_vtt_spans"] + item["timestamp_counts"]["timestamped_lines"] for item in records)
     alignment = "SEGMENT TEXT ALIGNMENT ESTABLISHED" if explicit_timing and all(item["non_empty"] and item["decode_success"] for item in records) else "SEGMENT TEXT ALIGNMENT NOT ESTABLISHED"
-    readiness = "T1 TRANSCRIPT DATA CONTRACT READY" if all(item["exists"] or not item["exists"] for item in records) and all(item["format_class"] != "decode_error" for item in records) and source_audit and all("columns" in item for item in source_audit.values()) else "T1 TRANSCRIPT DATA CONTRACT BLOCKED"
+    canonical_path_derivation_deterministic = bool(grouped) and all(
+        item["source_path"] == str(_path_for(data_root, item["corpus"], item["split"], item["video_id"]))
+        for item in records
+    )
+    duplicate_audit = _duplicates(records)
     script_summary: dict[str, Any] = {}
     for split in ("train", "dev"):
         counts = Counter()
@@ -287,7 +291,9 @@ def audit(data_root: Path) -> dict[str, Any]:
     return {
         "schema": "wsm_transcript_source_audit_v1",
         "data_root": str(data_root.resolve()),
-        "test_content_inspected": False,
+        "test_lexical_inspection_performed": False,
+        "test_language_audit_performed": False,
+        "test_predictions_or_metrics_inspected": False,
         "canonical_manifest": {
             "row_count": len(rows),
             "unique_video_count": len(grouped),
@@ -301,11 +307,26 @@ def audit(data_root: Path) -> dict[str, Any]:
         "timestamp_audit": {"total_parseable_timestamp_spans_or_lines": timestamp_total, "explicit_segment_timing_metadata_found": explicit_timing},
         "alignment_conclusion": alignment,
         "recommended_text_unit": "T1 TEXT UNIT SHOULD BE VIDEO-LEVEL TRANSCRIPT" if alignment != "SEGMENT TEXT ALIGNMENT ESTABLISHED" else "segment-level transcript span",
-        "duplicate_content_audit": _duplicates(records),
+        "duplicate_content_audit": duplicate_audit,
         "train_dev_unicode_script_audit": script_summary,
         "manual_sample": _manual_sample(records),
-        "readiness": readiness,
-        "readiness_blocker": "" if readiness.endswith("READY") else "uncontrolled decode ambiguity or incomplete source metadata audit",
+        "readiness": "T1 TRANSCRIPT DATA CONTRACT READY" if (
+            canonical_path_derivation_deterministic
+            and all(item["format_class"] != "decode_error" for item in records if item["split"] in ("train", "dev"))
+            and all(item["language_audit_performed"] for item in records if item["split"] in ("train", "dev"))
+            and bool(script_summary.get("train"))
+            and bool(script_summary.get("dev"))
+            and set(duplicate_audit["across_split"]) == {"train_vs_dev", "train_vs_test", "dev_vs_test"}
+            and alignment in {"SEGMENT TEXT ALIGNMENT ESTABLISHED", "SEGMENT TEXT ALIGNMENT NOT ESTABLISHED"}
+        ) else "T1 TRANSCRIPT DATA CONTRACT BLOCKED",
+        "readiness_predicates": {
+            "canonical_path_derivation_deterministic": canonical_path_derivation_deterministic,
+            "train_dev_decode_unambiguous": all(item["format_class"] != "decode_error" for item in records if item["split"] in ("train", "dev")),
+            "train_dev_language_evidence_present": bool(script_summary.get("train")) and bool(script_summary.get("dev")),
+            "duplicate_leakage_audit_present": bool(duplicate_audit),
+            "alignment_conclusion_present": alignment in {"SEGMENT TEXT ALIGNMENT ESTABLISHED", "SEGMENT TEXT ALIGNMENT NOT ESTABLISHED"},
+        },
+        "readiness_blocker": "" if canonical_path_derivation_deterministic else "canonical path derivation is not deterministic",
         "raw_transcript_text_included": False,
     }
 
@@ -322,6 +343,11 @@ def main() -> int:
     if output.is_relative_to(data_root):
         raise SystemExit(f"refusing to write output inside dataset root: {output}")
     report = audit(data_root)
+    test_records = [item for item in report["transcript_files"] if item["split"] == "test"]
+    if any(item["language_audit_performed"] or "coarse_language" in item or "mixed_language" in item for item in test_records):
+        raise SystemExit("TEST language-analysis output was produced")
+    if report["test_language_audit_performed"] or report["test_lexical_inspection_performed"] or report["test_predictions_or_metrics_inspected"]:
+        raise SystemExit("TEST firewall flags are not false")
     if _schema_has_forbidden_keys(report):
         raise SystemExit("report schema contains a forbidden raw-text field")
     output.parent.mkdir(parents=True, exist_ok=True)

@@ -1137,3 +1137,11 @@ Canonical coverage: 8,622 segments and 755 unique corpus/split/video groups. Non
 No source CSV had explicit segment timing columns; transcript timestamp parsing found zero spans/lines. Exact conclusion: `SEGMENT TEXT ALIGNMENT NOT ESTABLISHED`; required granularity conclusion: `T1 TEXT UNIT SHOULD BE VIDEO-LEVEL TRANSCRIPT`. TRAIN/DEV Unicode audit found only Latin letters and digits. The 24-video deterministic manual sample had coarse `English_or_other_Latin` labels, no mixed-language flags, and no committed snippets. Duplicate-hash audit found no cross-split duplicates and three within-TRAIN duplicate hashes, explicitly listed in the audit document.
 
 Exact readiness result: `T1 TRANSCRIPT DATA CONTRACT READY`. No encoder, model, dependency, config, source package, training, Test prediction/metric inspection, or Test lexical inspection occurred. T1 implementation remains unauthorized until manager review.
+
+### TASK-003A corrective firewall — TEST language isolation
+
+Manager review rejected the original report because the script computed  and  for TEST records. No Test predictions or performance metrics were inspected, but the implementation exceeded the structural-only Test contract.
+
+On the same branch , the script was corrected before report replacement. TEST records now receive only structural fields plus ; the executable main-path guard rejects any TEST language-analysis fields and requires , , and . Readiness now uses explicit path, TRAIN/DEV decode, TRAIN/DEV language evidence, duplicate-audit, and alignment-conclusion predicates; missing transcripts remain availability gaps.
+
+Corrective firewall checks passed: ; relevant synthetic parser tests; synthetic TEST-record/schema assertion; overwrite refusal; raw-text schema guard; ; and empty . The corrected external report will replace the rejected report once at the same path after this firewall is pushed. The earlier field-name runtime defect remains recorded above.
