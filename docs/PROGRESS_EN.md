@@ -1117,3 +1117,11 @@ Unsupported claims preserved exactly:
 Diagnostic-only findings preserved: `STRONG CORPUS-ID DECODABILITY FLAG NOT TRIGGERED`; no causal corpus-shortcut claim. TASK-006J is recorded accurately as 7 total invocations, with the first D42 failure before DEV/Test/checkpoint selection, corrective firewall, and six accepted completed runs in order D42/P42/D43/P43/D44/P44; no metric-driven retry or tuning.
 
 Candidate implications remain descriptive: full R4, matched audio, shared-fusion, no-semantic, paired task-isolated, no-video, and no-audio reference facts are recorded without promotion, demotion, or final-method selection. No run, source, config, script, cache, or Test-based decision occurred in TASK-006K. Stage 3 Text/Description remains deferred pending manager activation; Stage 7 and Final Test remain locked. Manager review is required before any next task.
+
+### TASK-003A pre-execution firewall
+
+Branch: `codex/task-003a`. Implemented only [scripts/text/audit_transcript_sources.py](../scripts/text/audit_transcript_sources.py). The audit is structural and metadata-only: it derives only canonical video-level transcript paths, parses canonical JSON segment IDs, never stores transcript text, refuses an existing external output, and sets Test lexical inspection to false.
+
+Firewall checks passed before the full dataset audit: `--help`; synthetic plain-text, SRT-like, WebVTT, timestamped-line, JSON-like, invalid-UTF8, and empty-file parser cases; existing-output overwrite refusal; raw-text output-schema guard; `py_compile`; `git diff --check`; and `git diff origin/main -- src configs pyproject.toml` empty. No source, config, dependency, training, model, cache, or Test inspection occurred.
+
+The firewall commit must precede the single full audit invocation. The external report path is `/media/maxim/Programs/Features/WSM/stage3_text_audit/transcript_source_audit_v1.json`; the full audit will fail rather than overwrite it.
