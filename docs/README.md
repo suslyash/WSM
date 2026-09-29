@@ -9,7 +9,7 @@ Read only these files for ordinary task startup:
 3. PROGRESS_EN.md
 4. NEXT_TASK_EN.md
 
-Then read only the active-stage detail file and source/config files explicitly named by NEXT_TASK_EN.md.
+Then read only the files explicitly named by NEXT_TASK_EN.md. There is no active experimental stage; the current task is final documentation closure.
 
 The default context intentionally does **not** include the full historical ledger or closed-stage plans.
 
@@ -18,7 +18,7 @@ The default context intentionally does **not** include the full historical ledge
 - [PROGRESS_EN.md](PROGRESS_EN.md) — authoritative current state plus high-level project roadmap.
 - [PLAN.md](PLAN.md) — optional cross-stage detailed formulation, architecture, experiment matrix, promotion rules, risks, and orchestration.
 - [plan/README.md](plan/README.md) — stage-plan index.
-- [plan/STAGE_7.md](plan/STAGE_7.md) — current active Stage-7 final-evaluation detailed plan.
+- [plan/STAGE_7.md](plan/STAGE_7.md) — completed Stage-7 final-evaluation plan and closure status.
 - [STAGE3_CLAIM_LEDGER_EN.md](STAGE3_CLAIM_LEDGER_EN.md) — frozen Stage-3 Text/Description claim ledger.
 - [STAGE6_CLAIM_LEDGER_EN.md](STAGE6_CLAIM_LEDGER_EN.md) — frozen core A+V Stage-6 claim ledger.
 

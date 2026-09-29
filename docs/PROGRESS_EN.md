@@ -4,19 +4,19 @@
 
 Plan initialized: 2026-09-23.
 
-Current stage: **Stage 7 — ACTIVE (all checkpoints frozen; separate Final Test reporting authorized)**.
+Current stage: **Research program — FINAL DOCUMENTATION CLOSURE**.
 
 Stage 5: **CLOSED TO OPTIMIZATION — R4 RETAINED AS LEADING MATCHED-SEED CANDIDATE**.
 
-Stage 7: **ACTIVE — FINAL TEST REPORTING AUTHORIZED UNDER FROZEN CHECKPOINTS**.
+Stage 7: **COMPLETE — FIVE-SEED DEV + ONE-SHOT FINAL TEST EVIDENCE FROZEN**.
 
-Final Test authorized: **yes — TASK-007C only, frozen reporting contract**.
+Final Test authorized: **completed once under TASK-007C; no further Test invocation authorized**.
 
-Current atomic task: **TASK-007C — separate frozen-checkpoint Final Test evaluation and reporting**.
+Current atomic task: **TASK-007D — final research/program closure ledger**.
 
-Expected Codex branch: `codex/task-007c`.
+Expected Codex branch: `codex/task-007d`.
 
-`TASK-007B` is accepted and merged. Exact result: `STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE COMPLETE`. All 15 checkpoint identities are SHA-verified and frozen. Manager has preselected equal-parameter shared fusion as the primary parsimonious paper candidate using DEV-only evidence; full R4 is the secondary multimodal reference and temporal audio is the frozen baseline. TASK-007C is the only authorized Final Test task and may not change models, checkpoints, configs, thresholds, or candidate roles after Test exposure.
+`TASK-007C` is accepted and merged. Exact result: `STAGE-7 FINAL TEST EVALUATION COMPLETE`. Stage 7 is COMPLETE. Shared fusion remains the preselected primary parsimonious paper candidate, full R4 the secondary multimodal reference, and temporal audio the baseline. TASK-007D is documentation-only and may only synthesize accepted Stage-3/6/7 evidence into a final research ledger; no experiment, Test invocation, recomputation, model selection, threshold change, or new claim is authorized.
 
 ## 2. Default Context Policy
 
@@ -50,7 +50,7 @@ Optional historical evidence:
 | 4. Fusion baselines | COMPLETE | Honest A+V baselines and strong-audio fusion search; no safe robust winner. | [plan/STAGE_4.md](plan/STAGE_4.md) |
 | 5. RAMPS | CLOSED TO OPTIMIZATION | Optimization/search is complete. Matched-seed audio confirmation superseded the prior negative robustness interpretation; R4 is retained as the leading Stage-6 candidate, not yet a final promoted method. | [plan/STAGE_5.md](plan/STAGE_5.md) |
 | 6. Ablations / claims audit | COMPLETE | Core A+V evidence matrix complete; claims frozen in STAGE6_CLAIM_LEDGER_EN.md. | [plan/STAGE_6.md](plan/STAGE_6.md) |
-| 7. Final evaluation | ACTIVE | Finalist/config/seed/statistical freeze, then missing-seed training, then separate final Test reporting after checkpoint freeze. | [plan/STAGE_7.md](plan/STAGE_7.md) |
+| 7. Final evaluation | COMPLETE | Five-seed DEV freeze and one-shot TEST_NONE/SOFT/HARD reporting completed under frozen roles/checkpoints/statistics. | [plan/STAGE_7.md](plan/STAGE_7.md) |
 
 ## 4. Frozen Scientific References
 
@@ -141,26 +141,25 @@ Authoritative synthesis:
 
 No further core A+V tuning, Stage-5 reopening, or Stage-6 mechanism search is authorized.
 
-## 7. Active Task — TASK-007C
+## 7. Active Task — TASK-007D
 
-Purpose: execute and report the **separate final TEST_NONE/SOFT/HARD evaluation** for the already frozen 15 checkpoints.
+Purpose: produce the authoritative **final research/program closure ledger** from already accepted Stage-3, Stage-6, and Stage-7 evidence.
 
-Pre-Test frozen roles:
+No compute is authorized.
 
-1. **primary paper candidate:** equal-parameter shared fusion;
+Final frozen roles:
+
+1. **primary parsimonious paper candidate:** equal-parameter shared fusion;
 2. **secondary multimodal reference:** full R4 trial012;
-3. **frozen baseline:** temporal audio.
+3. **baseline:** temporal audio;
+4. **standalone text evidence:** T1; not additive-fusion evidence;
+5. **T2:** blocked before implementation/training.
 
-This role assignment is based only on frozen five-seed DEV evidence and Stage-6 parsimony evidence. Shared vs full DEV Mean is effectively tied under the paired CI; the primary role is a parsimony choice, not a statistical-superiority claim.
-
-No checkpoint, config, threshold, architecture, method role, or claim gate may change after Test exposure.
-
-TASK-007C must first commit/push an evaluation-only script and DEV-reproduction firewall before any Test loader is iterated. It then performs exactly one standardized TEST_NONE/SOFT/HARD reporting pass per frozen checkpoint and writes the final Stage-7 report.
+Final Test has already run exactly once under the frozen evaluator/reporting contract. No further Test invocation is authorized.
 
 Exact completion string on success:
 
-`STAGE-7 FINAL TEST EVALUATION COMPLETE`.
-
+`WSM RESEARCH EVIDENCE PROGRAM COMPLETE`.
 ## 8. Non-Negotiable Current Boundaries
 
 - Do not tune or modify `src/audio`.
@@ -170,7 +169,7 @@ Exact completion string on success:
 - Observed ground truth overrides pseudo labels.
 - Test metrics cannot drive epoch, architecture, hyperparameter, threshold, ablation, or follow-up selection.
 - Stage 3 Text/Description is COMPLETE; do not reopen its family/model/prompt search.
-- Stage 7 Final Test is authorized only through TASK-007C under the frozen 15-checkpoint evaluator/reporting contract; no Test-driven revision is allowed.
+- Stage 7 and Final Test are COMPLETE; no further Test invocation, tuning, training, threshold fitting, model revision, or experimental follow-up is authorized by the current programme.
 - Do not claim verified recovery of genuinely missing disease labels or comorbidity without dual-annotated evidence.
 
 ## 9. Recent Authoritative Manager Decisions
@@ -515,6 +514,21 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - TASK-007C is authorized as the one separate Final Test reporting task;
 - after Test exposure, no model/config/checkpoint/threshold/candidate-role revision is authorized.
 
+### MANAGER-DECISION-081 — Accept TASK-007C; close Stage 7; assign final documentation closure
+
+- TASK-007C passed manager review and was merged via PR #91;
+- exact result: `STAGE-7 FINAL TEST EVALUATION COMPLETE`;
+- corrective firewall `bfaae7f812904dd9ae9a7460b394117867db5439` was pushed before any Test iteration;
+- after that firewall, evaluator code did not change; the final commit changed evidence documents only;
+- exactly one standardized Final Test invocation occurred;
+- evaluator SHA256 is `b691c9563bb6ffd63316b664949dcf1bef02d8d3f4e770110c2e70adbc4cee1e`;
+- external final report SHA256 is `59f763f04843c8e54d5d3f9893d3abe0530b47a32ea11f5b9585390edeb515bc`;
+- protocol membership is TEST_NONE `1364`, TEST_SOFT `1208`, TEST_HARD `1014`;
+- shared has the highest five-seed Mean point estimate on all three Test protocols, but every predeclared paired Mean 95% CI includes zero; no statistical-superiority claim is authorized;
+- shared retains the pre-Test primary role; full R4 remains secondary; temporal audio remains baseline;
+- no post-Test model/config/checkpoint/threshold/role revision occurred;
+- Stage 7 is COMPLETE and no further experiment/Test invocation is authorized;
+- next sole task TASK-007D is documentation-only final research/program closure.
 ## 10. Historical Evidence
 
 The full former 5,000+ line ledger is intentionally no longer part of default context.

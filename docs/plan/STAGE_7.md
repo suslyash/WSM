@@ -1,6 +1,6 @@
 # WSM Stage 7 Detailed Plan
 
-Status: **ACTIVE — 15 checkpoints frozen; Final Test reporting authorized only via TASK-007C**.
+Status: **COMPLETE — five-seed DEV freeze and one-shot Final Test reporting accepted**.
 
 This is a stage-specific detail file extracted from the former monolithic `docs/PLAN.md`.
 Read it only when the active task belongs to this stage or when historical plan detail is explicitly needed.
@@ -39,3 +39,14 @@ After freeze:
 6. trace every table entry to config, commit, checkpoint, and MLflow run.
 
 Gate: no Test-driven revision; complete traceability; claims match annotation evidence.
+
+## Final accepted Stage-7 outcome
+
+- DEV checkpoint freeze: `STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE COMPLETE`.
+- Final Test: `STAGE-7 FINAL TEST EVALUATION COMPLETE`.
+- Exactly 15 frozen checkpoints: 3 methods × 5 seeds.
+- Exactly one standardized Final Test invocation after the pushed evaluator firewall.
+- Primary pre-Test role remains equal-parameter shared fusion; full R4 remains secondary reference; temporal audio remains baseline.
+- Shared has the highest five-seed Mean point estimate on TEST_NONE, TEST_SOFT, and TEST_HARD, but every predeclared paired Mean 95% CI includes zero. No statistical-superiority claim is authorized.
+- No post-Test revision occurred.
+- No further Stage-7 experiment or Test invocation is authorized.
