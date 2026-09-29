@@ -24,6 +24,7 @@ PROMPT = ("Describe only directly observable visual behavior in this short video
           "Do not guess unobservable facts. Use concise neutral factual language.\n"
           "If an aspect is not visible, omit it.")
 PROMPT_HASH = hashlib.sha256(PROMPT.encode()).hexdigest()
+VIDEO_NUM_FRAMES = 8
 STRATA = (("depression", "train"), ("depression", "dev"), ("parkinson", "train"), ("parkinson", "dev"))
 
 
@@ -67,6 +68,7 @@ def _assert_prompt_firewall() -> None:
                       "If an aspect is not visible, omit it.")
     forbidden = ("diagnosis", "disease", "corpus", "video_id", "segment_file", "label", "split")
     assert not any(f"{item}:" in PROMPT for item in forbidden)
+    assert VIDEO_NUM_FRAMES == 8
 
 
 def _canonical_segment_path(row: dict[str, Any], data_root: str | Path) -> Path:
@@ -137,7 +139,7 @@ def _generate(model: Any, processor: Any, path: str, dtype: Any) -> tuple[str, f
     import torch
     messages = [{"role": "user", "content": [{"type": "video", "video": path}, {"type": "text", "text": PROMPT}]}]
     started = time.perf_counter()
-    inputs = processor.apply_chat_template(messages, tokenize=True, add_generation_prompt=True, return_dict=True, return_tensors="pt")
+    inputs = processor.apply_chat_template(messages, tokenize=True, add_generation_prompt=True, return_dict=True, return_tensors="pt", processor_kwargs={"videos_kwargs": {"num_frames": VIDEO_NUM_FRAMES}})
     target_device = next(model.parameters()).device
     inputs = {key: value.to(target_device) if isinstance(value, torch.Tensor) else value for key, value in inputs.items()}
     with torch.inference_mode():
@@ -177,7 +179,7 @@ def run(args: argparse.Namespace) -> None:
     repeat_a, repeat_seconds_a = _generate(model, processor, first, dtype)
     repeat_b, repeat_seconds_b = _generate(model, processor, first, dtype)
     generated[0]["repeat_generation"] = {"equal": repeat_a == repeat_b, "hash_a": hashlib.sha256(repeat_a.encode()).hexdigest(), "hash_b": hashlib.sha256(repeat_b.encode()).hexdigest(), "wall_seconds_a": repeat_seconds_a, "wall_seconds_b": repeat_seconds_b}
-    payload = {"schema": "wsm_t2_observable_description_preflight_v1", "model": identity, "prompt": {"sha256": PROMPT_HASH, "text": PROMPT}, "generation": {"do_sample": False, "max_new_tokens": 120, "num_return_sequences": 1, "num_beams": 1, "temperature_or_top_p_tuned": False, "system_prompt": None}, "environment": {"package_versions": _package_versions(), "device": str(next(model.parameters()).device), "dtype": str(dtype), "cuda_peak_allocated": __import__("torch").cuda.max_memory_allocated() if __import__("torch").cuda.is_available() else None, "cuda_peak_reserved": __import__("torch").cuda.max_memory_reserved() if __import__("torch").cuda.is_available() else None}, "source_audit": structural, "manifest_fingerprint": manifest_audit["manifest_fingerprint"], "sample_keys": [_stable_key(row) for row in sample], "samples": generated, "test_generation": False, "test_manual_inspection": False, "no_performance_metrics": True, "training_performed": False}
+    payload = {"schema": "wsm_t2_observable_description_preflight_v1", "model": identity, "prompt": {"sha256": PROMPT_HASH, "text": PROMPT}, "generation": {"do_sample": False, "max_new_tokens": 120, "num_return_sequences": 1, "num_beams": 1, "temperature_or_top_p_tuned": False, "system_prompt": None, "video_sampling": {"num_frames": VIDEO_NUM_FRAMES, "mode": "uniform_deterministic", "reason": "single transparent CUDA-memory runtime correction after default video processing OOM"}}, "environment": {"package_versions": _package_versions(), "device": str(next(model.parameters()).device), "dtype": str(dtype), "cuda_peak_allocated": __import__("torch").cuda.max_memory_allocated() if __import__("torch").cuda.is_available() else None, "cuda_peak_reserved": __import__("torch").cuda.max_memory_reserved() if __import__("torch").cuda.is_available() else None}, "source_audit": structural, "manifest_fingerprint": manifest_audit["manifest_fingerprint"], "sample_keys": [_stable_key(row) for row in sample], "samples": generated, "test_generation": False, "test_manual_inspection": False, "no_performance_metrics": True, "training_performed": False}
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({"output": str(output), "sample_count": len(sample), "model": identity, "test_generation": False}, indent=2))
