@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-003D — T2 observable-description generator/source/prompt preflight**.
+Current atomic task: **TASK-003E — Stage-3 text/description synthesis and closure dossier**.
 
-Expected Codex branch: `codex/task-003d`.
+Expected Codex branch: `codex/task-003e`.
 
-`TASK-003C` is accepted and merged. T1 is complete as a standalone three-seed text baseline. Stage 3 now advances to the second and final allowed family T2, beginning with a no-training preflight that freezes one observable-description generator, source granularity, and diagnosis-free prompt before any full description cache is built.
+`TASK-003D` is accepted and merged. The second and final Stage-3 family T2 is BLOCKED at its frozen observable-description preflight, so no T2 cache/model/training is authorized. TASK-003E is documentation-only and must synthesize T1/T2 evidence, verify the Stage-3 family budget is exhausted, and prepare the pre-Stage-7 candidate inventory without selecting a final method.
 
 ## 2. Default Context Policy
 
@@ -141,40 +141,26 @@ Authoritative synthesis:
 
 No further core A+V tuning, Stage-5 reopening, or Stage-6 mechanism search is authorized.
 
-## 7. Active Task — TASK-003D
+## 7. Active Task — TASK-003E
 
-Purpose: freeze the **observable-description source/model/prompt contract** for the second and final Stage-3 family T2.
+Purpose: create the authoritative **Stage-3 Text/Description synthesis and closure dossier**.
 
-Accepted T1 standalone evidence:
+No compute is authorized.
 
-- exact completion: `T1 THREE-SEED TEXT BASELINE COMPLETE`;
-- primary segment-level three-seed D/P/Mean = `0.6268063333/0.8447246667/0.7357653333`;
-- sample std D/P/Mean = `0.0834002123/0.0480683689/0.0646553057`;
-- Mean is below matched audio (`0.7733169588`) and full R4 (`0.7869088179`);
-- P is strong, while D is materially weaker and more seed-sensitive;
-- T1 remains a standalone text baseline; no additive A+V claim follows.
+The dossier must consolidate:
 
-Stage-3 plan permits one second family:
+- TASK-003A transcript contract;
+- TASK-003B frozen T1 implementation/cache identity;
+- TASK-003C three-seed T1 standalone evidence;
+- TASK-003D blocked T2 observable-description preflight.
 
-- T2 = T1 plus cached observable description/semantic feature with simple T/D gating.
+The Stage-3 family budget is exhausted:
 
-TASK-003D is preflight-only:
+- T1 is the one implemented pretrained transcript family;
+- T2 is the one attempted transcript+description family and is blocked before implementation under its frozen safety/concision gate;
+- no third text encoder, description generator, prompt variant, or T2 remediation family is authorized.
 
-- no full description cache;
-- no T2 model implementation;
-- no production training;
-- no DEV/Test performance inspection;
-- no generator sweep.
-
-Manager freezes one comparable description generator before performance evidence:
-
-- `Qwen/Qwen3-VL-8B-Instruct`;
-- requested revision `1dd1e02d981403da25ed73d43430e4ef598cb94b`;
-- visual input only;
-- one canonical segment clip per description;
-- deterministic diagnosis-free observable-behavior prompt;
-- manual audit only on a deterministic 24-item TRAIN/DEV sample;
-- no TEST generation or lexical inspection in TASK-003D.
+The dossier must also create a descriptive pre-Stage-7 candidate inventory from the frozen Stage-5/6/3 evidence. It must not promote, demote, or finally select any method; that remains a separate manager decision after TASK-003E.
 
 Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
@@ -468,6 +454,20 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - Stage-3 plan explicitly permits one second and final family T2 = T1 + observable description semantic stream;
 - to avoid a generator sweep, manager freezes `Qwen/Qwen3-VL-8B-Instruct` revision `1dd1e02d981403da25ed73d43430e4ef598cb94b` for a no-training preflight;
 - TASK-003D must establish source granularity, deterministic prompt/generation, environment feasibility, and leakage/hallucination audit before any full T2 cache/model work.
+
+### MANAGER-DECISION-077 — Accept TASK-003D blocked T2 preflight; assign Stage-3 synthesis
+
+- TASK-003D passed manager review and was merged via PR #83;
+- exact result: `T2 DESCRIPTION GENERATION CONTRACT BLOCKED`;
+- deterministic TRAIN/DEV audit generated 24/24 nonempty and visually grounded/mostly observable outputs;
+- frozen gate failed because demographic/identity inference occurred in `4/24` outputs and only `18/24` met the concision requirement;
+- diagnosis/health inference, causal/medication inference, and dataset/task/label leakage were all `0/24`;
+- TEST generation/manual inspection remained false;
+- external report SHA256 is `767d687e2f857938fa882555250d7a4be4159556e49537377967d82c36407930`;
+- default video processing OOM was handled transparently through pushed corrective firewalls by freezing uniform deterministic `num_frames=8`; model and prompt remained unchanged;
+- no full description cache, T2 model, training, performance metric, prompt variant, or generator switch is authorized;
+- the Stage-3 two-family budget is now exhausted: T1 completed, T2 blocked;
+- next sole atomic task is TASK-003E, a documentation-only Stage-3 synthesis/closure dossier and pre-Stage-7 candidate inventory.
 
 ## 10. Historical Evidence
 
