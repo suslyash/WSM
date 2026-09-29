@@ -4,7 +4,7 @@
 
 Plan initialized: 2026-09-23.
 
-Current stage: **Research program — FINAL DOCUMENTATION CLOSURE**.
+Current stage: **Research program — COMPLETE**.
 
 Stage 5: **CLOSED TO OPTIMIZATION — R4 RETAINED AS LEADING MATCHED-SEED CANDIDATE**.
 
@@ -12,11 +12,20 @@ Stage 7: **COMPLETE — FIVE-SEED DEV + ONE-SHOT FINAL TEST EVIDENCE FROZEN**.
 
 Final Test authorized: **completed once under TASK-007C; no further Test invocation authorized**.
 
-Current atomic task: **TASK-007D — final research/program closure ledger**.
+Current atomic task: **none — TASK-007D final research/program closure ledger complete**.
 
 Expected Codex branch: `codex/task-007d`.
 
-`TASK-007C` is accepted and merged. Exact result: `STAGE-7 FINAL TEST EVALUATION COMPLETE`. Stage 7 is COMPLETE. Shared fusion remains the preselected primary parsimonious paper candidate, full R4 the secondary multimodal reference, and temporal audio the baseline. TASK-007D is documentation-only and may only synthesize accepted Stage-3/6/7 evidence into a final research ledger; no experiment, Test invocation, recomputation, model selection, threshold change, or new claim is authorized.
+`TASK-007C` is accepted and merged. Exact result: `STAGE-7 FINAL TEST EVALUATION COMPLETE`. Stage 7 is COMPLETE. Shared fusion remains the primary parsimonious paper candidate, full R4 the secondary multimodal reference, and temporal audio the baseline. T1 remains standalone text evidence only; T2 remains blocked before implementation/training. TASK-007D completed the final ledger at [FINAL_RESEARCH_LEDGER_EN.md](FINAL_RESEARCH_LEDGER_EN.md). No experiment, Test invocation, recomputation, model selection, threshold change, or new claim was authorized.
+
+## TASK-007D closure
+
+- Outcome: complete; `WSM RESEARCH EVIDENCE PROGRAM COMPLETE`.
+- Final Test: complete exactly once; no further Test invocation is authorized.
+- Frozen roles: shared fusion primary parsimonious candidate; full R4 secondary reference; temporal audio baseline; T1 standalone text evidence; T2 blocked before implementation/training.
+- The Final-Test point estimates do not authorize statistical superiority; every predeclared paired Mean 95% CI includes zero.
+- `src/audio` remained unchanged. No compute, Test, recomputation, or new claim was performed.
+- Closure boundary: `NO FURTHER EXPERIMENT AUTHORIZED BY THE CURRENT PROGRAMME`.
 
 ## 2. Default Context Policy
 
