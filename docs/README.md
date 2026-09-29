@@ -18,7 +18,8 @@ The default context intentionally does **not** include the full historical ledge
 - [PROGRESS_EN.md](PROGRESS_EN.md) — authoritative current state plus high-level project roadmap.
 - [PLAN.md](PLAN.md) — optional cross-stage detailed formulation, architecture, experiment matrix, promotion rules, risks, and orchestration.
 - [plan/README.md](plan/README.md) — stage-plan index.
-- [plan/STAGE_3.md](plan/STAGE_3.md) — current active Stage-3 Text/Description detailed plan.
+- [plan/STAGE_7.md](plan/STAGE_7.md) — current active Stage-7 final-evaluation detailed plan.
+- [STAGE3_CLAIM_LEDGER_EN.md](STAGE3_CLAIM_LEDGER_EN.md) — frozen Stage-3 Text/Description claim ledger.
 - [STAGE6_CLAIM_LEDGER_EN.md](STAGE6_CLAIM_LEDGER_EN.md) — frozen core A+V Stage-6 claim ledger.
 
 Closed-stage plan files are optional. Do not load them unless the task requires historical plan detail.
