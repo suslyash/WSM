@@ -2,15 +2,15 @@
 
 ## Result and boundary
 
-`STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE INCOMPLETE`
+`STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE COMPLETE`
 
 The recovered accepted temporal-audio seed42 checkpoint is present at the
 historical path below and its SHA256 was verified. The existing adapter strict-
 loaded the epoch-4 payload with the archived graph compatibility path, all
-adapter parameters remained frozen, and evaluation mode was retained. However,
-the corrected canonical DEV-only reproduction materially failed the accepted
-TASK-004H DEV scores, so the unified freeze remains incomplete. No replacement
-run or source/config/model change is authorized.
+adapter parameters remained frozen, and evaluation mode was retained. The exact
+TASK-004H AV evaluation path now reproduces the accepted DEV scores within
+0.0005; the unified fifteen-checkpoint freeze is complete. No production run
+or source/config/model change was authorized.
 
 TASK-007B otherwise preserved the frozen method set (temporal audio, full R4
 trial012, equal-parameter shared fusion) and seeds 42–46. The six authorized
@@ -34,7 +34,7 @@ inspected.
 ## Existing accepted identities
 
 The following accepted identities were not retrained. Full paths and SHA256
-were verified locally for all listed entries, including the recovered audio seed42:
+were verified locally for all 15 listed entries, including the recovered audio seed42:
 
 - audio seed42: `logs/wsm_audio_segment_wavlm_base_l9_pool4/multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77/checkpoints/epoch=4_dev_mean_score=0.7878.pt`; SHA `0873c7cb5e32d415cdd301058949f5dd140c16b874cc5230d027a4ee33e3daf2`; historical run `multitask_audio_mamba_2026-08-19_14-12_audio_mamba_segment_model_wsm_audio_models-e0ce-006_ea8c8d77`; MLflow ID `not recorded`.
 - audio seed43: `logs/wsm_mm_pd_dep_v1/frozen_audio_wavlm_l9_pool4_seed43_2026-09-28_13-12_audio_mamba_segment_model_08192c1b/checkpoints/epoch=5_dev_mean_score=0.7602.pt`; SHA `1a65f8dd605a6d942bed828f126e79a1f02930dd578176ba31f49c4dc10899dd`; MLflow `4119e9a654ec481ca42606f7f207b969`.
@@ -78,28 +78,68 @@ are respectively `0.024912/0.019122/[0.001169,0.048655]`,
 R4-audio `5/0/0`, shared-audio `5/0/0`, shared-R4 `3/0/2`.
 These are descriptive only and do not change the finalist set.
 
-## Calibration and closure
+## Audio42 evaluation-path diagnostic and calibration
 
-The corrective audio42 DEV reproduction used observed rows only, sigmoid
-probabilities, 15 equal-width bins, no threshold fitting, and no recalibration.
-The recovered checkpoint SHA was exact and strict loading passed, but the
-reproduced DEV result was D UAR/MF1/Score
-`0.5047152194/0.3433026030/0.4240089112`, P UAR/MF1/Score
-`0.5000000000/0.3988439306/0.4494219653`, Mean
-`0.4367154383`, versus accepted D/P/Mean
-`0.7480392157/0.8277353635/0.7878268765`. This exceeds the required absolute
-tolerance `0.0005`, so the recovery stopped and the audio42 calibration is
-diagnostic-only, not accepted for finalization: observed D/P `621/312`,
-Brier D/P `0.4688533750/0.3203929081`, ECE-15 D/P
-`0.4694130072/0.3149863942`. Consequently all-15 final verification and the
-complete five-seed calibration summaries remain blocked; no new summary is
-claimed. The six seed45/46 production runs were not rerun.
+The manager-established source byte-identity result is preserved: the accepted
+TASK-004H source files and current main are byte-identical for the adapter,
+audio model, AV DataModule, manifest/segment index, and AV R3 model. Diagnostic
+A reconstructed the exact WSMAVFusionDataModule path, accessed only dm.val_dataset,
+and evaluated all 933 DEV rows with the recovered adapter. base_logits equaled
+legacy_audio_class_logits[:,:,1] - legacy_audio_class_logits[:,:,0] with maximum
+absolute difference 0.0; classification mismatch count was 0. Raw-logit
+compute_sparse_two_task_metrics and independent legacy-argmax confusion counts
+were identical within 1e-12: D
+0.7480392157/0.7477975633/0.7479183895, P
+0.8209799862/0.8344907407/0.8277353635, Mean 0.7878268765.
 
-The original TASK-007B pass incidentally surfaced pre-existing historical Test
-lines through a broad PROGRESS search. This corrective action performed no Test
-loader construction or iteration and no Test metric query. The values were not
-used for selection, checkpoint choice, statistics, calibration, or recovery:
-`FINAL TEST VALUES NOT USED FOR TASK-007B SELECTION OR RECOVERY`.
+Diagnostic B used WSMAudioSegmentDataModule(test_filters=()) and the native DEV
+task loaders. Direct historical-model logits and gathered adapter logits matched
+with maximum absolute difference 0.0 for both depression and Parkinson. Native
+metrics reproduced the same accepted D/P/Mean values.
+
+Diagnostic C compared 12 stable canonical DEV rows (six depression and six
+Parkinson) across the AV and native DataModules. Task IDs, labels, observed
+target placement, exact feature paths, feature-file SHA256 values, sanitized
+temporal tensor shapes/contents, and mask lengths all matched; all 12 rows
+passed every equality flag. No raw feature values were recorded.
+
+Diagnostic D verified current seed43 and seed44 checkpoint SHAs and reproduced
+accepted native DEV scores within 0.0005: seed43 D/P/Mean
+0.7086990/0.8117710/0.7602350; seed44
+0.7343964/0.8093819/0.7718891.
+
+Runtime identity: Python 3.12.3, torch 2.10.0+cu128, NumPy 2.5.1,
+CUDA 12.8, cuDNN 91002, CPU device, float32. No package/environment change
+occurred. The exact prior temporary evaluation code was unavailable, so the
+narrower mechanism (probability/logit mixing versus task-column ordering) is
+not claimed. A/B proves the prior 0.4367 result was an evaluation-path failure,
+not a checkpoint, source, feature-artifact, target-identity, or current
+seed43/44 evaluator failure.
+
+The prior failed audio42 attempt is superseded and its Brier/ECE values are
+discarded. Correct calibration used sigmoid(raw base_logits) only for
+probabilities, observed DEV rows, 15 equal-width bins, no threshold fitting,
+no recalibration, and no class balancing. Audio42 observed D/P counts were
+621/312; valid Brier D/P 0.2117752880/0.1241006106; valid ECE-15 D/P
+0.1664041658/0.1066767589.
+
+All 15 checkpoint paths and SHA256 values are now frozen: the 14 identities
+already verified in the prior evidence plus the recovered audio42 identity.
+Five-seed calibration summaries below use the five DEV values, arithmetic mean,
+sample standard deviation, and multiplier 2.7764451051977987 (two-sided 95%
+Student-t CI), with D/P observed counts 621/312 per seed.
+
+| method | task | Brier mean/std/95% CI | ECE-15 mean/std/95% CI |
+|---|---|---|---|
+| audio | D | 0.2170451701/0.0154621974/[0.1978463162,0.2362440239] | 0.1639118302/0.0352236709/[0.1201758661,0.2076477942] |
+| audio | P | 0.1459662288/0.0219627056/[0.1186959280,0.1732365297] | 0.1321086706/0.0316775441/[0.0927758046,0.1714415367] |
+| full R4 | D | 0.1838423908/0.0093544491/[0.1722273081,0.1954574735] | 0.0853467572/0.0248444032/[0.0544983561,0.1161951582] |
+| full R4 | P | 0.0879230276/0.0138090356/[0.0707768452,0.1050692099] | 0.0781538793/0.0245852325/[0.0476272813,0.1086804774] |
+| shared fusion | D | 0.1798457295/0.0089288407/[0.1687591094,0.1909323496] | 0.0848528604/0.0178286394/[0.0627156807,0.1069900402] |
+| shared fusion | P | 0.0887637645/0.0126071922/[0.0731098679,0.1044176611] | 0.0846235798/0.0184776064/[0.0616806011,0.1075665585] |
+
+The exact completion result is now:
+STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE COMPLETE.
 
 No method, config, threshold, source, cache, or family changed after TASK-007A.
 Stage 7 remains active. Final Test remains locked.
