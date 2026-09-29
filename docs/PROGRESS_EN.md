@@ -1169,3 +1169,10 @@ Manager review rejected the original report because the script computed `coarse_
 On the same branch `codex/task-003a`, the script was corrected before report replacement. TEST records now receive only structural fields plus `language_audit_performed: false`; the executable main-path guard rejects any TEST language-analysis fields and requires `test_language_audit_performed = false`, `test_lexical_inspection_performed = false`, and `test_predictions_or_metrics_inspected = false`. Readiness now uses explicit path, TRAIN/DEV decode, TRAIN/DEV language evidence, duplicate-audit, and alignment-conclusion predicates; missing transcripts remain availability gaps.
 
 Corrective firewall commit `b9a2d85` was pushed before replacing the rejected report. Checks passed: `--help`; relevant synthetic parser tests; synthetic TEST-record/schema assertion; overwrite refusal; raw-text schema guard; `git diff --check`; and empty `git diff origin/main -- src configs pyproject.toml`. The old report SHA `2dc2064aca131da0e80c103df1b8dd7a19d9735aa8c183e149392f7aafd1206b` is superseded. The corrected report SHA is `4254d81281522015d0633d6534e1616e925a2bf0130f67a37b541a2aacc2ed78`. The earlier field-name runtime defect remains recorded above.
+
+
+### TASK-003B corrective firewall
+
+The initial cache invocation stopped before creating the external cache root because this Transformers XLM-R tokenizer exposes neither public `build_inputs_with_special_tokens` nor `prepare_for_model`. This was a pure runtime API defect; no cache artifact or scientific conclusion was produced. The extractor was corrected to use the frozen tokenizer's two normal single-sequence special-token IDs around each pre-chunked content-token list, preserving the <=512 input and non-special pooling contract.
+
+Corrective firewall checks passed: corrected long-transcript multi-chunk extraction produced finite float32 [2,768] features; encoder remained eval/no-grad with all parameters frozen; `git diff --check` passed; forbidden source scopes remained empty. The corrected replacement cache build must follow this pushed corrective firewall.

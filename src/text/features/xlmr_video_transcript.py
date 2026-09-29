@@ -45,7 +45,9 @@ def extract_chunk_features(encoder: "XLMRVideoTranscriptEncoder", text: str) -> 
         raise ValueError("empty decoded transcript is unavailable")
     vectors: list[torch.Tensor] = []
     for content in chunks:
-        model_ids = encoder.tokenizer.build_inputs_with_special_tokens(content)
+        if encoder.tokenizer.num_special_tokens_to_add(pair=False) != 2:
+            raise RuntimeError("T1 requires the frozen single-sequence two-special-token contract")
+        model_ids = [int(encoder.tokenizer.cls_token_id), *content, int(encoder.tokenizer.sep_token_id)]
         if len(model_ids) > 512:
             raise RuntimeError("special-tokenized chunk exceeds 512 tokens")
         attention = torch.ones(1, len(model_ids), dtype=torch.long, device=encoder.device)
