@@ -12,11 +12,11 @@ Stage 7: **LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-003C — frozen T1 three-seed production evaluation**.
+Current atomic task: **TASK-003D — T2 observable-description generator/source/prompt preflight**.
 
-Expected Codex branch: `codex/task-003c`.
+Expected Codex branch: `codex/task-003d`.
 
-`TASK-003B` is accepted and merged. The single T1 video-level XLM-R pipeline, cache, architecture, and seed configs are frozen. TASK-003C may execute the three existing production configs only; no source/config/cache change or text-family tuning is authorized.
+`TASK-003C` is accepted and merged. T1 is complete as a standalone three-seed text baseline. Stage 3 now advances to the second and final allowed family T2, beginning with a no-training preflight that freezes one observable-description generator, source granularity, and diagnosis-free prompt before any full description cache is built.
 
 ## 2. Default Context Policy
 
@@ -141,22 +141,42 @@ Authoritative synthesis:
 
 No further core A+V tuning, Stage-5 reopening, or Stage-6 mechanism search is authorized.
 
-## 7. Active Task — TASK-003C
+## 7. Active Task — TASK-003D
 
-Purpose: obtain the first production evidence for the frozen **T1 text-only family**.
+Purpose: freeze the **observable-description source/model/prompt contract** for the second and final Stage-3 family T2.
 
-Frozen T1 identity:
+Accepted T1 standalone evidence:
 
-- encoder: `FacebookAI/xlm-roberta-base`, requested revision `e73636d`, resolved commit `e73636d4f797dec63c3081bb6ed5c7b0bb3f2089`;
-- model weight SHA256: `6fd4797bc397c3b8b55d6bb5740366b57e6a3ce91c04c77f22aafc0c128e6feb`;
-- cache index SHA256: `4f276b60e8e423a1eab2d69a02782daa274fb183ae028a525f16df3adcf83ea8`;
-- TRAIN units: 553 unique video transcripts, D287/P266;
-- downstream trainable parameters: `447746`;
-- configs: text/00, 01, 02 for seeds42/43/44.
+- exact completion: `T1 THREE-SEED TEXT BASELINE COMPLETE`;
+- primary segment-level three-seed D/P/Mean = `0.6268063333/0.8447246667/0.7357653333`;
+- sample std D/P/Mean = `0.0834002123/0.0480683689/0.0646553057`;
+- Mean is below matched audio (`0.7733169588`) and full R4 (`0.7869088179`);
+- P is strong, while D is materially weaker and more seed-sensitive;
+- T1 remains a standalone text baseline; no additive A+V claim follows.
 
-Exactly three production runs are authorized, in seed order 42 → 43 → 44. Checkpoint selection remains DEV/Mean_Score only. Test protocol metrics are mandatory monitoring outputs but cannot influence selection, interpretation, or follow-up.
+Stage-3 plan permits one second family:
 
-TASK-003C is an evidence task, not a tuning task. It may update PROGRESS only.
+- T2 = T1 plus cached observable description/semantic feature with simple T/D gating.
+
+TASK-003D is preflight-only:
+
+- no full description cache;
+- no T2 model implementation;
+- no production training;
+- no DEV/Test performance inspection;
+- no generator sweep.
+
+Manager freezes one comparable description generator before performance evidence:
+
+- `Qwen/Qwen3-VL-8B-Instruct`;
+- requested revision `1dd1e02d981403da25ed73d43430e4ef598cb94b`;
+- visual input only;
+- one canonical segment clip per description;
+- deterministic diagnosis-free observable-behavior prompt;
+- manual audit only on a deterministic 24-item TRAIN/DEV sample;
+- no TEST generation or lexical inspection in TASK-003D.
+
+Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -434,6 +454,20 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - frozen T1 downstream model has `447746` trainable parameters;
 - smoke forward/loss/backward and masked-unknown invariance passed; no DEV/Test performance metric was inspected;
 - next sole atomic task is TASK-003C: run the already frozen seeds42/43/44 configs exactly once each and record DEV-selected T1 evidence.
+
+### MANAGER-DECISION-076 — Accept TASK-003C; T1 complete; activate T2 preflight
+
+- TASK-003C passed manager review and was merged via PR #81;
+- firewall `6af94e4` preceded exactly three frozen production runs, seeds42/43/44, with no retry, tuning, source/config/cache change, or Test-driven decision;
+- selected DEV D/P/Mean by seed: seed42 `0.721153/0.899381/0.810267`; seed43 `0.562911/0.825768/0.694339`; seed44 `0.596355/0.809025/0.702690`;
+- T1 three-seed D/P/Mean = `0.6268063333/0.8447246667/0.7357653333`;
+- T1 D/P/Mean sample std = `0.0834002123/0.0480683689/0.0646553057`;
+- T1 Mean is `-0.0375516255` vs matched temporal audio and `-0.0511434846` vs full R4, while T1 P is `+0.0284285455` vs audio and `+0.00616399997` vs R4;
+- secondary unique-video DEV metrics were lower than segment-weighted metrics on every seed and were diagnostic only;
+- T1 is accepted only as a standalone text baseline; no additive, promotion, or significance claim is made;
+- Stage-3 plan explicitly permits one second and final family T2 = T1 + observable description semantic stream;
+- to avoid a generator sweep, manager freezes `Qwen/Qwen3-VL-8B-Instruct` revision `1dd1e02d981403da25ed73d43430e4ef598cb94b` for a no-training preflight;
+- TASK-003D must establish source granularity, deterministic prompt/generation, environment feasibility, and leakage/hallucination audit before any full T2 cache/model work.
 
 ## 10. Historical Evidence
 

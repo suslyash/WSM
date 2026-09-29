@@ -1,263 +1,291 @@
-# TASK-003C: Frozen T1 Three-Seed Production Evaluation
+# TASK-003D: T2 Observable-Description Generator / Source / Prompt Preflight
 
 ## Authority and branch
 
-This task follows **MANAGER-DECISION-075**.
+This task follows **MANAGER-DECISION-076**.
 
 Required branch:
 
-    codex/task-003c
+    codex/task-003d
 
 Start from current manager-updated `origin/main`.
 
-This task is production evidence only. The T1 family is frozen.
+This is a Stage-3 T2 preflight only.
 
-## Frozen T1 identity
+No production description cache and no T2 training are authorized.
 
-Encoder:
+## Why T2 remains in scope
 
-    FacebookAI/xlm-roberta-base
+Stage-3 allows at most two text/description families:
+
+- T1: transcript encoder;
+- T2: T1 + cached observable description/semantic feature + simple T/D gating.
+
+T1 is complete as a standalone three-seed baseline. T2 is the second and final allowed family, not a hyperparameter/model sweep.
+
+## Frozen description generator
+
+Use exactly:
+
+    Qwen/Qwen3-VL-8B-Instruct
 
 Requested revision:
 
-    e73636d
+    1dd1e02d981403da25ed73d43430e4ef598cb94b
 
-Resolved commit:
+Do not try another VLM in this task.
 
-    e73636d4f797dec63c3081bb6ed5c7b0bb3f2089
+Do not change dependencies.
 
-Model weight SHA256:
+The task must determine whether the current project environment can load and run this frozen revision. If not, record a blocker and stop; do not silently upgrade packages or switch models.
 
-    6fd4797bc397c3b8b55d6bb5740366b57e6a3ce91c04c77f22aafc0c128e6feb
+Record:
 
-Cache root:
+- resolved Hugging Face commit;
+- config/tokenizer/processor identities;
+- safetensors index SHA256;
+- every model shard SHA256;
+- package versions;
+- device;
+- dtype;
+- peak allocated/reserved GPU memory when applicable;
+- wall-clock generation time per audited sample.
 
-    /media/maxim/Programs/Features/WSM/text_t1_xlmr_v1
+## Frozen input source
 
-Cache index SHA256:
+The semantic description source is **visual-only canonical segment video**.
 
-    4f276b60e8e423a1eab2d69a02782daa274fb183ae028a525f16df3adcf83ea8
+For every canonical segment row, the candidate source is exactly its existing canonical `segment_path` from `build_manifest`.
 
-Frozen downstream trainable parameter count:
+Do not use:
 
-    447746
+- transcript text;
+- audio waveform;
+- disease labels;
+- task labels;
+- pseudo labels;
+- corpus name;
+- split name;
+- video ID/segment ID in the prompt;
+- prior model predictions.
 
-TRAIN contract:
+The VLM may receive only the segment video plus the frozen neutral prompt.
 
-- 553 unique video-level transcript units;
-- depression 287;
-- Parkinson 266;
-- no segment replication in TRAIN.
+Audit all canonical segment paths structurally and record:
 
-Evaluation contract:
+- total rows;
+- existing/missing files by split/corpus;
+- file extensions;
+- zero-byte files;
+- decode/open failures under the chosen processor path.
 
-- DEV = 933 canonical segment rows;
-- TEST_NONE = 1364;
-- TEST_SOFT = 1208;
-- TEST_HARD = 1014;
-- each row loads its parent video's frozen transcript feature sequence.
+Do not manually inspect TEST video content.
+
+## Frozen prompt
+
+Use exactly this user prompt for every generated description:
+
+    Describe only directly observable visual behavior in this short video clip.
+    Focus on facial movement or expression, gaze and head motion, hand or body movement,
+    posture, interaction or engagement, and recording/view conditions when they are visible.
+    Do not infer or mention any diagnosis, disease, health condition, neurological or psychiatric
+    state, medication, cause, identity, age, sex or gender, race or ethnicity, or dataset,
+    corpus, task, label, score, or prediction.
+    Do not guess unobservable facts. Use concise neutral factual language.
+    If an aspect is not visible, omit it.
+
+No system prompt may add disease/task context.
+
+If the model framework requires a generic system role, it must be a neutral non-medical assistant identity and must be recorded verbatim.
+
+## Frozen generation settings
+
+Use deterministic generation:
+
+- `do_sample = false`;
+- `max_new_tokens = 120`;
+- one output sequence;
+- no beam search;
+- no temperature/top-p tuning;
+- no prompt variants.
+
+Use the model/processor's documented video preprocessing defaults except for any deterministic frame/FPS argument that is strictly required by the current API. If such an argument is required, record and freeze it before sample generation; do not search alternatives.
+
+## Deterministic TRAIN/DEV manual-audit sample
+
+Generate descriptions only for a deterministic sample of at most 24 canonical segment rows.
+
+Strata:
+
+- depression TRAIN;
+- depression DEV;
+- Parkinson TRAIN;
+- Parkinson DEV.
+
+Target 6 rows per stratum.
+
+Selection:
+
+- stable SHA256 ordering of `corpus|split|video_id|segment_file`;
+- take the first 6 unique segment rows in each stratum;
+- no label/class balancing;
+- no performance information.
+
+TEST is excluded completely from generation in TASK-003D.
+
+## External preflight report
+
+Write exactly:
+
+    /media/maxim/Programs/Features/WSM/stage3_t2_preflight/qwen3vl8b_observable_preflight_v1.json
+
+Refuse overwrite.
+
+The external report may contain generated descriptions for the 24 TRAIN/DEV audit items because manual review is required, but no raw description text may be committed to GitHub.
+
+Record report SHA256 in PROGRESS and the human-readable audit doc.
+
+## Manual description audit
+
+For every sampled output, manually record:
+
+- nonempty: yes/no;
+- visually grounded / mostly observable: yes/no;
+- major unsupported/hallucinated fact: yes/no;
+- diagnosis/disease/health-state inference: yes/no;
+- demographic/identity inference: yes/no;
+- causal/medication inference: yes/no;
+- dataset/task/label leakage: yes/no;
+- concise enough for semantic encoding: yes/no.
+
+Do not use disease labels to judge whether a description is “correct”.
+
+The reviewer may look at the sampled TRAIN/DEV video clip and generated description only.
+
+Do not inspect Test video content.
+
+## Frozen preflight gate
+
+Record exactly:
+
+    T2 DESCRIPTION GENERATION CONTRACT READY
+
+only if all are true:
+
+1. all canonical segment source paths are deterministically mapped and structural availability is recorded;
+2. the frozen Qwen3-VL revision loads and generates under the current environment with no dependency change;
+3. all 24 sampled descriptions are nonempty;
+4. zero sampled descriptions contain diagnosis/disease/health-state inference;
+5. zero sampled descriptions contain demographic/identity inference;
+6. zero sampled descriptions contain causal/medication inference;
+7. zero sampled descriptions contain dataset/task/label leakage;
+8. at least 22/24 are judged visually grounded / mostly observable;
+9. at least 22/24 are concise enough for semantic encoding;
+10. no TEST content was generated or manually inspected.
+
+Otherwise record exactly:
+
+    T2 DESCRIPTION GENERATION CONTRACT BLOCKED
+
+and name every failed condition.
+
+Do not switch model or prompt in the same task if blocked.
+
+## Reproducibility / deterministic check
+
+Before accepting the sample generation contract:
+
+- choose the lexicographically first sampled item;
+- run the exact frozen generation twice from a fresh generation call without changing model/prompt/settings;
+- require exact generated-text equality;
+- record hashes, not the repeated text, in PROGRESS.
+
+If exact equality fails, record BLOCKED.
 
 ## Allowed tracked files
 
 Only:
 
+- `scripts/description/preflight_qwen3vl_observable.py`
+- `docs/STAGE3_T2_DESCRIPTION_PREFLIGHT_EN.md`
 - `docs/PROGRESS_EN.md`
 
-No source changes.
-No config changes.
-No cache changes.
-No dependency changes.
-No new scripts.
+No `src/*` changes.
+No configs.
+No dependencies.
+No T1 cache changes.
+No description production cache.
 
-If an implementation/config/cache defect is discovered, STOP and report the blocker. Do not patch it inside TASK-003C.
+## Pre-execution firewall
 
-An environment-only interruption before any optimizer step may be repeated with the exact same command only if documented. No metric-driven retry is allowed.
+Before loading the full VLM or generating sampled descriptions:
 
-## Mandatory pre-run firewall
+1. implement the preflight script;
+2. run `--help`;
+3. synthetic/test-mode checks prove:
+   - prompt is exactly frozen;
+   - no label/task/corpus/split/video/segment metadata enters prompt;
+   - sample selection is deterministic TRAIN/DEV only;
+   - TEST is excluded from generation;
+   - report refuses overwrite;
+4. structural source-path audit may run without model generation;
+5. verify no source/config/dependency diffs;
+6. `git diff --check`;
+7. append firewall evidence to PROGRESS;
+8. commit and PUSH firewall.
 
-Before seed42:
+No VLM sample generation before firewall is visible on origin.
 
-1. verify branch/base;
-2. verify working tree clean;
-3. verify cache index SHA256 exactly;
-4. verify all 754 artifact files referenced by the index exist;
-5. verify model/cache identities from TASK-003B;
-6. validate all three frozen configs;
-7. programmatically prove configs differ only by seed/run_name;
-8. instantiate all three configs;
-9. verify trainable parameter count = `447746`;
-10. verify TRAIN unit counts D287/P266/total553;
-11. verify evaluation membership counts 933/1364/1208/1014;
-12. one shape-only TRAIN batch and one shape-only DEV batch;
-13. no DEV/Test performance computation;
-14. `git diff --check`;
-15. `git diff origin/main -- src configs scripts pyproject.toml` must be empty;
-16. append firewall evidence to PROGRESS;
-17. commit and PUSH the firewall.
+## Execute preflight exactly once
 
-No production run before the firewall commit is visible on origin.
+After firewall push:
 
-## Exactly three production runs
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
+      scripts/description/preflight_qwen3vl_observable.py \
+      --data-root /media/maxim/Databases/WSM_NEW \
+      --output /media/maxim/Programs/Features/WSM/stage3_t2_preflight/qwen3vl8b_observable_preflight_v1.json
 
-Run exactly in this order:
+A pure runtime/API defect may be corrected transparently with a pushed corrective firewall before one replacement preflight. No prompt/model/source changes are allowed as a “runtime correction”.
 
-1. seed42;
-2. seed43;
-3. seed44.
+## Human-readable document
 
-Commands:
+Create `docs/STAGE3_T2_DESCRIPTION_PREFLIGHT_EN.md` with:
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/text/00_t1_xlmr_seed42.yaml
+- exact model/revision/resolved commit;
+- prompt and generation settings;
+- canonical structural source audit;
+- sample IDs only, not labels and not generated text;
+- manual audit flags/counts;
+- reproducibility result;
+- memory/runtime profile;
+- exact READY/BLOCKED string;
+- explicit no TEST generation/manual inspection;
+- explicit no training/model-performance metric.
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/text/01_t1_xlmr_seed43.yaml
+Do not include generated descriptions verbatim.
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/text/02_t1_xlmr_seed44.yaml
-
-No sweep.
-No hyperparameter change.
-No architecture change.
-No cache change.
-No extra seed.
-No retry for metric improvement.
-
-## DEV selection / Test firewall
-
-For each seed:
-
-1. determine the selected checkpoint solely by maximum `dev/mean_score`;
-2. record selected epoch, checkpoint path, checkpoint SHA256, MLflow/run identity;
-3. freeze that checkpoint identity;
-4. only after freeze, read the same-epoch TEST_NONE/SOFT/HARD monitoring metrics.
-
-Test metrics may be reported for traceability but MUST NOT influence:
-
-- checkpoint selection;
-- model-family judgment;
-- T2 design;
-- thresholds;
-- follow-up.
-
-## Required primary DEV evidence
-
-For each seed at the selected checkpoint record:
-
-Depression:
-- UAR;
-- MF1;
-- Score.
-
-Parkinson:
-- UAR;
-- MF1;
-- Score.
-
-Aggregate:
-- Mean_Score.
-
-Compute across seeds42/43/44:
-
-- D Score mean / sample std / range;
-- P Score mean / sample std / range;
-- Mean_Score mean / sample std / range.
-
-No significance claim is authorized from three seeds.
-
-## Secondary DEV video-unit audit
-
-Because T1 is trained on one transcript per video while the primary protocol is segment weighted, perform one post-freeze DEV diagnostic for each selected checkpoint:
-
-- deduplicate DEV by canonical `(corpus, video_id)`;
-- evaluate each unique video's prediction exactly once;
-- use the same observed-task mask and UAR/MF1/Score definitions;
-- report D/P/Mean at unique-video level.
-
-Do not use video-level DEV metrics to select checkpoints.
-
-Report segment-level minus unique-video-level differences so transcript broadcast weighting is transparent.
-
-Do not compute a Test video-level diagnostic.
-
-## DEV calibration audit
-
-After checkpoint freeze, DEV only:
-
-For each seed/task report:
-
-- observed sample count;
-- Brier score;
-- ECE-15.
-
-Primary calibration is segment-level to match the primary protocol.
-
-No threshold fitting/recalibration.
-
-## Contextual frozen comparisons
-
-Compare T1 three-seed DEV means descriptively against:
-
-Matched temporal audio three-seed:
-- D `0.7303377965`;
-- P `0.8162961212`;
-- Mean `0.7733169588`;
-- Mean std `0.0138512531`.
-
-Full R4 trial-012 three-seed:
-- D `0.7352563333`;
-- P `0.8385606667`;
-- Mean `0.7869088179`;
-- Mean std `0.0294384420`.
-
-Accepted Stage-2 V2 video reference, contextual single-run only:
-- D `0.6201013364`;
-- P `0.7930427585`;
-- Mean `0.7065720475`.
-
-These are not architecture-equivalent comparisons.
-
-Do NOT claim that text “adds” to A+V from T1 alone. T1 is a standalone text-stream baseline.
-
-## TASK-003C conclusion
-
-Do not invent a component-contribution gate.
-
-Record exactly:
-
-    T1 THREE-SEED TEXT BASELINE COMPLETE
-
-if all three frozen runs complete and all required evidence is traceable.
-
-Otherwise record exactly:
-
-    T1 THREE-SEED TEXT BASELINE INCOMPLETE
-
-and name the concrete missing evidence.
-
-The metric level does not determine task completion; execution integrity does.
-
-## Required PROGRESS evidence
+## PROGRESS evidence
 
 Record:
 
 - branch;
-- firewall SHA;
-- final SHA;
-- cache/index identity;
-- exactly three production commands/run identities;
-- selected epochs/checkpoint paths/SHA256;
-- per-seed primary DEV D/P/Mean evidence;
-- three-seed mean/std/range;
-- unique-video DEV secondary metrics and segment-minus-video differences;
-- DEV Brier/ECE-15;
-- same-epoch Test monitoring only after checkpoint freeze;
-- contextual audio/R4/video comparison;
-- exact T1 completion string;
-- no config/source/cache changes;
-- no tuning/retry;
+- firewall/final SHA;
+- external report path/SHA;
+- model/revision/resolved commit;
+- model shard hashes;
+- environment/package identity;
+- exact prompt hash and generation settings;
+- source structural counts;
+- deterministic sample IDs;
+- manual audit aggregate counts;
+- repeat-generation hash equality;
+- memory/time profile;
+- exact preflight gate string;
+- no Test content generation/inspection;
+- no performance metrics;
+- no training;
 - Stage 3 active;
-- Stage 7 and Final Test locked.
+- Stage 7/Final Test locked.
 
 ## Final scope checks
 
@@ -266,32 +294,31 @@ Run:
     git diff --check
     git diff origin/main -- src
     git diff origin/main -- configs
-    git diff origin/main -- scripts
     git diff origin/main -- pyproject.toml
     git status --short
     git diff --stat origin/main...HEAD
     git log -10 --oneline --decorate
 
-Only PROGRESS may differ.
+Only the three authorized tracked files may differ.
 
 ## Acceptance criteria
 
-TASK-003C passes only if:
+TASK-003D passes only if:
 
-- branch exactly `codex/task-003c`;
-- frozen cache/config/model identities match TASK-003B;
-- no source/config/cache changes;
-- firewall pushed before production;
-- exactly three completed production runs in seed order 42/43/44;
-- DEV/Mean_Score is the sole selector;
-- Test monitoring is inspected only after selected checkpoint freeze and is not decision-driving;
-- primary segment metrics, secondary unique-video DEV metrics, and DEV calibration are recorded;
-- no tuning, sweep, threshold search, or extra seed;
-- exact T1 completion string is correct;
+- branch exactly `codex/task-003d`;
+- one frozen Qwen3-VL model/revision only;
+- one exact prompt only;
+- visual canonical segment source only;
+- no labels/task/transcript/audio enter generation;
+- deterministic TRAIN/DEV sample only;
+- Test generation/manual inspection = false;
+- external report traceable;
+- manual audit gate applied exactly;
+- no source/config/dependency/model-training changes;
 - branch pushed;
 - main/master untouched.
 
-Passing TASK-003C closes only the T1 standalone baseline. It authorizes no T2 implementation automatically.
+Passing TASK-003D authorizes no full description cache or T2 training automatically.
 
 ## Required handoff
 
@@ -304,10 +331,10 @@ Respond in English using exactly:
 5. Blockers and risks
 6. Next atomic step
 
-Include branch, firewall/final SHA, pushed status, main/master untouched, run count/order, per-seed and aggregate primary DEV metrics, unique-video DEV diagnostics, DEV calibration summary, selected checkpoint identities, Test-monitoring boundary, contextual comparator summary, exact T1 completion string, no tuning/source/config/cache changes, Stage 3 active, Stage 7/Final Test locked.
+Include branch, firewall/final SHA, pushed status, report path/SHA, model/revision/resolved commit, shard hashes, source structural audit, sample count, manual audit gate counts, deterministic-repeat result, memory/runtime profile, exact READY/BLOCKED string, Test generation/manual inspection false, no training/performance metrics, Stage 3 active, Stage 7/Final Test locked.
 
 For section 6 write only:
 
-    Manager review of TASK-003C; do not start another task.
+    Manager review of TASK-003D; do not start another task.
 
 Stop.
