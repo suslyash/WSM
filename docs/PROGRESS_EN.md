@@ -1302,3 +1302,18 @@ TASK-003D preserved `T2 DESCRIPTION GENERATION CONTRACT BLOCKED`: Qwen3-VL revis
 The descriptive pre-Stage-7 inventory records matched temporal audio, full R4 trial012, equal-parameter shared fusion, no-semantic depression, paired task-isolated, T1 text-only, and blocked/ineligible T2. It does not rank, score, tier, promote, demote, or select a Stage-7 set. Paired task-isolated uses two models and is not an equal-total-deployment-size comparator. T1 is contextual standalone evidence, not additive A+V evidence. No significance claim is made.
 
 No compute, inference, source/config/script/dependency/cache change, Test content/metric analysis, or Stage-7 activation occurred in TASK-003E. Stage 3 remains pending manager closure; Stage 7 and Final Test remain locked. Main/master remain untouched.
+
+
+### TASK-007A — Stage-7 final candidate/config/seed/statistical freeze
+
+Status: preflight complete; production training and Final Test remain unauthorized. Branch: `codex/task-007a`. Dossier: [docs/STAGE7_FINAL_FREEZE_EN.md](STAGE7_FINAL_FREEZE_EN.md).
+
+The manager-frozen compared set is exactly frozen temporal audio, full optimized R4 trial012, and equal-parameter shared-fusion trial012. Frozen seeds are `42,43,44,45,46`; accepted seeds42–44 were audited from committed evidence and were not rerun. Exactly six seed45/46 clones were created: audio configs03/04, full R4 configs40/41, and shared-fusion configs42/43 under `fusion/`. YAML equivalence passed for every new/reference pair after removing only `seed` and `experiment_info.params.run_name`; all six pass `chimera-ml validate-config`.
+
+All six DataModules, models, losses, and callbacks instantiated without training. Audio trainable parameters were `3033416`; full R4 and shared fusion each retained exactly `295239`. Shape-only TRAIN and DEV batches passed for the audio and fusion families. No optimizer step, metric calculation, inference, or Test loader iteration occurred. Every new config retains max-mode `dev/mean_score` checkpoint and early-stopping selection.
+
+Frozen accepted checkpoint identities and shared-fusion run identities are recorded in the dossier. The semantic pseudo cache remained unchanged at SHA256 `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`, TRAIN rows `6325`, accepted D/P `376/1801`, and classes D `376/0`, P `212/1589`; canonical audio features remain `/media/maxim/Databases/WSM_NEW/features`, dimension 768.
+
+The dossier freezes five-seed mean/sample-std/min/max/range and Student-t 95% CI (`2.7764451051977987`, df=4), same-seed paired deltas for all three method pairs, and DEV-only Brier/ECE-15 summaries. Final Test is explicitly unauthorized: no new or historical Test values are inspected; all fifteen selected checkpoints must be frozen before a separate final-Test task. Next production order is exactly audio45, R4-45, shared45, audio46, R4-46, shared46, with no retry, extra seed, or post-firewall config change.
+
+Scope checks passed: `git diff --check`; forbidden source/script/dependency/cache scopes are unchanged; no production command was run. Main/master remain untouched.
