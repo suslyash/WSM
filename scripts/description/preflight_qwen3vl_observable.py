@@ -139,7 +139,7 @@ def _generate(model: Any, processor: Any, path: str, dtype: Any) -> tuple[str, f
     import torch
     messages = [{"role": "user", "content": [{"type": "video", "video": path}, {"type": "text", "text": PROMPT}]}]
     started = time.perf_counter()
-    inputs = processor.apply_chat_template(messages, tokenize=True, add_generation_prompt=True, return_dict=True, return_tensors="pt", processor_kwargs={"videos_kwargs": {"num_frames": VIDEO_NUM_FRAMES}})
+    inputs = processor.apply_chat_template(messages, tokenize=True, add_generation_prompt=True, return_dict=True, return_tensors="pt", processor_kwargs={"videos_kwargs": {"num_frames": VIDEO_NUM_FRAMES, "fps": None}})
     target_device = next(model.parameters()).device
     inputs = {key: value.to(target_device) if isinstance(value, torch.Tensor) else value for key, value in inputs.items()}
     with torch.inference_mode():
