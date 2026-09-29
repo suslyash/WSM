@@ -1273,3 +1273,19 @@ Structural source audit covered 8,622 canonical `.mp4` rows from `build_manifest
 Manual audit aggregate over 24 outputs: nonempty 24/24; visually grounded/mostly observable 24/24; major unsupported/hallucinated 0; diagnosis/disease/health-state inference 0; demographic/identity inference 4; causal/medication inference 0; dataset/task/label leakage 0; concise enough for semantic encoding 18/24. The four demographic failures were explicit gender terms; six concision failures were overly long, repetitive, or truncated. First-sample fresh-call determinism passed exactly: hash A/B both `bcad9ba7c4a55880b82e0106afcb93ebc3476a902683b9ea60725468b5aa63da`.
 
 External report: `/media/maxim/Programs/Features/WSM/stage3_t2_preflight/qwen3vl8b_observable_preflight_v1.json`; SHA256 `767d687e2f857938fa882555250d7a4be4159556e49537377967d82c36407930`. Failed frozen gate conditions: 5 (zero demographic/identity inference) and 9 (at least 22/24 concise; observed 18/24). The human-readable evidence is [docs/STAGE3_T2_DESCRIPTION_PREFLIGHT_EN.md](STAGE3_T2_DESCRIPTION_PREFLIGHT_EN.md); it contains no verbatim generated descriptions. No model/prompt change, dependency change, source/config change, training, cache generation, TEST inspection, or performance claim was made.
+
+
+### TASK-003E  Stage-3 text/description synthesis and closure dossier
+
+Status: documentation-only synthesis complete; Stage 3 remains ACTIVE pending manager closure. Branch: `codex/task-003e`. Ledger: [docs/STAGE3_CLAIM_LEDGER_EN.md](STAGE3_CLAIM_LEDGER_EN.md).
+
+Exact completeness result: `STAGE-3 TEXT/DESCRIPTION EVIDENCE MATRIX COMPLETE`.
+Exact family-budget result: `STAGE-3 TWO-FAMILY BUDGET EXHAUSTED`.
+
+TASK-003A preserved the accepted transcript conclusions `SEGMENT TEXT ALIGNMENT NOT ESTABLISHED`, `T1 TEXT UNIT SHOULD BE VIDEO-LEVEL TRANSCRIPT`, and `T1 TRANSCRIPT DATA CONTRACT READY`; authoritative report SHA256 `4254d81281522015d0633d6534e1616e925a2bf0130f67a37b541a2aacc2ed78`. TASK-003B preserved the frozen XLM-R identity/cache and D287/P266/total553 TRAIN units with 447746 downstream trainable parameters. TASK-003C preserved `T1 THREE-SEED TEXT BASELINE COMPLETE` with aggregate DEV D/P/Mean `0.6268063333/0.8447246667/0.7357653333`, sample std `0.0834002123/0.0480683689/0.0646553057`, and standalone-text-only interpretation.
+
+TASK-003D preserved `T2 DESCRIPTION GENERATION CONTRACT BLOCKED`: Qwen3-VL revision `1dd1e02d981403da25ed73d43430e4ef598cb94b`, prompt SHA256 `118b93ba090af2b4ce755d9da1476e073cab0624760e9aa4c347faad8750ee4d`, tested deterministic uniform `num_frames=8`, report SHA256 `767d687e2f857938fa882555250d7a4be4159556e49537377967d82c36407930`. Manual audit was nonempty 24/24, visually grounded 24/24, unsupported 0/24, diagnosis/health inference 0/24, demographic/identity inference 4/24, causal/medication 0/24, leakage 0/24, concise 18/24. The T2 safety/concision gate failed; no T2 cache, implementation, training, or performance evidence exists.
+
+The descriptive pre-Stage-7 inventory records matched temporal audio, full R4 trial012, equal-parameter shared fusion, no-semantic depression, paired task-isolated, T1 text-only, and blocked/ineligible T2. It does not rank, score, tier, promote, demote, or select a Stage-7 set. Paired task-isolated uses two models and is not an equal-total-deployment-size comparator. T1 is contextual standalone evidence, not additive A+V evidence. No significance claim is made.
+
+No compute, inference, source/config/script/dependency/cache change, Test content/metric analysis, or Stage-7 activation occurred in TASK-003E. Stage 3 remains pending manager closure; Stage 7 and Final Test remain locked. Main/master remain untouched.
