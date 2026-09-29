@@ -1,372 +1,450 @@
-# TASK-003A: Transcript Source, Alignment, and Language Audit
+# TASK-003B: Freeze and Implement the T1 Video-Level Transcript Pipeline
 
 ## Authority and branch
 
-This task follows **MANAGER-DECISION-073**.
+This task follows **MANAGER-DECISION-074**.
 
 Required branch:
 
-    codex/task-003a
+    codex/task-003b
 
 Start from current manager-updated `origin/main`.
 
-This is the first active Stage-3 task after core Stage-6 completion.
+This task implements and freezes T1, but **does not run production training**.
 
-It is **audit-only**. No model training or encoder implementation is authorized.
+## Frozen scientific/data contract
 
-## Why this task comes first
+TASK-003A established:
 
-Stage 1 intentionally left:
+    SEGMENT TEXT ALIGNMENT NOT ESTABLISHED
+    T1 TEXT UNIT SHOULD BE VIDEO-LEVEL TRANSCRIPT
+    T1 TRANSCRIPT DATA CONTRACT READY
 
-    text_available = false
+Authoritative audit report:
 
-for every canonical row.
+    /media/maxim/Programs/Features/WSM/stage3_text_audit/transcript_source_audit_v1.json
 
-The canonical manifest builder found video-level files at the conceptual location:
+SHA256:
 
-    <data_root>/<corpus>/<split>_labels/<video_id>/<video_id>.txt
+    4254d81281522015d0633d6534e1616e925a2bf0130f67a37b541a2aacc2ed78
 
-but explicitly recorded:
+Canonical facts:
 
-    segment_text_alignment_established = false
+- 8,622 segments;
+- 755 unique `(corpus, split, video_id)` groups;
+- 754 plain-text files;
+- one missing transcript: TRAIN availability gap;
+- zero decode errors;
+- no cross-split exact transcript-content hashes;
+- three within-TRAIN duplicate hashes;
+- no explicit segment timing metadata;
+- zero parseable transcript timestamps.
 
-Stage 3 T1 requires an audited-language transcript encoder. Before building it, determine what these transcript files actually contain and what text granularity is scientifically defensible.
+Do not invent segment text.
 
-Do not invent segment-level transcript labels.
+## Frozen T1 family
 
-## Required reading
+There is exactly one T1 encoder/model family. No encoder search is allowed.
 
-Read exactly:
+Frozen pretrained encoder:
 
-1. `AGENTS.md`
-2. `docs/README.md`
-3. `docs/PROJECT_REQUIREMENTS.md`
-4. `docs/PROGRESS_EN.md`
-5. `docs/plan/STAGE_3.md`
-6. `docs/NEXT_TASK_EN.md`
-7. `src/common/data/wsm_manifest.py`
-8. `scripts/common/build_wsm_manifest.py`
+    FacebookAI/xlm-roberta-base
 
-Do not load closed-stage source/config history unless needed to verify the canonical manifest contract.
+Frozen revision:
+
+    e73636d
+
+Expected model.safetensors SHA256:
+
+    6fd4797bc397c3b8b55d6bb5740366b57e6a3ce91c04c77f22aafc0c128e6feb
+
+Use `AutoTokenizer(..., use_fast=True)` and `AutoModel`.
+
+The encoder is **fully frozen** and used only for offline feature extraction.
+
+Do not fine-tune it.
+
+Do not compare it against another text encoder.
+
+## Frozen chunking and feature extraction
+
+For every present video-level transcript:
+
+1. decode UTF-8/UTF-8-SIG using the accepted TASK-003A contract;
+2. tokenize the complete transcript with no label/task/diagnosis prompt or metadata injected;
+3. do not truncate the document;
+4. split token IDs into consecutive, non-overlapping chunks of exactly at most 510 content tokens;
+5. add the encoder's normal single-sequence special tokens so every model input is at most 512 tokens;
+6. stride/overlap = 0;
+7. encoder in eval mode, no gradients;
+8. for every chunk, take final hidden states;
+9. mean-pool only valid **non-special** token positions;
+10. save one float32 768-d vector per chunk, preserving chunk order.
+
+Empty decoded text must be treated as unavailable, not as a fabricated zero feature.
+
+The one missing transcript remains unavailable.
+
+No labels, diagnosis, task ID, pseudo label, or corpus-specific prompt may enter feature extraction.
+
+Corpus/split/video identity may appear only in cache indexing/audit metadata.
+
+## External T1 cache
+
+Build exactly one external cache root:
+
+    /media/maxim/Programs/Features/WSM/text_t1_xlmr_v1
+
+Required index:
+
+    /media/maxim/Programs/Features/WSM/text_t1_xlmr_v1/cache_index.json
+
+Feature artifact layout:
+
+    features/<corpus>/<split>/<video_id>.pt
+
+The cache builder MUST fail rather than overwrite an existing cache root/index.
+
+Every index entry must include at least:
+
+- corpus;
+- split;
+- video_id;
+- transcript source path;
+- transcript SHA256;
+- availability;
+- chunk count;
+- feature dimension;
+- artifact path/SHA256 when available;
+- encoder name;
+- requested revision;
+- resolved Hugging Face commit SHA;
+- model weight SHA256;
+- tokenizer identity/fingerprints;
+- max model length;
+- content tokens per chunk;
+- overlap/stride;
+- pooling rule;
+- feature dtype;
+- canonical manifest fingerprint;
+- TASK-003A report SHA.
+
+Global cache metadata must include package versions and extractor source version/fingerprint.
+
+Record cache-index SHA256 in PROGRESS.
+
+Do not store raw transcript text or token IDs in the committed repo or cache index.
+
+Feature artifacts may contain only numeric chunk features and reproducibility metadata, not raw text/token IDs.
 
 ## Allowed tracked files
 
 Only:
 
-- `scripts/text/audit_transcript_sources.py`
-- `docs/STAGE3_TRANSCRIPT_AUDIT_EN.md`
+- `src/chimera_plugin.py`
+- `src/text/__init__.py`
+- `src/text/features/__init__.py`
+- `src/text/features/xlmr_video_transcript.py`
+- `src/text/data/__init__.py`
+- `src/text/data/wsm_text_video_datamodule.py`
+- `src/text/models/__init__.py`
+- `src/text/models/t1_chunk_transformer.py`
+- `scripts/text/build_t1_xlmr_cache.py`
+- `configs/wsm_mm_pd_dep_v1/text/00_t1_xlmr_seed42.yaml`
+- `configs/wsm_mm_pd_dep_v1/text/01_t1_xlmr_seed43.yaml`
+- `configs/wsm_mm_pd_dep_v1/text/02_t1_xlmr_seed44.yaml`
 - `docs/PROGRESS_EN.md`
 
-No `src/*` changes.
-No config changes.
+No `src/audio/*` changes.
+No `src/video/*`, `src/fusion/*`, description, or common-source changes.
 No dependency changes.
 
-## Inputs
+The three YAMLs are seed clones of **one** T1 family and do not count as three architecture families.
 
-Data root:
+## T1 DataModule contract
 
-    /media/maxim/Databases/WSM_NEW
+Register:
 
-Use the current canonical manifest implementation:
+    wsm_text_t1_datamodule
 
-    common.data.wsm_manifest.build_manifest
+Use the canonical manifest plus the existing canonical segment/protocol metadata.
 
-Do not modify dataset files.
+### TRAIN
 
-Do not write inside the dataset root.
+TRAIN dataset unit must be exactly one available `(corpus, video_id)` video-level transcript.
 
-## External machine-readable report
+Do not create one training row per segment.
 
-Write exactly one external report:
+Expected available TRAIN units from TASK-003A:
 
-    /media/maxim/Programs/Features/WSM/stage3_text_audit/transcript_source_audit_v1.json
+- depression: 287;
+- Parkinson: 266;
+- total: 553.
 
-The script MUST fail rather than overwrite an existing output path.
+For each grouped video:
 
-The report must contain no raw transcript text.
+- assert all canonical segments agree on the observed disease label;
+- target is two independent binary slots with NaN for the unknown task;
+- observed mask is `[true,false]` for depression corpus and `[false,true]` for Parkinson corpus;
+- load one cached ordered chunk-feature sequence.
 
-Record its SHA256 in PROGRESS and in the human-readable audit document.
+The missing depression TRAIN transcript is excluded from text-only T1 training and counted explicitly as text unavailable.
 
-## Canonical mapping
+If identical text exists in both corpus namespaces, keep the two canonical corpus/video training identities separate; do not merge them into synthetic dual annotation.
 
-For every canonical manifest row:
+### DEV / TEST evaluation
 
-- parse `segment_id` exactly as the JSON array `[corpus, video_id, segment_file]`;
-- group by canonical `(corpus, split, video_id)`;
-- derive the transcript path only as:
+DEV and TEST protocol datasets remain **canonical segment rows**.
 
-      data_root / corpus / f"{split}_labels" / video_id / f"{video_id}.txt"
+Each segment row loads its parent video's one cached transcript feature sequence.
 
-- do not search arbitrary alternative transcript files;
-- missing files are legitimate missing text availability and must be counted, not guessed.
+This deliberate evaluation broadcast is only to reproduce the project's primary segment-level metric protocol.
 
-Verify every grouped video maps to exactly one derived transcript path.
+It MUST NOT be used for TRAIN.
 
-## Structural transcript audit
+Expose separately named evaluation streams so every epoch can report:
 
-For every unique canonical video, record machine-readably:
+- `dev`;
+- `test_none`;
+- `test_soft`;
+- `test_hard`.
 
-- corpus;
-- split;
-- video_id;
-- number of canonical segments;
-- derived transcript path;
-- exists;
-- non-empty;
-- byte size;
-- SHA256 if present;
-- UTF-8/UTF-8-SIG decode success;
-- line count;
-- nonblank line count;
-- Unicode character count;
-- whitespace-token count;
-- deterministic format classification.
+Test remains monitoring-only and may not drive selection.
 
-Allowed format classes:
+No Test lexical/manual inspection is authorized.
 
-- `plain_text`
-- `webvtt`
-- `srt_like`
-- `timestamped_lines`
-- `json_like`
-- `unknown_text`
-- `missing`
-- `decode_error`
+### Batch contract
 
-Implement deterministic local classification; no network and no LLM.
+Collate to:
 
-Record aggregate counts by corpus and split.
+- `inputs["text"]`: float tensor `[B,C,768]`;
+- `masks["text_mask"]`: bool `[B,C]`;
+- targets: float `[B,2]` with NaN unknowns;
+- `masks["observed_mask"]`: bool `[B,2]`;
+- metadata with canonical IDs/protocol identity.
 
-## Timestamp and segment-alignment audit
+Every sample must have at least one valid chunk.
 
-The central scientific question is whether text can be aligned to canonical segment files.
+Context must publish text feature dim, task names/count, class names, cache fingerprint/index SHA, and train/eval unit semantics.
 
-Inspect only canonical source metadata and the derived transcript file.
+## T1 model contract
 
-For every source CSV used by the manifest, record its column names and whether it provides explicit segment timing fields such as start/end/offset/time.
+Register:
 
-For transcript files, record counts of parseable timestamp spans/lines using deterministic regex/parsers for common SRT/VTT/timestamp forms.
+    wsm_text_t1_chunk_transformer
 
-Do NOT infer a segment start time from a suffix like `_005` unless source metadata explicitly establishes the mapping.
+Inputs are frozen cached chunk vectors.
 
-Do NOT assume fixed segment duration.
+Frozen architecture:
 
-Do NOT use video duration plus ordinal arithmetic as a substitute for explicit segment offsets.
+- input dim 768;
+- hidden dim 192;
+- input LayerNorm + Linear(768,192) + GELU + Dropout(0.20);
+- deterministic sinusoidal chunk-position encoding generated at runtime;
+- one `TransformerEncoderLayer`;
+- 4 attention heads;
+- feed-forward width = 384;
+- dropout = 0.20;
+- `batch_first=True`;
+- `norm_first=True`;
+- one encoder layer only;
+- final LayerNorm;
+- mask-aware mean pooling over valid chunks;
+- two independent disease heads, each:
+  - LayerNorm(192);
+  - Dropout(0.20);
+  - Linear(192,1).
 
-Record exactly one global alignment conclusion:
+Output:
 
-    SEGMENT TEXT ALIGNMENT ESTABLISHED
+    ModelOutput.preds shape [B,2]
 
-only if every text-available canonical segment can be mapped deterministically to a transcript span from explicit metadata.
+No task ID enters the model.
 
-Otherwise record exactly:
+Both logits are always produced, so simultaneous positives remain possible.
 
-    SEGMENT TEXT ALIGNMENT NOT ESTABLISHED
+## Loss and optimizer
 
-If alignment is not established, record:
+Reuse existing:
 
-    T1 TEXT UNIT SHOULD BE VIDEO-LEVEL TRANSCRIPT
+    wsm_masked_sparse_loss
 
-This means a future T1 must treat one transcript as one video-level text unit; it may later broadcast a frozen video prediction/feature to segment rows for metric compatibility, but training must not silently multiply one transcript by segment count without an explicit weighting policy.
+Unknown target slots remain masked and never become negatives.
 
-Do not implement that future policy in TASK-003A.
+Optimizer:
 
-## Exact-duplicate / leakage audit
+    adamw_optimizer
+    lr: 0.0001
+    weight_decay: 0.01
 
-Using transcript SHA256 only:
+Train settings for future production:
 
-- count duplicate transcript contents within each split;
-- count identical transcript contents across train/dev;
-- count identical transcript contents across train/test;
-- count identical transcript contents across dev/test;
-- list only video IDs/hashes, never raw text.
+- epochs: 30;
+- mixed precision: true;
+- grad clip: 0.5;
+- batch size: 32;
+- early stopping patience: 6;
+- min_delta: 0.0005.
 
-Any cross-split exact duplicate must be highlighted as a leakage risk.
+No hyperparameter sweep.
 
-Do not use diagnosis labels in duplicate analysis.
+## Configs
 
-## TRAIN/DEV language audit
+Create the three seed-clone configs now, but do not execute production training.
 
-Language/model-family decisions must not use Test lexical content.
+Required run names:
 
-For TRAIN and DEV only:
+- seed42: `stage3_t1_xlmr_video_text_seed42`
+- seed43: `stage3_t1_xlmr_video_text_seed43`
+- seed44: `stage3_t1_xlmr_video_text_seed44`
 
-1. compute aggregate Unicode-script character counts and proportions at least for:
-   - Latin;
-   - Cyrillic;
-   - Greek;
-   - Arabic;
-   - Han;
-   - Hiragana/Katakana;
-   - Hangul;
-   - digits;
-   - other letters;
-2. create a deterministic manual-audit sample of up to 24 unique videos:
-   - stratify by corpus x split over TRAIN and DEV;
-   - use stable SHA256 ordering of `corpus|split|video_id`;
-   - target up to 6 videos per stratum;
-3. Codex may inspect those local transcript files manually to assign a coarse language label per sampled video.
+All config semantics must be identical except seed/run_name.
 
-Do NOT commit transcript snippets or verbatim phrases.
+Every config must include required instrumentation:
 
-The committed report/document may contain only:
+- `wsm_segment_metrics_callback`;
+- checkpoint callback on `dev/mean_score`, max;
+- early stopping on `dev/mean_score`, max;
+- snapshot;
+- summary;
+- console logger;
+- MLflow logger.
 
-- sampled video IDs;
-- coarse language label;
-- mixed-language yes/no;
-- unreadable/empty status;
-- aggregate counts.
+Every epoch-level evaluation must expose DEV and TEST_NONE/SOFT/HARD metrics, but only DEV may drive checkpoint/early stopping.
 
-No external language-ID service/model download is authorized.
+## Implementation/cache firewall
 
-If an already-installed offline language-ID package happens to exist, do not make the task depend on it; manual + Unicode-script audit remains authoritative.
+Before building the full external cache:
 
-## Test-content firewall
+1. implement the encoder wrapper/cache builder/DataModule/model/configs/plugin registration;
+2. plugin imports with no project-module warnings;
+3. registry keys resolve;
+4. configs validate;
+5. synthetic transcript tests prove:
+   - <510 content tokens => one chunk;
+   - >510 => ordered multiple chunks;
+   - no overlap;
+   - no truncation;
+   - special tokens excluded from pooling;
+   - raw text/token IDs absent from artifact metadata;
+6. verify the requested HF revision resolves;
+7. verify downloaded model.safetensors SHA256 matches the frozen value;
+8. verify encoder parameters `requires_grad=false` and extraction under no-grad/eval;
+9. verify cache builder refuses overwrite;
+10. verify no label/task/corpus prompt enters encoder input;
+11. verify `git diff --check`;
+12. verify `git diff origin/main -- src/audio src/video src/fusion src/description src/common pyproject.toml` empty;
+13. append firewall evidence to PROGRESS;
+14. commit and PUSH the firewall.
 
-For TEST:
+No full cache build before firewall is visible on origin.
 
-Allowed:
-- path existence;
-- byte size;
-- hash;
-- decode success;
-- line/character/token counts;
-- structural format class;
-- timestamp-pattern counts;
-- duplicate-hash checks.
+## Build the full T1 cache exactly once
 
-Forbidden:
-- manual lexical reading;
-- language-based model choice;
-- vocabulary analysis;
-- label association;
-- performance analysis.
+After firewall push, run exactly:
 
-No Test prediction or metric may be read.
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/text/build_t1_xlmr_cache.py       --data-root /media/maxim/Databases/WSM_NEW       --audit-report /media/maxim/Programs/Features/WSM/stage3_text_audit/transcript_source_audit_v1.json       --output-root /media/maxim/Programs/Features/WSM/text_t1_xlmr_v1
 
-## Coverage and readiness conclusions
+No model-family alternative or parameter variant is allowed.
 
-Report canonical segment-level and unique-video-level transcript coverage for TRAIN/DEV/TEST and by corpus.
+A pure runtime bug may be corrected only transparently with a pushed corrective firewall before a replacement cache build.
 
-Missing transcripts remain a future availability-mask case; do not fabricate text.
+## Post-cache verification
 
-Record exactly one readiness string:
+Before final commit:
 
-    T1 TRANSCRIPT DATA CONTRACT READY
+1. verify cache index SHA256;
+2. verify expected 755 canonical video entries;
+3. verify available/missing counts exactly match TASK-003A;
+4. verify every present transcript SHA matches the audit report;
+5. verify feature artifact SHA and metadata;
+6. verify all chunk features finite float32 `[C,768]`, `C>=1`;
+7. verify no raw text/token IDs stored;
+8. instantiate all three configs from the frozen cache;
+9. TRAIN dataset counts exactly D287/P266/total553;
+10. verify no duplicate TRAIN `(corpus,video_id)` unit;
+11. verify DEV and TEST protocol segment membership matches canonical existing protocol counts;
+12. one TRAIN batch forward/loss/backward:
+    - finite loss;
+    - finite nonzero model gradients;
+    - masked unknown slots do not affect loss;
+13. one shape-only batch load from each evaluation stream;
+14. do NOT compute or inspect DEV/Test performance metrics;
+15. verify seed configs differ only seed/run_name;
+16. final scope checks.
 
-if all of the following hold:
+This task may inspect tensor shapes and IDs from Test loaders, but must not inspect Test text manually or calculate model-performance metrics.
 
-1. canonical video-to-transcript path derivation is deterministic;
-2. existing TRAIN/DEV transcript files are auditable without uncontrolled decode ambiguity;
-3. language/granularity evidence is sufficient to specify a T1 input contract;
-4. any duplicate/leakage risk is explicitly enumerated.
+## No production training
 
-Otherwise record exactly:
+TASK-003B MUST NOT:
 
-    T1 TRANSCRIPT DATA CONTRACT BLOCKED
+- run `chimera-ml train` for a production epoch;
+- report DEV/Test model performance;
+- select a checkpoint;
+- tune hidden size/layers/dropout/chunking/encoder;
+- compare another encoder.
 
-and name the concrete blocker.
+The next manager task, if this pipeline passes review, will run the frozen T1 family on seeds42/43/44.
 
-This readiness result does NOT authorize training automatically.
+## Required PROGRESS evidence
 
-## Human-readable audit document
+Record:
 
-Create `docs/STAGE3_TRANSCRIPT_AUDIT_EN.md` containing:
-
-- scope and no-Test-selection boundary;
-- canonical counts;
-- transcript coverage by split/corpus at video and segment level;
-- format/encoding audit;
-- timestamp/source-metadata audit;
-- exact alignment conclusion;
-- duplicate/leakage audit;
-- TRAIN/DEV Unicode-script summary;
-- deterministic manual sample IDs and coarse language labels;
-- exact readiness string;
-- recommended **data granularity only** for T1;
-- explicit statement that no encoder/model was selected or downloaded.
-
-Do not include raw transcript text.
-
-## Pre-execution firewall
-
-Before running the full audit:
-
-1. implement the script;
-2. run `--help`;
-3. run synthetic parser tests in a temporary directory for:
-   - plain text;
-   - SRT-like;
-   - WebVTT;
-   - timestamped lines;
-   - invalid UTF-8;
-   - missing file;
-4. verify output schema contains no raw text fields;
-5. verify script refuses overwrite;
-6. `git diff --check`;
-7. `git diff origin/main -- src configs pyproject.toml` must be empty;
-8. append firewall evidence to PROGRESS;
-9. commit and push the firewall.
-
-No full dataset audit before the firewall commit is visible on origin.
-
-## Execute the full audit once
-
-Run exactly:
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/text/audit_transcript_sources.py       --data-root /media/maxim/Databases/WSM_NEW       --output /media/maxim/Programs/Features/WSM/stage3_text_audit/transcript_source_audit_v1.json
-
-Do not rerun to change conclusions.
-
-A runtime/parser bug may be corrected only if documented, with a new corrective firewall before a replacement full audit. No data/content-driven tuning.
-
-## Final evidence
-
-After the full audit:
-
-- verify report SHA256;
-- create the human-readable audit document;
-- append compact final evidence to PROGRESS;
-- record whether the report inspected Test lexical content: must be `false`;
-- record no Test metrics/predictions inspected;
-- record no model/encoder selected;
-- commit and push.
+- branch;
+- frozen encoder/revision and resolved commit;
+- model weight SHA;
+- chunking/pooling contract;
+- cache path/index SHA;
+- canonical/cache counts;
+- TRAIN unique-video counts;
+- evaluation segment/protocol counts;
+- registered keys;
+- model trainable parameter count;
+- smoke forward/loss/backward evidence;
+- no performance metrics inspected;
+- no production training;
+- no source changes outside allowed scope;
+- Stage 3 active;
+- Stage 7/Final Test locked.
 
 ## Final scope checks
 
 Run:
 
     git diff --check
-    git diff origin/main -- src
-    git diff origin/main -- configs
+    git diff origin/main -- src/audio
+    git diff origin/main -- src/video
+    git diff origin/main -- src/fusion
+    git diff origin/main -- src/description
+    git diff origin/main -- src/common
     git diff origin/main -- pyproject.toml
     git status --short
     git diff --stat origin/main...HEAD
-    git log -10 --oneline --decorate
+    git log -12 --oneline --decorate
 
-Only the three authorized tracked files may differ.
+Only authorized files may differ.
 
 ## Acceptance criteria
 
-TASK-003A passes only if:
+TASK-003B passes only if:
 
-- branch exactly `codex/task-003a`;
-- no source/config/dependency change;
-- canonical path mapping is deterministic and audited;
-- full transcript coverage/format/decode audit is complete;
-- segment alignment conclusion follows explicit metadata only;
-- no ordinal/fixed-duration alignment is invented;
-- exact duplicate cross-split audit is complete;
-- TRAIN/DEV language audit is deterministic and no raw text is committed;
-- Test lexical content is not manually inspected or used for model choice;
-- external JSON contains no raw transcript text and has a recorded SHA;
-- exact readiness string is recorded;
-- firewall precedes the one full audit;
-- no training/model download/encoder selection occurs;
+- branch exactly `codex/task-003b`;
+- one and only one T1 family is implemented;
+- video-level TRAIN unit is enforced;
+- segment-level evaluation broadcast is explicit and TRAIN-safe;
+- frozen encoder/cache fingerprint is reproducible;
+- encoder is frozen;
+- no labels/prompts enter extraction;
+- cache counts/fingerprints pass;
+- required Chimera registrations/configs pass;
+- smoke backward passes;
+- DEV/Test performance is not inspected;
+- no production training occurs;
 - branch pushed;
 - main/master untouched.
 
-Passing TASK-003A closes only the Stage-3 text data-contract audit. It authorizes no T1 implementation automatically.
+Passing TASK-003B authorizes no production run automatically.
 
 ## Required handoff
 
@@ -379,29 +457,10 @@ Respond in English using exactly:
 5. Blockers and risks
 6. Next atomic step
 
-Include:
-
-- branch;
-- firewall/final commit SHAs;
-- pushed status;
-- main/master untouched;
-- report path/SHA;
-- canonical coverage;
-- format/decode summary;
-- exact alignment string;
-- duplicate/leakage summary;
-- TRAIN/DEV language/script summary;
-- exact readiness string;
-- explicit no raw text committed;
-- Test lexical inspection = false;
-- no Test metrics/predictions;
-- no model/encoder selected;
-- Stage 3 active;
-- Stage 6 complete;
-- Stage 7/Final Test locked.
+Include branch, firewall/final SHA, pushed status, main/master untouched, encoder/revision/resolved commit/model SHA, cache path/index SHA, cache counts, TRAIN unique-video counts, eval protocol counts, registry/config validation, trainable parameter count, smoke loss/gradient result, no performance metrics, no production training, Stage 3 active, Stage 7/Final Test locked.
 
 For section 6 write only:
 
-    Manager review of TASK-003A; do not start another task.
+    Manager review of TASK-003B; do not start another task.
 
 Stop.
