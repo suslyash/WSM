@@ -1391,3 +1391,14 @@ Diagnostic A reconstructed the exact TASK-004H AV path using WSMAVFusionDataModu
 Correct audio42 DEV calibration from raw logits: counts D/P 621/312; Brier 0.2117752880/0.1241006106; ECE-15 0.1664041658/0.1066767589. All 15 checkpoint identities are frozen (14 previously verified plus recovered audio42). Five-seed calibration summaries were finalized with the frozen Student-t multiplier 2.7764451051977987; full values are in the Stage-7 evidence dossier. Runtime: Python 3.12.3, torch 2.10.0+cu128, NumPy 2.5.1, CPU float32, CUDA 12.8/cuDNN 91002.
 
 The prior 0.4367 attempt is superseded as an evaluation-path failure; its calibration values are discarded. Exact narrower mechanism was not claimed because the prior temporary code was unavailable. No training, production rerun, source/config/cache/environment change, or Test loader/Test metric query occurred in this correction. The prior procedural exception remains documented: FINAL TEST VALUES NOT USED FOR TASK-007B SELECTION OR RECOVERY. Stage 7 remains active pending manager review; Final Test remains locked.
+
+
+### TASK-007C — DEV firewall blocked before Final Test
+
+Status incomplete. Exact result: STAGE-7 FINAL TEST EVALUATION INCOMPLETE. Branch: codex/task-007c.
+
+The evaluator scripts/common/evaluate_stage7_final_test.py was implemented with the frozen 15-entry ledger, checkpoint/config/pseudo-cache SHA verification, raw-logit metrics, historical audio42 margin/argmax checks, sparse-mask semantics, synthetic arithmetic checks, DEV-only preflight, overwrite refusal, and atomic output. Static checks, --help, synthetic checks, 15-entry count, and overwrite refusal passed.
+
+The mandatory all-15 DEV preflight was attempted using the exact semantic RAMPS DataModule. It stopped before any Test loader or Test dataset iteration at shared-fusion seed43: checkpoint SHA ec746e519e551d69d59954dffff0a73968fb4ab555d43020b7722e635cc477ee, config configs/wsm_mm_pd_dep_v1/ablations/56_shared_fusion_seed43.yaml, frozen DEV D/P/Mean 0.724496/0.818152/0.771324, reproduced 0.7229314130/0.8181521375/0.7705417752; D/Mean absolute mismatches 0.0015645870/0.0007822248, exceeding 0.0005. The configured shared mode and a narrow task-aware diagnostic both failed the frozen ledger, so no source/config/checkpoint/cache correction is authorized.
+
+Final Test invocation count: 0. External report was not created. No training, Test loader iteration, Test metrics, recalibration, threshold fitting, role revision, or retry occurred. Pre-Test roles remain shared primary, full R4 secondary, audio baseline. Stage 7 remains active; Final Test remains locked pending manager review.
