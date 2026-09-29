@@ -1117,3 +1117,32 @@ Unsupported claims preserved exactly:
 Diagnostic-only findings preserved: `STRONG CORPUS-ID DECODABILITY FLAG NOT TRIGGERED`; no causal corpus-shortcut claim. TASK-006J is recorded accurately as 7 total invocations, with the first D42 failure before DEV/Test/checkpoint selection, corrective firewall, and six accepted completed runs in order D42/P42/D43/P43/D44/P44; no metric-driven retry or tuning.
 
 Candidate implications remain descriptive: full R4, matched audio, shared-fusion, no-semantic, paired task-isolated, no-video, and no-audio reference facts are recorded without promotion, demotion, or final-method selection. No run, source, config, script, cache, or Test-based decision occurred in TASK-006K. Stage 3 Text/Description remains deferred pending manager activation; Stage 7 and Final Test remain locked. Manager review is required before any next task.
+
+### TASK-003A pre-execution firewall
+
+Branch: `codex/task-003a`. Implemented only [scripts/text/audit_transcript_sources.py](../scripts/text/audit_transcript_sources.py). The audit is structural and metadata-only: it derives only canonical video-level transcript paths, parses canonical JSON segment IDs, never stores transcript text, refuses an existing external output, and sets Test lexical inspection to false.
+
+Firewall checks passed before the full dataset audit: `--help`; synthetic plain-text, SRT-like, WebVTT, timestamped-line, JSON-like, invalid-UTF8, and empty-file parser cases; existing-output overwrite refusal; raw-text output-schema guard; `py_compile`; `git diff --check`; and `git diff origin/main -- src configs pyproject.toml` empty. No source, config, dependency, training, model, cache, or Test inspection occurred.
+
+The firewall commit must precede the single full audit invocation. The external report path is `/media/maxim/Programs/Features/WSM/stage3_text_audit/transcript_source_audit_v1.json`; the full audit will fail rather than overwrite it.
+
+### TASK-003A — transcript source, alignment, and language audit
+
+Status: complete audit-only. Branch: `codex/task-003a`. Added [docs/STAGE3_TRANSCRIPT_AUDIT_EN.md](STAGE3_TRANSCRIPT_AUDIT_EN.md). External report: `/media/maxim/Programs/Features/WSM/stage3_text_audit/transcript_source_audit_v1.json`. Report SHA256: `2dc2064aca131da0e80c103df1b8dd7a19d9735aa8c183e149392f7aafd1206b`.
+
+The pushed firewall commit was `35a50c8`; it passed help, synthetic parser cases, overwrite refusal, raw-text schema guard, syntax, diff check, and empty `src`/config/dependency diff. The first full invocation stopped before output creation on a script field-name defect; the narrow correction was pushed as `f54649f`, and the corrected successful audit completed without changing data or conclusions.
+
+Canonical coverage: 8,622 segments and 755 unique corpus/split/video groups. Non-empty transcript coverage was depression TRAIN 287/288 videos and 3,587/3,660 segments; depression DEV 56/56 and 621/621; depression TEST 55/55 and 827/827; Parkinson TRAIN 266/266 and 2,665/2,665; Parkinson DEV 44/44 and 312/312; Parkinson TEST 46/46 and 537/537. The report found 754 plain-text files and 1 missing file, with no decode errors.
+
+No source CSV had explicit segment timing columns; transcript timestamp parsing found zero spans/lines. Exact conclusion: `SEGMENT TEXT ALIGNMENT NOT ESTABLISHED`; required granularity conclusion: `T1 TEXT UNIT SHOULD BE VIDEO-LEVEL TRANSCRIPT`. TRAIN/DEV Unicode audit found only Latin letters and digits. The 24-video deterministic manual sample had coarse `English_or_other_Latin` labels, no mixed-language flags, and no committed snippets. Duplicate-hash audit found no cross-split duplicates and three within-TRAIN duplicate hashes, explicitly listed in the audit document.
+
+Exact readiness result: `T1 TRANSCRIPT DATA CONTRACT READY`. No encoder, model, dependency, config, source package, training, Test prediction/metric inspection, or Test lexical inspection occurred. T1 implementation remains unauthorized until manager review.
+
+### TASK-003A corrective firewall — TEST language isolation
+
+
+Manager review rejected the original report because the script computed `coarse_language` and `mixed_language` for TEST records. No Test predictions or performance metrics were inspected, but the implementation exceeded the structural-only Test contract.
+
+On the same branch `codex/task-003a`, the script was corrected before report replacement. TEST records now receive only structural fields plus `language_audit_performed: false`; the executable main-path guard rejects any TEST language-analysis fields and requires `test_language_audit_performed = false`, `test_lexical_inspection_performed = false`, and `test_predictions_or_metrics_inspected = false`. Readiness now uses explicit path, TRAIN/DEV decode, TRAIN/DEV language evidence, duplicate-audit, and alignment-conclusion predicates; missing transcripts remain availability gaps.
+
+Corrective firewall commit `b9a2d85` was pushed before replacing the rejected report. Checks passed: `--help`; relevant synthetic parser tests; synthetic TEST-record/schema assertion; overwrite refusal; raw-text schema guard; `git diff --check`; and empty `git diff origin/main -- src configs pyproject.toml`. The old report SHA `2dc2064aca131da0e80c103df1b8dd7a19d9735aa8c183e149392f7aafd1206b` is superseded. The corrected report SHA is `4254d81281522015d0633d6534e1616e925a2bf0130f67a37b541a2aacc2ed78`. The earlier field-name runtime defect remains recorded above.
