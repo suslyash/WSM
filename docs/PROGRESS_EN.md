@@ -4,19 +4,19 @@
 
 Plan initialized: 2026-09-23.
 
-Current stage: **Stage 3 — ACTIVE (deferred Text/Description study)**.
+Current stage: **Stage 7 — ACTIVE (final candidate/config/seed freeze before final multi-seed evaluation)**.
 
 Stage 5: **CLOSED TO OPTIMIZATION — R4 RETAINED AS LEADING MATCHED-SEED CANDIDATE**.
 
-Stage 7: **LOCKED**.
+Stage 7: **ACTIVE — FREEZE/PREFLIGHT ONLY; FINAL TEST STILL LOCKED**.
 
 Final Test authorized: **no**.
 
-Current atomic task: **TASK-003E — Stage-3 text/description synthesis and closure dossier**.
+Current atomic task: **TASK-007A — final candidate/config/seed/statistical freeze and preflight**.
 
-Expected Codex branch: `codex/task-003e`.
+Expected Codex branch: `codex/task-007a`.
 
-`TASK-003D` is accepted and merged. The second and final Stage-3 family T2 is BLOCKED at its frozen observable-description preflight, so no T2 cache/model/training is authorized. TASK-003E is documentation-only and must synthesize T1/T2 evidence, verify the Stage-3 family budget is exhausted, and prepare the pre-Stage-7 candidate inventory without selecting a final method.
+`TASK-003E` is accepted and merged. Stage 3 is COMPLETE. Manager has frozen the Stage-7 compared-method set from DEV-only evidence: frozen temporal audio, full R4 trial012, and equal-parameter shared fusion. TASK-007A must create/validate only the missing seed45/46 configs and a final evaluation freeze dossier. No production training and no Final Test inspection are authorized yet.
 
 ## 2. Default Context Policy
 
@@ -46,11 +46,11 @@ Optional historical evidence:
 | 0. Reproducible base | COMPLETE | Freeze and validate the historical audio baseline and instrumentation contract. | [plan/STAGE_0.md](plan/STAGE_0.md) |
 | 1. Manifest / partial labels | COMPLETE | Canonical sparse-label manifest, split contract, masking, and evaluation separation. | [plan/STAGE_1.md](plan/STAGE_1.md) |
 | 2. Video | COMPLETE | Compare the bounded video families and establish the accepted V2 video reference. | [plan/STAGE_2.md](plan/STAGE_2.md) |
-| 3. Text / description | ACTIVE | Bounded text/description study after completed core Stage-6 A+V research. | [plan/STAGE_3.md](plan/STAGE_3.md) |
+| 3. Text / description | COMPLETE | Two-family budget exhausted: T1 standalone baseline complete; T2 blocked at frozen observable-description preflight. | [plan/STAGE_3.md](plan/STAGE_3.md) |
 | 4. Fusion baselines | COMPLETE | Honest A+V baselines and strong-audio fusion search; no safe robust winner. | [plan/STAGE_4.md](plan/STAGE_4.md) |
 | 5. RAMPS | CLOSED TO OPTIMIZATION | Optimization/search is complete. Matched-seed audio confirmation superseded the prior negative robustness interpretation; R4 is retained as the leading Stage-6 candidate, not yet a final promoted method. | [plan/STAGE_5.md](plan/STAGE_5.md) |
 | 6. Ablations / claims audit | COMPLETE | Core A+V evidence matrix complete; claims frozen in STAGE6_CLAIM_LEDGER_EN.md. | [plan/STAGE_6.md](plan/STAGE_6.md) |
-| 7. Final evaluation | LOCKED | Final multi-seed evaluation only after configuration/claim freeze and manager authorization. | [plan/STAGE_7.md](plan/STAGE_7.md) |
+| 7. Final evaluation | ACTIVE | Finalist/config/seed/statistical freeze, then missing-seed training, then separate final Test reporting after checkpoint freeze. | [plan/STAGE_7.md](plan/STAGE_7.md) |
 
 ## 4. Frozen Scientific References
 
@@ -141,39 +141,34 @@ Authoritative synthesis:
 
 No further core A+V tuning, Stage-5 reopening, or Stage-6 mechanism search is authorized.
 
-## 7. Active Task — TASK-003E
+## 7. Active Task — TASK-007A
 
-Purpose: create the authoritative **Stage-3 Text/Description synthesis and closure dossier**.
+Purpose: freeze and verify the **final Stage-7 compared-method set, seeds, configs, statistics, and Test firewall** before any new production run.
 
-No compute is authorized.
+Manager-selected final compared methods, using DEV-only pre-final evidence:
 
-The dossier must consolidate:
+1. frozen temporal audio baseline;
+2. full optimized R4 trial012;
+3. equal-parameter shared-fusion trial012 candidate.
 
-- TASK-003A transcript contract;
-- TASK-003B frozen T1 implementation/cache identity;
-- TASK-003C three-seed T1 standalone evidence;
-- TASK-003D blocked T2 observable-description preflight.
+Frozen final seeds for every method:
 
-The Stage-3 family budget is exhausted:
+`42, 43, 44, 45, 46`.
 
-- T1 is the one implemented pretrained transcript family;
-- T2 is the one attempted transcript+description family and is blocked before implementation under its frozen safety/concision gate;
-- no third text encoder, description generator, prompt variant, or T2 remediation family is authorized.
+Accepted existing seeds42-44 are reused and MUST NOT be rerun. TASK-007A creates only seed45/46 clones and verifies all frozen identities.
 
-The dossier must also create a descriptive pre-Stage-7 candidate inventory from the frozen Stage-5/6/3 evidence. It must not promote, demote, or finally select any method; that remains a separate manager decision after TASK-003E.
-
-Full executable requirements are authoritative in [NEXT_TASK_EN.md](NEXT_TASK_EN.md).
+Final Test remains unauthorized in TASK-007A. The next production task, if this freeze passes manager review, will run exactly six missing seed45/46 trainings. A later separate task will inspect/run final TEST_NONE/SOFT/HARD only after all five selected checkpoints per method are frozen.
 
 ## 8. Non-Negotiable Current Boundaries
 
 - Do not tune or modify `src/audio`.
 - Do not reopen Stage-5 optimization or Stage-6 A+V tuning.
-- Frozen Stage-5/6 seeds and A+V evidence are not Text/Description tuning targets beyond contextual comparison.
+- Frozen Stage-5/6/3 evidence is now selection history only; no final-method tuning or family changes are authorized.
 - Unknown labels remain masked, never converted to negative.
 - Observed ground truth overrides pseudo labels.
 - Test metrics cannot drive epoch, architecture, hyperparameter, threshold, ablation, or follow-up selection.
-- Text/Description is now ACTIVE but bounded to the Stage-3 two-family budget.
-- Stage 7 and Final Test remain locked until Stage 3 is complete and manager authorizes final evaluation.
+- Stage 3 Text/Description is COMPLETE; do not reopen its family/model/prompt search.
+- Stage 7 is ACTIVE, but Final Test remains locked until all five checkpoints for every frozen compared method are selected and manager authorizes the separate final-Test task.
 - Do not claim verified recovery of genuinely missing disease labels or comorbidity without dual-annotated evidence.
 
 ## 9. Recent Authoritative Manager Decisions
@@ -468,6 +463,24 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - no full description cache, T2 model, training, performance metric, prompt variant, or generator switch is authorized;
 - the Stage-3 two-family budget is now exhausted: T1 completed, T2 blocked;
 - next sole atomic task is TASK-003E, a documentation-only Stage-3 synthesis/closure dossier and pre-Stage-7 candidate inventory.
+
+### MANAGER-DECISION-078 — Accept TASK-003E; close Stage 3; activate Stage 7 with frozen compared-method set
+
+- TASK-003E passed manager review and was merged via PR #85;
+- exact Stage-3 synthesis results are `STAGE-3 TEXT/DESCRIPTION EVIDENCE MATRIX COMPLETE` and `STAGE-3 TWO-FAMILY BUDGET EXHAUSTED`;
+- Stage 3 is CLOSED: T1 is a completed standalone three-seed text baseline; T2 is blocked before implementation/training; no third text/description family is authorized;
+- Stage 7 is ACTIVATED, but Final Test remains LOCKED;
+- manager freezes the Stage-7 compared-method set using DEV-only evidence, before seeds45/46 and before any final-Test use:
+  1. frozen temporal audio baseline;
+  2. full R4 trial012;
+  3. equal-parameter shared-fusion trial012 candidate;
+- rationale: audio is the mandatory frozen/stable anchor; full R4 is the optimized multimodal reference; shared fusion is the matched equal-parameter single-model comparator that exceeded full Mean on all existing 3/3 seeds while TASK-006I did not support a task-aware-fusion contribution;
+- T1 is not selected as a final method because its three-seed Mean `0.7357653333` is below matched audio/R4 and its Mean std `0.0646553057` is high; it remains required standalone text evidence;
+- T2 is ineligible because its generation contract is blocked;
+- no-semantic-depression is not selected because its D regression versus full is `0.020809`, despite higher P/aggregate Mean, creating a material task trade-off;
+- paired task-isolated is not selected because it is a two-model, non-equal-deployment-size diagnostic control;
+- frozen final seeds are `42,43,44,45,46`; accepted existing seeds42-44 are reused, not rerun;
+- TASK-007A is freeze/preflight only: create seed45/46 config clones, verify existing seed42-44 artifacts, freeze the statistical plan and Test firewall; no production training or Test inspection.
 
 ## 10. Historical Evidence
 
