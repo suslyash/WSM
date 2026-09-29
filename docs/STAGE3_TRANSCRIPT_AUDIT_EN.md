@@ -4,7 +4,7 @@ Status: TASK-003A complete; audit-only. External report: `/media/maxim/Programs/
 
 Report SHA256:
 
-`2dc2064aca131da0e80c103df1b8dd7a19d9735aa8c183e149392f7aafd1206b`
+`4254d81281522015d0633d6534e1616e925a2bf0130f67a37b541a2aacc2ed78`
 
 ## Scope and firewall
 
@@ -15,6 +15,8 @@ The audit used the canonical manifest implementation and derived only:
 It did not modify the dataset, train a model, download a model, create a config, inspect Test predictions or metrics, inspect Test lexical content, or select an encoder. The report contains no transcript text or snippets. Test lexical inspection is explicitly false; Test was audited structurally only.
 
 The pre-execution firewall passed on pushed commit `35a50c8`: help, synthetic plain/SRT/WebVTT/timestamped/JSON/invalid-UTF8/empty parser checks, overwrite refusal, raw-text schema guard, syntax, diff check, and empty source/config/dependency diff. The first full invocation exposed a script field-name defect before report creation; the narrowly corrected script was pushed as `f54649f`, after which the single successful audit completed. No dataset or conclusion was changed.
+
+The first report with SHA256 `2dc2064aca131da0e80c103df1b8dd7a19d9735aa8c183e149392f7aafd1206b` was rejected during manager review because TEST records carried language-analysis fields. It is superseded. Corrective firewall commit `b9a2d85` pushed the fix before the one authorized replacement report. TEST records now contain no `coarse_language` or `mixed_language` outputs; `test_language_audit_performed = false`, `test_lexical_inspection_performed = false`, and `test_predictions_or_metrics_inspected = false`.
 
 ## Canonical coverage
 
