@@ -1,12 +1,14 @@
 # WSM Stage 6 Detailed Plan
 
-Status: **ACTIVE**.
+Status: **COMPLETE**.
 
 This is a stage-specific detail file extracted from the former monolithic `docs/PLAN.md`.
 Read it only when the active task belongs to this stage or when historical plan detail is explicitly needed.
 Current project status is authoritative in [../PROGRESS_EN.md](../PROGRESS_EN.md).
 
 ### Stage 6 — Ablations and claims audit
+
+Frozen completion: `CORE STAGE-6 A+V EVIDENCE MATRIX COMPLETE`. The authoritative supported/not-supported/diagnostic ledger is [../STAGE6_CLAIM_LEDGER_EN.md](../STAGE6_CLAIM_LEDGER_EN.md). No further core A+V tuning is authorized.
 
 Required:
 
