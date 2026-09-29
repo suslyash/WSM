@@ -159,9 +159,9 @@ def _aggregate_counts(records: list[dict[str, Any]]) -> dict[str, Any]:
                 "unique_videos": len(group),
                 "videos_with_nonempty_transcript": len(present),
                 "video_coverage": len(present) / len(group) if group else 0.0,
-                "canonical_segments": sum(item["segment_count"] for item in group),
-                "segments_with_transcript": sum(item["segment_count"] for item in present),
-                "segment_coverage": sum(item["segment_count"] for item in present) / sum(item["segment_count"] for item in group) if group else 0.0,
+                "canonical_segments": sum(item["canonical_segment_count"] for item in group),
+                "segments_with_transcript": sum(item["canonical_segment_count"] for item in present),
+                "segment_coverage": sum(item["canonical_segment_count"] for item in present) / sum(item["canonical_segment_count"] for item in group) if group else 0.0,
             }
     return output
 
