@@ -1,450 +1,297 @@
-# TASK-003B: Freeze and Implement the T1 Video-Level Transcript Pipeline
+# TASK-003C: Frozen T1 Three-Seed Production Evaluation
 
 ## Authority and branch
 
-This task follows **MANAGER-DECISION-074**.
+This task follows **MANAGER-DECISION-075**.
 
 Required branch:
 
-    codex/task-003b
+    codex/task-003c
 
 Start from current manager-updated `origin/main`.
 
-This task implements and freezes T1, but **does not run production training**.
+This task is production evidence only. The T1 family is frozen.
 
-## Frozen scientific/data contract
+## Frozen T1 identity
 
-TASK-003A established:
-
-    SEGMENT TEXT ALIGNMENT NOT ESTABLISHED
-    T1 TEXT UNIT SHOULD BE VIDEO-LEVEL TRANSCRIPT
-    T1 TRANSCRIPT DATA CONTRACT READY
-
-Authoritative audit report:
-
-    /media/maxim/Programs/Features/WSM/stage3_text_audit/transcript_source_audit_v1.json
-
-SHA256:
-
-    4254d81281522015d0633d6534e1616e925a2bf0130f67a37b541a2aacc2ed78
-
-Canonical facts:
-
-- 8,622 segments;
-- 755 unique `(corpus, split, video_id)` groups;
-- 754 plain-text files;
-- one missing transcript: TRAIN availability gap;
-- zero decode errors;
-- no cross-split exact transcript-content hashes;
-- three within-TRAIN duplicate hashes;
-- no explicit segment timing metadata;
-- zero parseable transcript timestamps.
-
-Do not invent segment text.
-
-## Frozen T1 family
-
-There is exactly one T1 encoder/model family. No encoder search is allowed.
-
-Frozen pretrained encoder:
+Encoder:
 
     FacebookAI/xlm-roberta-base
 
-Frozen revision:
+Requested revision:
 
     e73636d
 
-Expected model.safetensors SHA256:
+Resolved commit:
+
+    e73636d4f797dec63c3081bb6ed5c7b0bb3f2089
+
+Model weight SHA256:
 
     6fd4797bc397c3b8b55d6bb5740366b57e6a3ce91c04c77f22aafc0c128e6feb
 
-Use `AutoTokenizer(..., use_fast=True)` and `AutoModel`.
-
-The encoder is **fully frozen** and used only for offline feature extraction.
-
-Do not fine-tune it.
-
-Do not compare it against another text encoder.
-
-## Frozen chunking and feature extraction
-
-For every present video-level transcript:
-
-1. decode UTF-8/UTF-8-SIG using the accepted TASK-003A contract;
-2. tokenize the complete transcript with no label/task/diagnosis prompt or metadata injected;
-3. do not truncate the document;
-4. split token IDs into consecutive, non-overlapping chunks of exactly at most 510 content tokens;
-5. add the encoder's normal single-sequence special tokens so every model input is at most 512 tokens;
-6. stride/overlap = 0;
-7. encoder in eval mode, no gradients;
-8. for every chunk, take final hidden states;
-9. mean-pool only valid **non-special** token positions;
-10. save one float32 768-d vector per chunk, preserving chunk order.
-
-Empty decoded text must be treated as unavailable, not as a fabricated zero feature.
-
-The one missing transcript remains unavailable.
-
-No labels, diagnosis, task ID, pseudo label, or corpus-specific prompt may enter feature extraction.
-
-Corpus/split/video identity may appear only in cache indexing/audit metadata.
-
-## External T1 cache
-
-Build exactly one external cache root:
+Cache root:
 
     /media/maxim/Programs/Features/WSM/text_t1_xlmr_v1
 
-Required index:
+Cache index SHA256:
 
-    /media/maxim/Programs/Features/WSM/text_t1_xlmr_v1/cache_index.json
+    4f276b60e8e423a1eab2d69a02782daa274fb183ae028a525f16df3adcf83ea8
 
-Feature artifact layout:
+Frozen downstream trainable parameter count:
 
-    features/<corpus>/<split>/<video_id>.pt
+    447746
 
-The cache builder MUST fail rather than overwrite an existing cache root/index.
+TRAIN contract:
 
-Every index entry must include at least:
+- 553 unique video-level transcript units;
+- depression 287;
+- Parkinson 266;
+- no segment replication in TRAIN.
 
-- corpus;
-- split;
-- video_id;
-- transcript source path;
-- transcript SHA256;
-- availability;
-- chunk count;
-- feature dimension;
-- artifact path/SHA256 when available;
-- encoder name;
-- requested revision;
-- resolved Hugging Face commit SHA;
-- model weight SHA256;
-- tokenizer identity/fingerprints;
-- max model length;
-- content tokens per chunk;
-- overlap/stride;
-- pooling rule;
-- feature dtype;
-- canonical manifest fingerprint;
-- TASK-003A report SHA.
+Evaluation contract:
 
-Global cache metadata must include package versions and extractor source version/fingerprint.
-
-Record cache-index SHA256 in PROGRESS.
-
-Do not store raw transcript text or token IDs in the committed repo or cache index.
-
-Feature artifacts may contain only numeric chunk features and reproducibility metadata, not raw text/token IDs.
+- DEV = 933 canonical segment rows;
+- TEST_NONE = 1364;
+- TEST_SOFT = 1208;
+- TEST_HARD = 1014;
+- each row loads its parent video's frozen transcript feature sequence.
 
 ## Allowed tracked files
 
 Only:
 
-- `src/chimera_plugin.py`
-- `src/text/__init__.py`
-- `src/text/features/__init__.py`
-- `src/text/features/xlmr_video_transcript.py`
-- `src/text/data/__init__.py`
-- `src/text/data/wsm_text_video_datamodule.py`
-- `src/text/models/__init__.py`
-- `src/text/models/t1_chunk_transformer.py`
-- `scripts/text/build_t1_xlmr_cache.py`
-- `configs/wsm_mm_pd_dep_v1/text/00_t1_xlmr_seed42.yaml`
-- `configs/wsm_mm_pd_dep_v1/text/01_t1_xlmr_seed43.yaml`
-- `configs/wsm_mm_pd_dep_v1/text/02_t1_xlmr_seed44.yaml`
 - `docs/PROGRESS_EN.md`
 
-No `src/audio/*` changes.
-No `src/video/*`, `src/fusion/*`, description, or common-source changes.
+No source changes.
+No config changes.
+No cache changes.
 No dependency changes.
+No new scripts.
 
-The three YAMLs are seed clones of **one** T1 family and do not count as three architecture families.
+If an implementation/config/cache defect is discovered, STOP and report the blocker. Do not patch it inside TASK-003C.
 
-## T1 DataModule contract
+An environment-only interruption before any optimizer step may be repeated with the exact same command only if documented. No metric-driven retry is allowed.
 
-Register:
+## Mandatory pre-run firewall
 
-    wsm_text_t1_datamodule
+Before seed42:
 
-Use the canonical manifest plus the existing canonical segment/protocol metadata.
+1. verify branch/base;
+2. verify working tree clean;
+3. verify cache index SHA256 exactly;
+4. verify all 754 artifact files referenced by the index exist;
+5. verify model/cache identities from TASK-003B;
+6. validate all three frozen configs;
+7. programmatically prove configs differ only by seed/run_name;
+8. instantiate all three configs;
+9. verify trainable parameter count = `447746`;
+10. verify TRAIN unit counts D287/P266/total553;
+11. verify evaluation membership counts 933/1364/1208/1014;
+12. one shape-only TRAIN batch and one shape-only DEV batch;
+13. no DEV/Test performance computation;
+14. `git diff --check`;
+15. `git diff origin/main -- src configs scripts pyproject.toml` must be empty;
+16. append firewall evidence to PROGRESS;
+17. commit and PUSH the firewall.
 
-### TRAIN
+No production run before the firewall commit is visible on origin.
 
-TRAIN dataset unit must be exactly one available `(corpus, video_id)` video-level transcript.
+## Exactly three production runs
 
-Do not create one training row per segment.
+Run exactly in this order:
 
-Expected available TRAIN units from TASK-003A:
+1. seed42;
+2. seed43;
+3. seed44.
 
-- depression: 287;
-- Parkinson: 266;
-- total: 553.
+Commands:
 
-For each grouped video:
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
+      --config-path configs/wsm_mm_pd_dep_v1/text/00_t1_xlmr_seed42.yaml
 
-- assert all canonical segments agree on the observed disease label;
-- target is two independent binary slots with NaN for the unknown task;
-- observed mask is `[true,false]` for depression corpus and `[false,true]` for Parkinson corpus;
-- load one cached ordered chunk-feature sequence.
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
+      --config-path configs/wsm_mm_pd_dep_v1/text/01_t1_xlmr_seed43.yaml
 
-The missing depression TRAIN transcript is excluded from text-only T1 training and counted explicitly as text unavailable.
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
+      --config-path configs/wsm_mm_pd_dep_v1/text/02_t1_xlmr_seed44.yaml
 
-If identical text exists in both corpus namespaces, keep the two canonical corpus/video training identities separate; do not merge them into synthetic dual annotation.
+No sweep.
+No hyperparameter change.
+No architecture change.
+No cache change.
+No extra seed.
+No retry for metric improvement.
 
-### DEV / TEST evaluation
+## DEV selection / Test firewall
 
-DEV and TEST protocol datasets remain **canonical segment rows**.
+For each seed:
 
-Each segment row loads its parent video's one cached transcript feature sequence.
+1. determine the selected checkpoint solely by maximum `dev/mean_score`;
+2. record selected epoch, checkpoint path, checkpoint SHA256, MLflow/run identity;
+3. freeze that checkpoint identity;
+4. only after freeze, read the same-epoch TEST_NONE/SOFT/HARD monitoring metrics.
 
-This deliberate evaluation broadcast is only to reproduce the project's primary segment-level metric protocol.
+Test metrics may be reported for traceability but MUST NOT influence:
 
-It MUST NOT be used for TRAIN.
+- checkpoint selection;
+- model-family judgment;
+- T2 design;
+- thresholds;
+- follow-up.
 
-Expose separately named evaluation streams so every epoch can report:
+## Required primary DEV evidence
 
-- `dev`;
-- `test_none`;
-- `test_soft`;
-- `test_hard`.
+For each seed at the selected checkpoint record:
 
-Test remains monitoring-only and may not drive selection.
+Depression:
+- UAR;
+- MF1;
+- Score.
 
-No Test lexical/manual inspection is authorized.
+Parkinson:
+- UAR;
+- MF1;
+- Score.
 
-### Batch contract
+Aggregate:
+- Mean_Score.
 
-Collate to:
+Compute across seeds42/43/44:
 
-- `inputs["text"]`: float tensor `[B,C,768]`;
-- `masks["text_mask"]`: bool `[B,C]`;
-- targets: float `[B,2]` with NaN unknowns;
-- `masks["observed_mask"]`: bool `[B,2]`;
-- metadata with canonical IDs/protocol identity.
+- D Score mean / sample std / range;
+- P Score mean / sample std / range;
+- Mean_Score mean / sample std / range.
 
-Every sample must have at least one valid chunk.
+No significance claim is authorized from three seeds.
 
-Context must publish text feature dim, task names/count, class names, cache fingerprint/index SHA, and train/eval unit semantics.
+## Secondary DEV video-unit audit
 
-## T1 model contract
+Because T1 is trained on one transcript per video while the primary protocol is segment weighted, perform one post-freeze DEV diagnostic for each selected checkpoint:
 
-Register:
+- deduplicate DEV by canonical `(corpus, video_id)`;
+- evaluate each unique video's prediction exactly once;
+- use the same observed-task mask and UAR/MF1/Score definitions;
+- report D/P/Mean at unique-video level.
 
-    wsm_text_t1_chunk_transformer
+Do not use video-level DEV metrics to select checkpoints.
 
-Inputs are frozen cached chunk vectors.
+Report segment-level minus unique-video-level differences so transcript broadcast weighting is transparent.
 
-Frozen architecture:
+Do not compute a Test video-level diagnostic.
 
-- input dim 768;
-- hidden dim 192;
-- input LayerNorm + Linear(768,192) + GELU + Dropout(0.20);
-- deterministic sinusoidal chunk-position encoding generated at runtime;
-- one `TransformerEncoderLayer`;
-- 4 attention heads;
-- feed-forward width = 384;
-- dropout = 0.20;
-- `batch_first=True`;
-- `norm_first=True`;
-- one encoder layer only;
-- final LayerNorm;
-- mask-aware mean pooling over valid chunks;
-- two independent disease heads, each:
-  - LayerNorm(192);
-  - Dropout(0.20);
-  - Linear(192,1).
+## DEV calibration audit
 
-Output:
+After checkpoint freeze, DEV only:
 
-    ModelOutput.preds shape [B,2]
+For each seed/task report:
 
-No task ID enters the model.
+- observed sample count;
+- Brier score;
+- ECE-15.
 
-Both logits are always produced, so simultaneous positives remain possible.
+Primary calibration is segment-level to match the primary protocol.
 
-## Loss and optimizer
+No threshold fitting/recalibration.
 
-Reuse existing:
+## Contextual frozen comparisons
 
-    wsm_masked_sparse_loss
+Compare T1 three-seed DEV means descriptively against:
 
-Unknown target slots remain masked and never become negatives.
+Matched temporal audio three-seed:
+- D `0.7303377965`;
+- P `0.8162961212`;
+- Mean `0.7733169588`;
+- Mean std `0.0138512531`.
 
-Optimizer:
+Full R4 trial-012 three-seed:
+- D `0.7352563333`;
+- P `0.8385606667`;
+- Mean `0.7869088179`;
+- Mean std `0.0294384420`.
 
-    adamw_optimizer
-    lr: 0.0001
-    weight_decay: 0.01
+Accepted Stage-2 V2 video reference, contextual single-run only:
+- D `0.6201013364`;
+- P `0.7930427585`;
+- Mean `0.7065720475`.
 
-Train settings for future production:
+These are not architecture-equivalent comparisons.
 
-- epochs: 30;
-- mixed precision: true;
-- grad clip: 0.5;
-- batch size: 32;
-- early stopping patience: 6;
-- min_delta: 0.0005.
+Do NOT claim that text “adds” to A+V from T1 alone. T1 is a standalone text-stream baseline.
 
-No hyperparameter sweep.
+## TASK-003C conclusion
 
-## Configs
+Do not invent a component-contribution gate.
 
-Create the three seed-clone configs now, but do not execute production training.
+Record exactly:
 
-Required run names:
+    T1 THREE-SEED TEXT BASELINE COMPLETE
 
-- seed42: `stage3_t1_xlmr_video_text_seed42`
-- seed43: `stage3_t1_xlmr_video_text_seed43`
-- seed44: `stage3_t1_xlmr_video_text_seed44`
+if all three frozen runs complete and all required evidence is traceable.
 
-All config semantics must be identical except seed/run_name.
+Otherwise record exactly:
 
-Every config must include required instrumentation:
+    T1 THREE-SEED TEXT BASELINE INCOMPLETE
 
-- `wsm_segment_metrics_callback`;
-- checkpoint callback on `dev/mean_score`, max;
-- early stopping on `dev/mean_score`, max;
-- snapshot;
-- summary;
-- console logger;
-- MLflow logger.
+and name the concrete missing evidence.
 
-Every epoch-level evaluation must expose DEV and TEST_NONE/SOFT/HARD metrics, but only DEV may drive checkpoint/early stopping.
-
-## Implementation/cache firewall
-
-Before building the full external cache:
-
-1. implement the encoder wrapper/cache builder/DataModule/model/configs/plugin registration;
-2. plugin imports with no project-module warnings;
-3. registry keys resolve;
-4. configs validate;
-5. synthetic transcript tests prove:
-   - <510 content tokens => one chunk;
-   - >510 => ordered multiple chunks;
-   - no overlap;
-   - no truncation;
-   - special tokens excluded from pooling;
-   - raw text/token IDs absent from artifact metadata;
-6. verify the requested HF revision resolves;
-7. verify downloaded model.safetensors SHA256 matches the frozen value;
-8. verify encoder parameters `requires_grad=false` and extraction under no-grad/eval;
-9. verify cache builder refuses overwrite;
-10. verify no label/task/corpus prompt enters encoder input;
-11. verify `git diff --check`;
-12. verify `git diff origin/main -- src/audio src/video src/fusion src/description src/common pyproject.toml` empty;
-13. append firewall evidence to PROGRESS;
-14. commit and PUSH the firewall.
-
-No full cache build before firewall is visible on origin.
-
-## Build the full T1 cache exactly once
-
-After firewall push, run exactly:
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python       scripts/text/build_t1_xlmr_cache.py       --data-root /media/maxim/Databases/WSM_NEW       --audit-report /media/maxim/Programs/Features/WSM/stage3_text_audit/transcript_source_audit_v1.json       --output-root /media/maxim/Programs/Features/WSM/text_t1_xlmr_v1
-
-No model-family alternative or parameter variant is allowed.
-
-A pure runtime bug may be corrected only transparently with a pushed corrective firewall before a replacement cache build.
-
-## Post-cache verification
-
-Before final commit:
-
-1. verify cache index SHA256;
-2. verify expected 755 canonical video entries;
-3. verify available/missing counts exactly match TASK-003A;
-4. verify every present transcript SHA matches the audit report;
-5. verify feature artifact SHA and metadata;
-6. verify all chunk features finite float32 `[C,768]`, `C>=1`;
-7. verify no raw text/token IDs stored;
-8. instantiate all three configs from the frozen cache;
-9. TRAIN dataset counts exactly D287/P266/total553;
-10. verify no duplicate TRAIN `(corpus,video_id)` unit;
-11. verify DEV and TEST protocol segment membership matches canonical existing protocol counts;
-12. one TRAIN batch forward/loss/backward:
-    - finite loss;
-    - finite nonzero model gradients;
-    - masked unknown slots do not affect loss;
-13. one shape-only batch load from each evaluation stream;
-14. do NOT compute or inspect DEV/Test performance metrics;
-15. verify seed configs differ only seed/run_name;
-16. final scope checks.
-
-This task may inspect tensor shapes and IDs from Test loaders, but must not inspect Test text manually or calculate model-performance metrics.
-
-## No production training
-
-TASK-003B MUST NOT:
-
-- run `chimera-ml train` for a production epoch;
-- report DEV/Test model performance;
-- select a checkpoint;
-- tune hidden size/layers/dropout/chunking/encoder;
-- compare another encoder.
-
-The next manager task, if this pipeline passes review, will run the frozen T1 family on seeds42/43/44.
+The metric level does not determine task completion; execution integrity does.
 
 ## Required PROGRESS evidence
 
 Record:
 
 - branch;
-- frozen encoder/revision and resolved commit;
-- model weight SHA;
-- chunking/pooling contract;
-- cache path/index SHA;
-- canonical/cache counts;
-- TRAIN unique-video counts;
-- evaluation segment/protocol counts;
-- registered keys;
-- model trainable parameter count;
-- smoke forward/loss/backward evidence;
-- no performance metrics inspected;
-- no production training;
-- no source changes outside allowed scope;
+- firewall SHA;
+- final SHA;
+- cache/index identity;
+- exactly three production commands/run identities;
+- selected epochs/checkpoint paths/SHA256;
+- per-seed primary DEV D/P/Mean evidence;
+- three-seed mean/std/range;
+- unique-video DEV secondary metrics and segment-minus-video differences;
+- DEV Brier/ECE-15;
+- same-epoch Test monitoring only after checkpoint freeze;
+- contextual audio/R4/video comparison;
+- exact T1 completion string;
+- no config/source/cache changes;
+- no tuning/retry;
 - Stage 3 active;
-- Stage 7/Final Test locked.
+- Stage 7 and Final Test locked.
 
 ## Final scope checks
 
 Run:
 
     git diff --check
-    git diff origin/main -- src/audio
-    git diff origin/main -- src/video
-    git diff origin/main -- src/fusion
-    git diff origin/main -- src/description
-    git diff origin/main -- src/common
+    git diff origin/main -- src
+    git diff origin/main -- configs
+    git diff origin/main -- scripts
     git diff origin/main -- pyproject.toml
     git status --short
     git diff --stat origin/main...HEAD
-    git log -12 --oneline --decorate
+    git log -10 --oneline --decorate
 
-Only authorized files may differ.
+Only PROGRESS may differ.
 
 ## Acceptance criteria
 
-TASK-003B passes only if:
+TASK-003C passes only if:
 
-- branch exactly `codex/task-003b`;
-- one and only one T1 family is implemented;
-- video-level TRAIN unit is enforced;
-- segment-level evaluation broadcast is explicit and TRAIN-safe;
-- frozen encoder/cache fingerprint is reproducible;
-- encoder is frozen;
-- no labels/prompts enter extraction;
-- cache counts/fingerprints pass;
-- required Chimera registrations/configs pass;
-- smoke backward passes;
-- DEV/Test performance is not inspected;
-- no production training occurs;
+- branch exactly `codex/task-003c`;
+- frozen cache/config/model identities match TASK-003B;
+- no source/config/cache changes;
+- firewall pushed before production;
+- exactly three completed production runs in seed order 42/43/44;
+- DEV/Mean_Score is the sole selector;
+- Test monitoring is inspected only after selected checkpoint freeze and is not decision-driving;
+- primary segment metrics, secondary unique-video DEV metrics, and DEV calibration are recorded;
+- no tuning, sweep, threshold search, or extra seed;
+- exact T1 completion string is correct;
 - branch pushed;
 - main/master untouched.
 
-Passing TASK-003B authorizes no production run automatically.
+Passing TASK-003C closes only the T1 standalone baseline. It authorizes no T2 implementation automatically.
 
 ## Required handoff
 
@@ -457,10 +304,10 @@ Respond in English using exactly:
 5. Blockers and risks
 6. Next atomic step
 
-Include branch, firewall/final SHA, pushed status, main/master untouched, encoder/revision/resolved commit/model SHA, cache path/index SHA, cache counts, TRAIN unique-video counts, eval protocol counts, registry/config validation, trainable parameter count, smoke loss/gradient result, no performance metrics, no production training, Stage 3 active, Stage 7/Final Test locked.
+Include branch, firewall/final SHA, pushed status, main/master untouched, run count/order, per-seed and aggregate primary DEV metrics, unique-video DEV diagnostics, DEV calibration summary, selected checkpoint identities, Test-monitoring boundary, contextual comparator summary, exact T1 completion string, no tuning/source/config/cache changes, Stage 3 active, Stage 7/Final Test locked.
 
 For section 6 write only:
 
-    Manager review of TASK-003B; do not start another task.
+    Manager review of TASK-003C; do not start another task.
 
 Stop.
