@@ -32,6 +32,9 @@ _MODULES_TO_REGISTER: tuple[str, ...] = (
     "video.models.depart_v1",
     "video.models.depart_v2",
     "video.data.wsm_video_cache_datamodule",
+    "text.features.xlmr_video_transcript",
+    "text.data.wsm_text_video_datamodule",
+    "text.models.t1_chunk_transformer",
 )
 
 
