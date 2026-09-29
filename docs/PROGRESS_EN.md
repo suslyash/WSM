@@ -1080,3 +1080,28 @@ Pseudo coverage remained unchanged: accepted D/P 376/1801; accepted classes D po
 Same-epoch Test monitoring was read only after active-task checkpoint freeze: D42 NONE/SOFT/HARD 0.465976/0.593093/0.594806; P42 0.576740/0.707599/0.713087; D43 0.535903/0.634482/0.640188; P43 0.495735/0.651528/0.631796; D44 0.395258/0.578021/0.580933; P44 0.519774/0.707595/0.714565. Test did not affect selection, claim, or follow-up, and no Test rows entered post-hoc diagnostics.
 
 Final scope checks passed: git diff --check; model, DataModule, callbacks, audio, and video diffs against origin/main are empty; only the authorized R4 loss file, configs58–63, and this ledger differ. No sparse-MTL significance, pseudo-label correctness, missing-label/comorbidity recovery, promotion, or demotion claim is made. Stage 6 remains active pending manager review; Stage 5 remains closed; Stage 7, Text/Description, and Final Test remain locked.
+
+### TASK-006K — Stage-6 claim ledger and completeness matrix
+
+Status: complete as a documentation-only synthesis; Stage 6 remains active pending manager review. Branch: codex/task-006k. Added [docs/STAGE6_CLAIM_LEDGER_EN.md](STAGE6_CLAIM_LEDGER_EN.md), mapping all Stage-6 plan items 1–10 and the required DEV, calibration, pseudo-coverage/class-balance, gradient/controller, negative-transfer, and gate diagnostics to accepted evidence.
+
+Exact completeness result: `CORE STAGE-6 A+V EVIDENCE MATRIX COMPLETE`.
+
+Supported claims preserved exactly:
+- `DIRECT PSEUDO-SUPERVISION CONTRIBUTION SUPPORTED`
+- `UNCERTAINTY/RELIABILITY CONTRIBUTION SUPPORTED`
+- `ONLINE AUDIO INPUT MODALITY CONTRIBUTION SUPPORTED`
+- `SAMPLE-SPECIFIC PSEUDO ALIGNMENT CLAIM SUPPORTED BY THIS NEGATIVE CONTROL`
+
+Unsupported claims preserved exactly:
+- `SPARSE MTL JOINT-TRAINING CONTRIBUTION NOT SUPPORTED`
+- `TASK-AWARE FUSION CONTRIBUTION NOT SUPPORTED`
+- `SEMANTIC-EVIDENCE CONTRIBUTION VIA DEPRESSION PSEUDO ACCEPTANCE NOT SUPPORTED`
+- `RA-STCH BALANCING CONTRIBUTION OVER EQUAL NOT SUPPORTED`
+- `RA-STCH ADVANTAGE OVER SIMPLER BALANCING NOT SUPPORTED`
+- `VIDEO MODALITY CONTRIBUTION NOT SUPPORTED`
+- `FUSION AMPLIFICATION OF CORPUS DECODABILITY NOT SUPPORTED`
+
+Diagnostic-only findings preserved: `STRONG CORPUS-ID DECODABILITY FLAG NOT TRIGGERED`; no causal corpus-shortcut claim. TASK-006J is recorded accurately as 7 total invocations, with the first D42 failure before DEV/Test/checkpoint selection, corrective firewall, and six accepted completed runs in order D42/P42/D43/P43/D44/P44; no metric-driven retry or tuning.
+
+Candidate implications remain descriptive: full R4, matched audio, shared-fusion, no-semantic, paired task-isolated, no-video, and no-audio reference facts are recorded without promotion, demotion, or final-method selection. No run, source, config, script, cache, or Test-based decision occurred in TASK-006K. Stage 3 Text/Description remains deferred pending manager activation; Stage 7 and Final Test remain locked. Manager review is required before any next task.
