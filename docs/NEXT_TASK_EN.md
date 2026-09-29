@@ -1,312 +1,299 @@
-# TASK-007B: Missing Final Seeds and Five-Seed DEV Checkpoint Freeze
+# TASK-007C: Separate Frozen-Checkpoint Final Test Evaluation
 
 ## Authority and branch
 
-This task follows **MANAGER-DECISION-079**.
+This task follows **MANAGER-DECISION-080**.
 
 Required branch:
 
-    codex/task-007b
+    codex/task-007c
 
-Start from current `origin/main`.
+Start from current manager-updated `origin/main`.
 
-This task is the final **DEV-only production evidence** task before Final Test.
+This is the only authorized Final Test task.
 
-Final Test remains locked.
+## Frozen pre-Test state
 
-## Frozen compared methods and seeds
+All 15 checkpoints are frozen and verified.
 
-Methods are fixed:
+Methods/roles are frozen BEFORE Test:
 
-1. frozen temporal audio;
-2. full R4 trial012;
-3. equal-parameter shared fusion.
+1. **primary paper candidate:** equal-parameter shared fusion;
+2. **secondary multimodal reference:** full R4 trial012;
+3. **baseline:** frozen temporal audio.
 
-Seeds are fixed:
+Seeds for every method:
 
     42, 43, 44, 45, 46
 
-Accepted seeds42-44 MUST NOT be retrained.
+Do not change these roles based on Test results.
 
-Do not add/drop/replace a method after seeing seed45/46.
+Authoritative DEV dossier:
+
+    docs/STAGE7_FINAL_DEV_EVIDENCE_EN.md
+
+Exact DEV completion:
+
+    STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE COMPLETE
+
+Frozen five-seed DEV Mean:
+
+- audio: `0.765145`, 95% CI `[0.746230,0.784059]`;
+- full R4: `0.790057`, 95% CI `[0.763530,0.816583]`;
+- shared fusion: `0.790914`, 95% CI `[0.766258,0.815571]`.
+
+Frozen paired DEV Mean CIs:
+
+- full R4 - audio: `[0.001169,0.048655]`;
+- shared - audio: `[0.009556,0.041984]`;
+- shared - full R4: `[-0.009704,0.011419]`.
+
+No Test result may cause a model/config/checkpoint/threshold/role change.
+
+## Final Test protocols
+
+Evaluate exactly:
+
+- `test_none`;
+- `test_soft`;
+- `test_hard`.
+
+Canonical total membership must be:
+
+- TEST_NONE: `1364`;
+- TEST_SOFT: `1208`;
+- TEST_HARD: `1014`.
+
+Use the canonical per-task observed-label mask. Unknown labels remain ignored.
+
+Primary metrics for every checkpoint/protocol:
+
+- depression UAR;
+- depression MF1;
+- depression Score = (UAR + MF1)/2;
+- Parkinson UAR;
+- Parkinson MF1;
+- Parkinson Score = (UAR + MF1)/2;
+- Mean_Score = (D Score + P Score)/2.
+
+Classification threshold remains frozen:
+- binary-logit models: raw logit >= 0;
+- historical two-class audio42 path: class argmax, equivalently class1-class0 margin >= 0.
+
+No threshold fitting.
+No recalibration.
+No Test calibration analysis is required or authorized.
 
 ## Allowed tracked files
 
 Only:
 
-- `docs/STAGE7_FINAL_DEV_EVIDENCE_EN.md`
+- `scripts/common/evaluate_stage7_final_test.py`
+- `docs/STAGE7_FINAL_TEST_EVIDENCE_EN.md`
 - `docs/PROGRESS_EN.md`
 
-No source changes.
+No `src/*` changes.
 No config changes.
-No script changes.
 No cache changes.
 No dependency changes.
-No existing evidence edits.
+No checkpoint changes.
+No prior evidence-file edits.
 
-All six production configs already exist in `origin/main`.
+## External machine-readable report
 
-## Frozen six-run order
+Write exactly:
 
-Execute exactly:
+    /media/maxim/Programs/Features/WSM/stage7_final_test/final_test_v1.json
 
-1. audio seed45;
-2. full R4 seed45;
-3. shared fusion seed45;
-4. audio seed46;
-5. full R4 seed46;
-6. shared fusion seed46.
+The evaluator MUST refuse overwrite.
 
-Configs:
+The report must contain aggregate metric/count/checkpoint/config/run traceability only.
 
-- `configs/wsm_mm_pd_dep_v1/audio/03_final_seed45.yaml`
-- `configs/wsm_mm_pd_dep_v1/fusion/40_r4_trial012_final_seed45.yaml`
-- `configs/wsm_mm_pd_dep_v1/fusion/42_shared_fusion_final_seed45.yaml`
-- `configs/wsm_mm_pd_dep_v1/audio/04_final_seed46.yaml`
-- `configs/wsm_mm_pd_dep_v1/fusion/41_r4_trial012_final_seed46.yaml`
-- `configs/wsm_mm_pd_dep_v1/fusion/43_shared_fusion_final_seed46.yaml`
+Do NOT store:
+- raw logits;
+- raw probabilities;
+- per-sample predictions;
+- labels;
+- raw sample metadata beyond aggregate protocol counts.
 
-No retry for any failed production invocation inside TASK-007B.
+Record report SHA256 in the final docs.
 
-If any production command exits nonzero, STOP immediately, record which invocation failed and whether any optimizer step occurred if determinable without Test inspection, push an incomplete evidence update, and hand back to manager. Do not rerun it and do not continue to later jobs.
+## Evaluation-only script contract
 
-Poor DEV performance is NOT a failure and must not stop the sequence.
+Create:
 
-## Mandatory pre-run firewall
+    scripts/common/evaluate_stage7_final_test.py
 
-Before run 1:
+The script must:
 
-1. verify branch/base and clean working tree;
-2. verify `docs/STAGE7_FINAL_FREEZE_EN.md` is present and unchanged;
-3. verify the six config file SHA256 values and semantic identities against their references;
-4. validate all six configs;
-5. verify trainable parameter counts:
-   - audio `3033416`;
-   - full R4 `295239`;
-   - shared `295239`;
-6. verify semantic pseudo cache SHA256:
-   `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`;
-7. verify canonical audio/video feature/cache identities are unchanged;
-8. verify seed/run names and exact frozen order;
-9. verify checkpoint + early-stopping selectors are `dev/mean_score`, mode max;
-10. verify no tracked diff outside PROGRESS;
-11. do not iterate any Test loader;
-12. do not compute any metric;
+1. encode/read the frozen 15-checkpoint ledger from committed Stage-7 evidence without changing any identity;
+2. verify every checkpoint exists and SHA256 matches before evaluation;
+3. verify referenced configs exist and remain unchanged;
+4. load each model using the exact frozen architecture/config semantics;
+5. special-case historical audio42 ONLY through the already accepted `FrozenAudioTemporalAdapter` compatibility path;
+6. use current standard audio model for audio seeds43-46;
+7. use frozen R4/shared model semantics for fusion checkpoints;
+8. use canonical Test protocol membership;
+9. compute only the frozen UAR/MF1/Score/Mean metrics;
+10. write one atomic JSON report only after all required evaluations succeed;
+11. refuse overwrite;
+12. expose `--help`;
+13. support a DEV-only preflight mode that never constructs/iterates Test datasets when feasible;
+14. never train, optimize, fit a threshold, or mutate model state.
+
+No Test result-dependent branch is allowed in the evaluator.
+
+## Mandatory pre-Test firewall
+
+Before iterating ANY Test loader:
+
+1. implement the evaluator;
+2. run `--help`;
+3. run static/synthetic checks:
+   - metric formula;
+   - raw-logit threshold at 0;
+   - two-class margin/argmax equivalence;
+   - sparse observed-mask behavior;
+   - Student-t summary arithmetic;
+   - overwrite refusal;
+4. verify evaluator has exactly 15 frozen checkpoint entries, 3 methods × 5 seeds;
+5. verify all 15 checkpoint SHA256 values;
+6. verify all config paths;
+7. verify pseudo-cache SHA where relevant;
+8. verify no `src`, config, cache, dependency diff;
+9. perform DEV-only reproduction using the evaluator for ALL 15 checkpoints;
+10. require every reproduced D/P/Mean Score to match `docs/STAGE7_FINAL_DEV_EVIDENCE_EN.md` within absolute tolerance `0.0005`;
+11. verify audio42 raw-logit/legacy-argmax equivalence as established in TASK-007B;
+12. verify no Test dataset/loader iteration occurred during preflight;
 13. append firewall evidence to PROGRESS;
 14. `git diff --check`;
-15. commit and PUSH firewall.
+15. commit and PUSH the firewall.
 
-No production command before firewall commit is visible on origin.
+No Test loader may be iterated before the firewall commit is visible on origin.
 
-## Test-value blindness during training
+If DEV reproduction fails for any checkpoint, STOP. Do not inspect Test and do not fix source/config in TASK-007C.
 
-The existing training stack may compute mandatory epoch-level TEST_NONE/SOFT/HARD monitoring.
+## Exactly one final Test invocation
 
-During TASK-007B those values are forbidden evidence.
+After the pushed firewall, run exactly once:
 
-To minimize accidental exposure:
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
+      scripts/common/evaluate_stage7_final_test.py \
+      --data-root /media/maxim/Databases/WSM_NEW \
+      --audio-feature-cache-root /media/maxim/Databases/WSM_NEW/features \
+      --video-cache-root /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache \
+      --pseudo-cache-path /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt \
+      --output /media/maxim/Programs/Features/WSM/stage7_final_test/final_test_v1.json
 
-- run every training command with stdout/stderr redirected to an external temporary file under `/tmp`;
-- do not open/cat/tail/search the raw redirected stdout/stderr after a successful run;
-- do not open `summary.txt` or raw training logs if they contain Test values;
-- retrieve production evidence only from exact run/checkpoint metadata and MLflow queries restricted to `dev/` metric keys;
-- never enumerate, query, fetch, print, copy, compare, or summarize a Test metric key/value;
-- existing historical Test values are also irrelevant to this task.
+No second invocation for metric improvement.
 
-The fact that the stack computed monitoring does not authorize looking at it.
+If the invocation fails after Test evaluation begins:
+- do not edit model/config/evaluator logic;
+- preserve any failure evidence without exposing partial metrics as final;
+- stop and return to manager.
 
-## Exact production commands
+A process/environment retry with the identical committed evaluator is NOT automatically authorized; manager review is required.
 
-Use:
+## Frozen final statistics
 
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/audio/03_final_seed45.yaml \
-      >/tmp/wsm_stage7_audio45.stdout 2>&1
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/fusion/40_r4_trial012_final_seed45.yaml \
-      >/tmp/wsm_stage7_r4_45.stdout 2>&1
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/fusion/42_shared_fusion_final_seed45.yaml \
-      >/tmp/wsm_stage7_shared45.stdout 2>&1
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/audio/04_final_seed46.yaml \
-      >/tmp/wsm_stage7_audio46.stdout 2>&1
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/fusion/41_r4_trial012_final_seed46.yaml \
-      >/tmp/wsm_stage7_r4_46.stdout 2>&1
-
-    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/chimera-ml train \
-      --config-path configs/wsm_mm_pd_dep_v1/fusion/43_shared_fusion_final_seed46.yaml \
-      >/tmp/wsm_stage7_shared46.stdout 2>&1
-
-After each command, inspect only its exit status and filesystem/run identity. Do not read the redirected output on success.
-
-No sweep.
-No extra seed.
-No config/source/cache change.
-No retry.
-
-## New seed45/46 checkpoint selection
-
-For each successful new run:
-
-1. identify the exact run/MLflow identity by the frozen run_name;
-2. query only metric keys under `dev/`;
-3. select/freeze checkpoint exactly by maximum `dev/mean_score` under the existing checkpoint callback;
-4. record selected epoch;
-5. record full checkpoint path;
-6. compute checkpoint SHA256;
-7. record DEV D/P UAR/MF1/Score and Mean_Score at that selected epoch;
-8. do not query or inspect any Test key/value.
-
-Do not choose a different epoch based on calibration or any other diagnostic.
-
-## Freeze all fifteen checkpoint identities
-
-After all six jobs complete, assemble the final 15-checkpoint ledger:
-
-- audio seeds42-46;
-- full R4 seeds42-46;
-- shared fusion seeds42-46.
-
-For existing seeds42-44, use accepted checkpoint identities from `docs/STAGE7_FINAL_FREEZE_EN.md` and committed evidence.
-
-Resolve and verify the full local checkpoint path for every historical checkpoint by SHA256/run identity without rerunning training.
-
-For every one of the 15 record:
-
-- method;
-- seed;
-- config path;
-- run/MLflow identity when available;
-- selected epoch;
-- checkpoint path;
-- checkpoint SHA256.
-
-If an accepted historical MLflow ID was never recorded, do not invent one; retain the exact accepted run identity and mark MLflow ID as not recorded.
-
-All checkpoint paths must exist and every SHA must match.
-
-## Unified DEV-only evaluation for all 15 checkpoints
-
-After all 15 identities are frozen, perform exactly one DEV-only evaluation pass per checkpoint using the current frozen evaluation code.
-
-Never call/iterate a Test loader.
-
-Use the canonical DEV set and the same binary metric definition used by `wsm_segment_metrics_callback`.
-
-For every checkpoint/task record:
-
-- observed sample count;
-- UAR;
-- MF1;
-- Score.
-
-Record Mean_Score for every checkpoint.
-
-For historical seeds42-44, verify reproduced Score values against accepted evidence. Small floating serialization noise only is acceptable; investigate any material mismatch without touching Test.
-
-## DEV calibration — frozen procedure
-
-During the same DEV-only pass, compute probability = sigmoid(logit) on observed target rows only.
-
-Brier:
-
-    mean((probability - target)^2)
-
-ECE-15:
-
-- 15 equal-width confidence bins on [0,1];
-- bins 0-13 are left-closed/right-open;
-- final bin includes probability 1.0;
-- for each nonempty bin:
-  - confidence = mean(probability);
-  - accuracy = mean(binary target);
-  - contribution = (bin_count / N) * abs(accuracy - confidence);
-- ECE is the sum of contributions.
-
-No threshold fitting.
-No recalibration.
-No class balancing in calibration.
-
-For every method/seed/task record Brier and ECE-15.
-
-## Frozen five-seed statistics
-
-Use exactly the TASK-007A plan and multiplier:
+Use the same pre-Test-frozen multiplier:
 
     2.7764451051977987
 
-For each method and each of D Score, P Score, Mean_Score over seeds42-46 report:
+For EACH protocol independently (`test_none`, `test_soft`, `test_hard`):
+
+### Per-method five-seed summaries
+
+For D Score, P Score, Mean_Score report:
 
 - five seed values;
 - arithmetic mean;
-- sample std (`ddof=1`);
+- sample std, ddof=1;
 - min;
 - max;
 - range;
 - two-sided 95% Student-t CI:
   `mean ± 2.7764451051977987 * s / sqrt(5)`.
 
-For DEV Brier and ECE-15, per method/task report:
+### Paired same-seed comparisons
 
-- five values;
-- mean;
-- sample std;
-- same 95% CI.
+Compute:
 
-Do not replace the CI method after seeing results.
+1. full R4 - audio;
+2. shared - audio;
+3. shared - full R4.
 
-## Frozen paired comparisons
+For D/P/Mean report:
 
-Same-seed deltas for D/P/Mean:
-
-1. full R4 minus audio;
-2. shared fusion minus audio;
-3. shared fusion minus full R4.
-
-For every pair/metric report:
-
-- five seed deltas in seed order;
+- five seed deltas;
 - mean delta;
 - sample std;
-- same two-sided 95% Student-t CI.
+- same 95% Student-t CI.
 
-For Mean additionally report wins/ties/losses using exact numerical comparison of the frozen Score values.
+For Mean additionally report wins/ties/losses.
 
-These are descriptive paired comparisons. Do not change the finalist set regardless of outcome.
+Do not change the method roles regardless of Test outcomes.
 
-## Required evidence document
+Do not add another inferential test after seeing results.
+
+## DEV-to-Test generalization summary
+
+For each method/protocol report descriptively:
+
+    Test five-seed Mean - frozen DEV five-seed Mean
+
+using the already frozen DEV means.
+
+This is descriptive only.
+
+Do not tune or select from it.
+
+## Required final evidence document
 
 Create:
 
-    docs/STAGE7_FINAL_DEV_EVIDENCE_EN.md
+    docs/STAGE7_FINAL_TEST_EVIDENCE_EN.md
 
-It must contain:
+It must include:
 
-- frozen methods/seeds;
-- six new production run identities;
-- final 15-checkpoint ledger;
-- per-seed DEV D/P UAR/MF1/Score and Mean for all methods;
-- five-seed summaries/95% CIs;
-- paired delta tables/95% CIs;
-- DEV calibration tables and summaries;
-- explicit confirmation that Test values were not inspected;
-- explicit confirmation that no method/config/threshold changed after TASK-007A.
+- evaluator firewall SHA;
+- evaluator script SHA256;
+- external report path/SHA256;
+- commit/runtime/package identity;
+- all 15 checkpoint/config/run identities or an exact pointer to the frozen DEV ledger;
+- protocol membership counts;
+- per-seed D/P UAR/MF1/Score and Mean for all 15 checkpoints × 3 protocols;
+- per-protocol five-seed summary tables;
+- per-protocol paired delta/CI tables;
+- DEV-to-Test Mean deltas;
+- frozen pre-Test role assignment;
+- explicit no post-Test revision;
+- explicit no training/recalibration/threshold fitting;
+- the prior historical Test-line visibility exception, clearly separated from this standardized final evaluation.
 
-Record exactly on full success:
+Record exactly on success:
 
-    STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE COMPLETE
+    STAGE-7 FINAL TEST EVALUATION COMPLETE
 
-If any required run/checkpoint/evidence is missing, record:
+If anything is incomplete:
 
-    STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE INCOMPLETE
+    STAGE-7 FINAL TEST EVALUATION INCOMPLETE
 
-and name the exact missing evidence.
+and state the blocker.
+
+## Interpretation boundaries
+
+Final Test is reporting/generalization evidence, not a new selection set.
+
+Preserve:
+
+- shared fusion remains the preselected primary paper candidate even if another method has a higher Test point estimate;
+- full R4 remains the secondary multimodal reference;
+- audio remains baseline;
+- do not claim shared statistically outperforms full R4 unless a PREDECLARED paired 95% CI for the relevant frozen metric excludes zero;
+- do not claim missing-label correctness/comorbidity;
+- Stage-6 unsupported mechanism claims remain unsupported;
+- T1/T2 Stage-3 conclusions remain unchanged.
 
 ## PROGRESS update
 
@@ -315,18 +302,16 @@ Record:
 - branch;
 - firewall SHA;
 - final SHA;
-- exact six production commands and completion order;
-- six new run identities;
-- seed45/46 selected epoch/checkpoint path/SHA and DEV metrics;
-- all 15 frozen checkpoint identities;
-- five-seed DEV statistics;
-- paired comparisons;
-- DEV Brier/ECE-15;
+- evaluator script SHA;
+- external report SHA;
+- exact one Test invocation;
+- protocol counts;
+- per-method five-seed Test summaries;
+- paired summaries;
+- DEV-to-Test deltas;
+- no role/config/checkpoint/threshold revision;
 - exact completion string;
-- no retry/tuning/change;
-- Test values not inspected;
-- Final Test still locked;
-- Stage 7 active.
+- Stage 7 pending manager closure.
 
 ## Final scope checks
 
@@ -335,33 +320,32 @@ Run:
     git diff --check
     git diff origin/main -- src
     git diff origin/main -- configs
-    git diff origin/main -- scripts
     git diff origin/main -- pyproject.toml
     git status --short
     git diff --stat origin/main...HEAD
-    git log -10 --oneline --decorate
+    git log -12 --oneline --decorate
 
-Only `docs/STAGE7_FINAL_DEV_EVIDENCE_EN.md` and `docs/PROGRESS_EN.md` may differ from origin/main.
+Only the three authorized files may differ.
 
 ## Acceptance criteria
 
-TASK-007B passes only if:
+TASK-007C passes only if:
 
-- branch exactly `codex/task-007b`;
-- firewall pushed before production;
-- exactly six successful production invocations in frozen order;
-- no retry or extra seed;
-- no source/config/cache/dependency change;
-- selected checkpoints use DEV/Mean_Score only;
-- all fifteen checkpoint paths/SHA identities are frozen and verified;
-- unified DEV-only metrics/calibration are complete;
-- frozen five-seed CI/paired plans are applied exactly;
-- Test metric values are not inspected/transcribed/queried;
-- exact completion string is correct;
+- branch exactly `codex/task-007c`;
+- evaluator firewall pushed before ANY Test iteration;
+- DEV reproduction all 15 passes tolerance;
+- all 15 checkpoint SHAs remain exact;
+- exactly one standardized final Test invocation occurs;
+- TEST_NONE/SOFT/HARD membership is correct;
+- frozen metrics/statistics/pairs are applied exactly;
+- no model/config/checkpoint/threshold/role change;
+- no training;
+- no Test-driven retry/tuning;
+- machine-readable report and human-readable report are traceable;
 - branch pushed;
 - main/master untouched.
 
-Passing TASK-007B does NOT itself authorize reading Final Test. Manager must review and assign a separate TASK-007C.
+Passing TASK-007C does not authorize another experiment. Manager review will determine Stage-7/project closure documentation only.
 
 ## Required handoff
 
@@ -374,10 +358,10 @@ Respond in English using exactly:
 5. Blockers and risks
 6. Next atomic step
 
-Include branch, firewall/final SHA, pushed status, main/master untouched, six-run completion/order, new run/checkpoint identities, fifteen-checkpoint freeze status, five-seed DEV summaries/CIs, paired Mean comparison summary, DEV calibration summary, exact completion string, Test inspection=false, no retry/tuning/config/source/cache changes, Stage 7 active, Final Test locked.
+Include branch, firewall/final SHA, pushed status, main/master untouched, evaluator/report SHA, exact Test invocation count, protocol counts, five-seed Test means/CIs, paired Mean summaries, DEV-to-Test deltas, frozen role statement, no post-Test revision, exact completion string, Stage 7 pending manager closure.
 
 For section 6 write only:
 
-    Manager review of TASK-007B; do not start another task.
+    Manager review of TASK-007C; do not start another task.
 
 Stop.

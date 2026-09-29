@@ -4,19 +4,19 @@
 
 Plan initialized: 2026-09-23.
 
-Current stage: **Stage 7 — ACTIVE (complete five-seed DEV evidence and checkpoint freeze; Final Test locked)**.
+Current stage: **Stage 7 — ACTIVE (all checkpoints frozen; separate Final Test reporting authorized)**.
 
 Stage 5: **CLOSED TO OPTIMIZATION — R4 RETAINED AS LEADING MATCHED-SEED CANDIDATE**.
 
-Stage 7: **ACTIVE — MISSING-SEED PRODUCTION AUTHORIZED; FINAL TEST STILL LOCKED**.
+Stage 7: **ACTIVE — FINAL TEST REPORTING AUTHORIZED UNDER FROZEN CHECKPOINTS**.
 
-Final Test authorized: **no**.
+Final Test authorized: **yes — TASK-007C only, frozen reporting contract**.
 
-Current atomic task: **TASK-007B — six missing seed45/46 production runs and five-seed DEV checkpoint freeze**.
+Current atomic task: **TASK-007C — separate frozen-checkpoint Final Test evaluation and reporting**.
 
-Expected Codex branch: `codex/task-007b`.
+Expected Codex branch: `codex/task-007c`.
 
-`TASK-007A` is accepted and merged. The compared-method set, seeds42-46, six seed45/46 configs, statistical plan, paired-comparison plan, and Final-Test firewall are frozen. TASK-007B is authorized to run exactly the six missing jobs and to compute DEV-only five-seed evidence. Final Test remains locked and its epoch-level monitoring values must not be inspected.
+`TASK-007B` is accepted and merged. Exact result: `STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE COMPLETE`. All 15 checkpoint identities are SHA-verified and frozen. Manager has preselected equal-parameter shared fusion as the primary parsimonious paper candidate using DEV-only evidence; full R4 is the secondary multimodal reference and temporal audio is the frozen baseline. TASK-007C is the only authorized Final Test task and may not change models, checkpoints, configs, thresholds, or candidate roles after Test exposure.
 
 ## 2. Default Context Policy
 
@@ -141,36 +141,25 @@ Authoritative synthesis:
 
 No further core A+V tuning, Stage-5 reopening, or Stage-6 mechanism search is authorized.
 
-## 7. Active Task — TASK-007B
+## 7. Active Task — TASK-007C
 
-Purpose: complete the frozen Stage-7 five-seed DEV evidence for all three compared methods and freeze all fifteen selected checkpoint identities before any final Test reporting.
+Purpose: execute and report the **separate final TEST_NONE/SOFT/HARD evaluation** for the already frozen 15 checkpoints.
 
-Frozen compared methods:
+Pre-Test frozen roles:
 
-1. frozen temporal audio;
-2. full R4 trial012;
-3. equal-parameter shared fusion.
+1. **primary paper candidate:** equal-parameter shared fusion;
+2. **secondary multimodal reference:** full R4 trial012;
+3. **frozen baseline:** temporal audio.
 
-Frozen seeds: `42,43,44,45,46`.
+This role assignment is based only on frozen five-seed DEV evidence and Stage-6 parsimony evidence. Shared vs full DEV Mean is effectively tied under the paired CI; the primary role is a parsimony choice, not a statistical-superiority claim.
 
-Seeds42-44 remain accepted historical evidence and MUST NOT be retrained. Exactly six new jobs are authorized in the frozen order:
+No checkpoint, config, threshold, architecture, method role, or claim gate may change after Test exposure.
 
-1. audio45;
-2. full-R4-45;
-3. shared-45;
-4. audio46;
-5. full-R4-46;
-6. shared-46.
-
-No source/config/cache/dependency change is authorized. Checkpoint selection is DEV/Mean_Score only. Mandatory epoch-level Test monitoring may be computed by the existing stack, but its values must not be inspected, transcribed, queried, compared, or used in TASK-007B.
-
-After all six jobs complete, freeze all fifteen checkpoint paths/SHA256 values, run one DEV-only evaluation/calibration pass per checkpoint, and apply the already-frozen five-seed Student-t and paired-comparison plan.
+TASK-007C must first commit/push an evaluation-only script and DEV-reproduction firewall before any Test loader is iterated. It then performs exactly one standardized TEST_NONE/SOFT/HARD reporting pass per frozen checkpoint and writes the final Stage-7 report.
 
 Exact completion string on success:
 
-`STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE COMPLETE`.
-
-Final Test remains locked until manager reviews TASK-007B.
+`STAGE-7 FINAL TEST EVALUATION COMPLETE`.
 
 ## 8. Non-Negotiable Current Boundaries
 
@@ -181,7 +170,7 @@ Final Test remains locked until manager reviews TASK-007B.
 - Observed ground truth overrides pseudo labels.
 - Test metrics cannot drive epoch, architecture, hyperparameter, threshold, ablation, or follow-up selection.
 - Stage 3 Text/Description is COMPLETE; do not reopen its family/model/prompt search.
-- Stage 7 is ACTIVE, but Final Test remains locked until all five checkpoints for every frozen compared method are selected and manager authorizes the separate final-Test task.
+- Stage 7 Final Test is authorized only through TASK-007C under the frozen 15-checkpoint evaluator/reporting contract; no Test-driven revision is allowed.
 - Do not claim verified recovery of genuinely missing disease labels or comorbidity without dual-annotated evidence.
 
 ## 9. Recent Authoritative Manager Decisions
@@ -510,6 +499,21 @@ Only recent state-changing decisions are repeated here; older decisions are in t
 - TASK-007B is authorized to run exactly six missing jobs in order audio45, R4-45, shared45, audio46, R4-46, shared46, with no retry, extra seed, config change, or metric-driven stopping;
 - after the six jobs, TASK-007B must freeze all fifteen selected checkpoints and compute final five-seed DEV evidence only;
 - a separate manager-reviewed TASK-007C will be required before any final TEST_NONE/SOFT/HARD reporting.
+
+### MANAGER-DECISION-080 — Accept TASK-007B; freeze primary candidate; authorize separate Final Test reporting
+
+- TASK-007B passed manager review and was merged via PR #89;
+- exact completion is `STAGE-7 FIVE-SEED DEV CHECKPOINT FREEZE COMPLETE`;
+- all 15 checkpoint paths/SHA256 identities are frozen and verified for audio/full-R4/shared-fusion across seeds42-46;
+- the audio42 historical checkpoint was recovered and the accepted TASK-004H DEV result was reproduced exactly through raw-logit/legacy-argmax equivalent paths; the earlier `0.4367` diagnostic is superseded as an evaluation-path failure;
+- five-seed DEV Mean (95% CI): audio `0.765145 [0.746230,0.784059]`; full R4 `0.790057 [0.763530,0.816583]`; shared fusion `0.790914 [0.766258,0.815571]`;
+- paired Mean full-R4 minus audio CI is `[0.001169,0.048655]`; shared minus audio `[0.009556,0.041984]`; shared minus full R4 `[-0.009704,0.011419]`;
+- full R4 and shared each beat audio Mean on `5/5` frozen DEV seeds; shared vs full is effectively tied under the frozen paired CI;
+- manager preselects **equal-parameter shared fusion as the primary parsimonious paper candidate** before Test because it has the slightly higher five-seed DEV Mean, the same `295239` trainable parameter count as full R4, and TASK-006I found `TASK-AWARE FUSION CONTRIBUTION NOT SUPPORTED`;
+- this primary-role choice is a DEV-only parsimony decision, not a statistical-superiority claim;
+- full R4 remains the secondary multimodal reference; temporal audio remains the frozen baseline;
+- TASK-007C is authorized as the one separate Final Test reporting task;
+- after Test exposure, no model/config/checkpoint/threshold/candidate-role revision is authorized.
 
 ## 10. Historical Evidence
 
