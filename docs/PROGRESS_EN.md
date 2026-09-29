@@ -1417,3 +1417,21 @@ Shared controls passed with config-native semantics: seed42 `0.7653242327/0.8836
 Corrective firewall checks passed: evaluator `--help`; metric/raw-threshold/margin-argmax/sparse-mask/Student-t synthetic checks; 15 unique frozen entries; overwrite refusal; all 15 checkpoint/config SHA checks; pseudo-cache SHA check; and full evaluator DEV preflight. All 15 DEV D/P/Mean values matched the frozen ledger within `0.0005`; audio42 compatibility equivalence passed; preflight reported `test_iteration: false`; `git diff --check` passed; forbidden `src`, config, cache, dependency, and audio scopes are unchanged. The corrective firewall must be committed and pushed before the single authorized Final Test invocation.
 
 No Test loader/dataset was constructed or iterated during the corrective diagnostics or full preflight; Test invocation count remains exactly `0`; external report remains absent. Stage 7 remains active pending the pushed firewall and one authorized Final Test run.
+
+
+### TASK-007C — corrected firewall and standardized Final Test evidence
+
+Status: complete. Exact result: `STAGE-7 FINAL TEST EVALUATION COMPLETE`. Branch: `codex/task-007c`. Corrective firewall commit `bfaae7f812904dd9ae9a7460b394117867db5439` was pushed before Test; evaluator SHA256 `b691c9563bb6ffd63316b664949dcf1bef02d8d3f4e770110c2e70adbc4cee1e`; report `/media/maxim/Programs/Features/WSM/stage7_final_test/final_test_v1.json` SHA256 `59f763f04843c8e54d5d3f9893d3abe0530b47a32ea11f5b9585390edeb515bc`.
+
+The config-native corrective firewall passed all 15 DEV reproductions within `0.0005`, including shared seed43 C-mode `0.7244960383/0.8181521375/0.7713240879`, shared42/44 controls, all frozen checkpoint/config/pseudo-cache SHA checks, audio42 equivalence, synthetic checks, overwrite refusal, and `test_iteration: false`. Exactly one Final Test invocation then completed; protocol counts are TEST_NONE `1364`, TEST_SOFT `1208`, TEST_HARD `1014`.
+
+Five-seed Test D/P/Mean means with frozen two-sided Student-t 95% CIs are:
+- TEST_NONE: audio `0.752954/0.848230/0.800592` CI Mean `[0.781012,0.820172]`; R4 `0.790977/0.816028/0.803502` CI `[0.780018,0.826987]`; shared `0.799233/0.812774/0.806003` CI `[0.794417,0.817590]`.
+- TEST_SOFT: audio `0.775925/0.850212/0.813068` CI Mean `[0.793383,0.832754]`; R4 `0.802296/0.820389/0.811343` CI `[0.785432,0.837253]`; shared `0.812757/0.817941/0.815349` CI `[0.801248,0.829450]`.
+- TEST_HARD: audio `0.788289/0.860246/0.824268` CI Mean `[0.808625,0.839910]`; R4 `0.806044/0.837490/0.821767` CI `[0.790908,0.852626]`; shared `0.815916/0.837049/0.826483` CI `[0.810207,0.842758]`.
+
+Paired Mean mean deltas (95% CI), in order R4−audio, shared−audio, shared−R4: TEST_NONE `+0.002910[-0.021829,+0.027649]`, `+0.005411[-0.014285,+0.025108]`, `+0.002501[-0.013563,+0.018565]`; TEST_SOFT `-0.001726[-0.029386,+0.025934]`, `+0.002281[-0.014017,+0.018578]`, `+0.004006[-0.014503,+0.022516]`; TEST_HARD `-0.002501[-0.029933,+0.024931]`, `+0.002215[-0.013123,+0.017553]`, `+0.004716[-0.015705,+0.025137]`. All paired Mean CIs include zero; no statistical superiority claim.
+
+Descriptive Test−frozen-DEV five-seed Mean deltas (audio/R4/shared): TEST_NONE `+0.035448/+0.013446/+0.015089`; TEST_SOFT `+0.047924/+0.021286/+0.024435`; TEST_HARD `+0.059123/+0.031710/+0.035568`. Full per-seed D/P UAR/MF1/Score, summary min/max/range/std/CI, paired D/P/Mean deltas, and all traceability rows are in [STAGE7_FINAL_TEST_EVIDENCE_EN.md](STAGE7_FINAL_TEST_EVIDENCE_EN.md).
+
+Frozen roles remain unchanged: shared primary, full R4 secondary multimodal reference, temporal audio baseline. No post-Test role/config/checkpoint/threshold revision, training, recalibration, tuning, retry, or further experiment occurred. Main/master untouched; Stage 7 is pending manager closure.
