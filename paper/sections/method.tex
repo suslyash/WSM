@@ -1,0 +1,26 @@
+\section{Method}
+\label{sec:method}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.90\textwidth]{figures/wsm_method_overview.pdf}
+  \caption{WSM evidence-model overview. The primary shared-fusion candidate combines online audio and video representations with a shared fusion trunk and two independent masked disease outputs. Reliability-weighted direct pseudo-supervision is applied only to missing targets; observed labels take precedence. Full R4 is a frozen secondary multimodal reference, and temporal audio is the frozen baseline.}
+  \label{fig:overview}
+\end{figure*}
+
+\paragraph{Audio and video representations.} The frozen audio baseline uses WavLM-base-plus layer~9 features with temporal pooling and a temporal Transformer. Video follows a body-centric CLIP feature path with temporal aggregation. The final primary shared-fusion candidate projects the available online audio and video inputs into a common space, combines them through a shared fusion trunk, and predicts two independent logits. Full R4 remains a secondary reference with its frozen task-conditioned fusion semantics; it is not substituted into the primary candidate after Test reporting.
+
+\paragraph{Masked observed supervision.} Let $z_{it}$ be the logit for task $t\in\{D,P\}$ and let $\ell_{\mathrm{BCE}}$ denote binary cross entropy with logits. Observed supervision is
+\begin{equation}
+ \mathcal{L}_{\mathrm{obs}} = \frac{\sum_{i,t}m_{it}\ell_{\mathrm{BCE}}(z_{it},y_{it})}{\sum_{i,t}m_{it}+\epsilon}.
+\end{equation}
+This form leaves unknown labels out of the supervised numerator and denominator.
+
+\paragraph{Direct pseudo-supervision and reliability.} For an accepted missing target $\tilde y_{it}$ with detached reliability $r_{it}$, the direct pseudo term can be written
+\begin{equation}
+ \mathcal{L}_{\mathrm{pseudo}}=\frac{\sum_{i,t}(1-m_{it})a_{it}r_{it}\ell_{\mathrm{BCE}}(z_{it},\tilde y_{it})}{\sum_{i,t}(1-m_{it})a_{it}r_{it}+\epsilon},
+ \qquad \mathcal{L}=\mathcal{L}_{\mathrm{obs}}+\lambda_p\mathcal{L}_{\mathrm{pseudo}}+\mathcal{L}_{\mathrm{aux}}.
+\end{equation}
+Here $a_{it}$ is a frozen acceptance indicator. The formulation describes the accepted direct pseudo-supervision path only; it does not claim that pseudo labels are clinically correct or that missing labels are recovered correctly. Observed labels override pseudo targets by construction. Reliability is detached and controls gradient contribution rather than medical truth.
+
+\paragraph{From full R4 to shared fusion.} Both R4 and shared fusion have 295,239 trainable parameters. The research programme retained shared fusion as the parsimonious primary candidate from a DEV-only role decision; the paired DEV Mean interval did not separate shared from R4. Figure~\ref{fig:overview} deliberately depicts shared fusion as the primary candidate and labels R4 as a reference, rather than representing every ablation mechanism as part of the final method.

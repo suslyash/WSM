@@ -1,0 +1,13 @@
+\section{Data and Evaluation Protocol}
+\label{sec:protocol}
+
+Each canonical segment has targets $\mathbf{y}_i=(y_i^D,y_i^P)$ and an observed mask $\mathbf{m}_i=(m_i^D,m_i^P)$. In the depression corpus, the depression label is observed and the Parkinson label is unknown; the converse holds for the Parkinson corpus. Unknown entries remain masked throughout supervised loss and metric computation and are never converted to negative labels. Observed ground truth always overrides any pseudo target.
+
+Canonical split membership is fixed at the video level and shared across modalities. We report DEV during model selection and three distinct final Test views: TEST\_NONE (1,364 rows), TEST\_SOFT (1,208 rows), and TEST\_HARD (1,014 rows). The one-shot final Test report was produced only after all checkpoints, roles, seeds, and summary procedures were frozen. It is not used to select an epoch, threshold, architecture, or follow-up experiment.
+
+For each task, UAR and macro-F1 are combined as
+\begin{equation}
+ \mathrm{Score}_t = \frac{\mathrm{UAR}_t+\mathrm{MF1}_t}{2},
+ \qquad \mathrm{Mean\_Score}=\frac{\mathrm{Score}_D+\mathrm{Score}_P}{2}.
+\end{equation}
+DEV Mean\_Score is the sole checkpoint-selection signal. Five-seed summaries use the frozen descriptive two-sided Student-$t$ interval with multiplier 2.7764451051977987 and sample standard deviation; these intervals are not multiplicity-corrected significance tests.

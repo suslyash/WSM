@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">WSM shared-fusion method overview</title>
+  <desc id="desc">Audio and video inputs feed a shared fusion trunk. Observed labels and accepted reliability-weighted pseudo targets supervise independent depression and Parkinson heads.</desc>
+  <defs>
+    <style>.box{fill:#fff;stroke:#1e1e1e;stroke-width:2.2}.soft{fill:#f2f2f2;stroke:#1e1e1e;stroke-width:2.2}.dash{fill:#fff;stroke:#555;stroke-width:2;stroke-dasharray:7 6}.arrow{fill:none;stroke:#202020;stroke-width:2.4;marker-end:url(#m)}.thin{fill:none;stroke:#555;stroke-width:2;marker-end:url(#m)}.t{font-family:Arial,Helvetica,sans-serif;fill:#171717}.h{font-size:22px;font-weight:700}.s{font-size:17px}.xs{font-size:14px}</style>
+    <marker id="m" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#202020"/></marker>
+  </defs>
+  <text x="600" y="35" text-anchor="middle" class="t h">Frozen primary candidate: equal-parameter shared fusion</text>
+  <rect x="45" y="115" width="205" height="95" rx="10" class="box"/><text x="147" y="153" text-anchor="middle" class="t h">Audio</text><text x="147" y="181" text-anchor="middle" class="t s">WavLM temporal features</text>
+  <rect x="45" y="325" width="205" height="95" rx="10" class="box"/><text x="147" y="363" text-anchor="middle" class="t h">Video</text><text x="147" y="391" text-anchor="middle" class="t s">CLIP temporal features</text>
+  <rect x="325" y="130" width="205" height="70" rx="10" class="soft"/><text x="427" y="170" text-anchor="middle" class="t h">Projection</text><rect x="325" y="340" width="205" height="70" rx="10" class="soft"/><text x="427" y="380" text-anchor="middle" class="t h">Projection</text>
+  <path d="M250 162 L325 162" class="arrow"/><path d="M250 372 L325 372" class="arrow"/>
+  <rect x="610" y="195" width="230" height="155" rx="12" class="soft"/><text x="725" y="245" text-anchor="middle" class="t h">Shared fusion trunk</text><text x="725" y="275" text-anchor="middle" class="t s">availability-aware A+V</text><text x="725" y="302" text-anchor="middle" class="t s">shared representation</text>
+  <path d="M530 165 C570 165 570 225 610 235" class="arrow"/><path d="M530 375 C570 375 570 320 610 310" class="arrow"/>
+  <rect x="920" y="130" width="220" height="85" rx="10" class="box"/><text x="1030" y="166" text-anchor="middle" class="t h">Depression head</text><text x="1030" y="194" text-anchor="middle" class="t s">independent logit</text>
+  <rect x="920" y="330" width="220" height="85" rx="10" class="box"/><text x="1030" y="366" text-anchor="middle" class="t h">Parkinson head</text><text x="1030" y="394" text-anchor="middle" class="t s">independent logit</text>
+  <path d="M840 245 C875 220 880 190 920 180" class="arrow"/><path d="M840 300 C875 330 880 360 920 370" class="arrow"/>
+  <rect x="330" y="465" width="410" height="66" rx="10" class="dash"/><text x="535" y="492" text-anchor="middle" class="t s">Observed-label mask + accepted detached</text><text x="535" y="515" text-anchor="middle" class="t s">reliability-weighted pseudo supervision</text>
+  <path d="M535 465 C560 420 630 385 690 350" class="thin"/>
+  <text x="45" y="93" class="t xs">Online student inputs</text><text x="884" y="104" class="t xs">Two independent disease tasks</text><text x="755" y="505" class="t xs">Full R4: frozen secondary reference; audio: frozen baseline.</text>
+</svg>

@@ -1458,3 +1458,8 @@ Paired Mean mean deltas (95% CI), in order R4−audio, shared−audio, shared−
 Descriptive Test−frozen-DEV five-seed Mean deltas (audio/R4/shared): TEST_NONE `+0.035448/+0.013446/+0.015089`; TEST_SOFT `+0.047924/+0.021286/+0.024435`; TEST_HARD `+0.059123/+0.031710/+0.035568`. Full per-seed D/P UAR/MF1/Score, summary min/max/range/std/CI, paired D/P/Mean deltas, and all traceability rows are in [STAGE7_FINAL_TEST_EVIDENCE_EN.md](STAGE7_FINAL_TEST_EVIDENCE_EN.md).
 
 Frozen roles remain unchanged: shared primary, full R4 secondary multimodal reference, temporal audio baseline. No post-Test role/config/checkpoint/threshold revision, training, recalibration, tuning, retry, or further experiment occurred. Main/master untouched; Stage 7 is pending manager closure.
+
+
+## TASK-008A paper draft v1
+
+Branch: `codex/task-008a-paper-draft`. This presentation-only task created the internal-review manuscript package under `paper/`, including sectioned LaTeX, frozen-evidence result and ablation tables, bibliography, and the native vector SVG method overview. No training, inference, Test invocation, metric recomputation, checkpoint loading, or scientific-claim/role revision occurred. The research programme remains scientifically frozen; this is article drafting only, pending manager review.

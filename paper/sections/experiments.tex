@@ -1,0 +1,9 @@
+\section{Experimental Setup}
+\label{sec:experiments}
+
+The final compared set was frozen before Test reporting: temporal audio, full R4 trial012, and equal-parameter shared fusion, each on seeds 42--46. Checkpoints were selected exclusively by maximum DEV Mean\_Score. The final evaluation then used the predeclared same-seed paired comparisons R4$-$audio, shared$-$audio, and shared$-$R4. No threshold fitting, recalibration, role revision, or retry followed Test reporting.
+
+The primary candidate is shared fusion; full R4 is the secondary multimodal reference; temporal audio is the baseline. This assignment was frozen from DEV-only parsimony evidence before Test. The final report verifies the checkpoint/config ledger, evaluates all 15 frozen checkpoints once per protocol, and stores aggregate metrics only.
+
+\subsection{Text and description context}
+T1 is a completed standalone transcript baseline based on frozen XLM-R features. Its three-seed DEV D/P/Mean is 0.6268063333/0.8447246667/0.7357653333. It is contextual evidence only and does not show that text improves audio--video fusion. The planned T2 observable-description family stopped before cache, model, or training because its frozen preflight found demographic/identity inference in 4/24 outputs and only 18/24 concise outputs. It has no performance claim.

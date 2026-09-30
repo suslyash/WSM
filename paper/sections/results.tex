@@ -1,0 +1,112 @@
+\section{Results}
+\label{sec:results}
+
+Table~\ref{tab:main} gives the frozen primary comparison. Both multimodal finalists had a positive paired DEV Mean advantage over audio under the frozen descriptive interval plan: R4$-$audio is $+0.024912$ ([$+0.001169,+0.048655$]) and shared$-$audio is $+0.025769$ ([$+0.009556,+0.041984$]), each with 5/5 seed wins. Shared$-$R4 is $+0.000858$ ([$-0.009704,+0.011419$]; 3/5 shared wins), so these finalists are not separated by the paired DEV Mean interval.
+
+\begin{table*}[t]
+\centering\small
+\caption{Frozen five-seed main comparison. DEV cells are D/P/Mean; Test cells are Mean with 95\% descriptive CI. Shared fusion was selected as the primary parsimonious candidate before Test reporting.}
+\label{tab:main}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llclllll}
+\toprule
+Method & Modality & Seeds & DEV D/P/Mean & TEST\_NONE Mean & TEST\_SOFT Mean & TEST\_HARD Mean\\
+\midrule
+Temporal audio & A & 42--46 & .721720/.808569/.765145 & .800592 [.781012,.820172] & .813068 [.793383,.832754] & .824268 [.808625,.839910]\\
+Full R4 trial012 & A+V & 42--46 & .731250/.848863/.790057 & .803502 [.780018,.826987] & .811343 [.785432,.837253] & .821767 [.790908,.852626]\\
+Shared fusion & A+V & 42--46 & .737690/.844139/.790914 & .806003 [.794417,.817590] & .815349 [.801248,.829450] & .826483 [.810207,.842758]\\
+\bottomrule
+\end{tabular}%
+}
+\end{table*}
+
+\begin{table*}[t]
+\centering\small
+\caption{Five-seed protocol breakdown (D/P/Mean). Values are frozen final-Test summary means, not additional selection results.}
+\label{tab:protocol-breakdown}
+\begin{tabular}{llrrr}
+\toprule
+Method & Protocol & Depression Score & Parkinson Score & Mean\_Score\\
+\midrule
+Temporal audio & TEST\_NONE & .752954 & .848230 & .800592\\
+Full R4 trial012 & TEST\_NONE & .790977 & .816028 & .803502\\
+Shared fusion & TEST\_NONE & .799233 & .812774 & .806003\\
+\addlinespace
+Temporal audio & TEST\_SOFT & .775925 & .850212 & .813068\\
+Full R4 trial012 & TEST\_SOFT & .802296 & .820389 & .811343\\
+Shared fusion & TEST\_SOFT & .812757 & .817941 & .815349\\
+\addlinespace
+Temporal audio & TEST\_HARD & .788289 & .860246 & .824268\\
+Full R4 trial012 & TEST\_HARD & .806044 & .837490 & .821767\\
+Shared fusion & TEST\_HARD & .815916 & .837049 & .826483\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Shared has the highest five-seed Mean point estimate on TEST\_NONE, TEST\_SOFT, and TEST\_HARD. This does not authorize a Final-Test superiority claim: every predeclared paired Test Mean 95\% interval includes zero (Table~\ref{tab:paired}). Test reporting did not revise the frozen roles.
+
+\begin{table*}[t]
+\centering\small
+\caption{Final-Test paired Mean deltas (mean [95\% CI]). All intervals include zero. Values are descriptive under the predeclared five-seed plan.}
+\label{tab:paired}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrr}
+\toprule
+Protocol & R4 $-$ audio & shared $-$ audio & shared $-$ R4\\
+\midrule
+TEST\_NONE & +.002910 [$-.021829,.027649$] & +.005411 [$-.014285,.025108$] & +.002501 [$-.013563,.018565$]\\
+TEST\_SOFT & $-.001726$ [$-.029386,.025934$] & +.002281 [$-.014017,.018578$] & +.004006 [$-.014503,.022515$]\\
+TEST\_HARD & $-.002501$ [$-.029933,.024931$] & +.002215 [$-.013123,.017553$] & +.004716 [$-.015706,.025137$]\\
+\bottomrule
+\end{tabular}%
+}
+\end{table*}
+
+\subsection{Ablation and mechanism record}
+\begin{table*}[t]
+\centering\small
+\caption{Frozen Stage-6 claim matrix. ``Not supported'' is scoped to the tested component and comparator; it is not a universal uselessness claim.}
+\label{tab:ablations}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{>{\raggedright\arraybackslash}p{.30\linewidth}>{\raggedright\arraybackslash}p{.16\linewidth}>{\raggedright\arraybackslash}p{.42\linewidth}}
+\toprule
+Hypothesis/component & Status & Narrow interpretation\\
+\midrule
+Direct pseudo-supervision & Supported & Direct pseudo BCE contribution supported; pseudo masks and reliability remained present in the ablation.\\
+Uncertainty/reliability & Supported & Frozen graded-reliability contribution supported; its subcomponents are not separately identified.\\
+Online audio branch & Supported & Concerns the online student audio input branch under unchanged pseudo training.\\
+Sample-specific pseudo alignment & Supported & Supported only by the specified shuffled/mismatched pseudo negative control.\\
+Sparse MTL; task-aware fusion; semantic depression acceptance & Not supported & These exact contribution gates did not support the proposed mechanisms.\\
+RA-STCH versus equal/simpler balancing; video removal; fusion amplification & Not supported & Fixed comparators did not support these contributions; unsupported does not imply universal uselessness.\\
+Strong corpus-ID linear decodability & Diagnostic only & Flag not triggered; no causal corpus-shortcut claim.\\
+\bottomrule
+\end{tabular}%
+}
+\end{table*}
+
+The exact Stage-6 ledger records four supported conclusions: direct pseudo-supervision, uncertainty/reliability, online audio input modality, and sample-specific pseudo alignment under its negative control. It records seven unsupported contribution claims: sparse MTL joint training, task-aware fusion, semantic evidence via depression pseudo acceptance, both RA-STCH claims, video modality contribution, and fusion amplification of corpus decodability.
+
+
+\subsection{Contextual video, text, and DEPART comparison}
+Table~\ref{tab:context} separates WSM evidence from external DEPART results. The accepted V2 prototype-aware video reference has DEV D/P/Mean 0.620101/0.793043/0.706572. T1 is text-only context, not additive fusion evidence. Published DEPART is strong for visual-only depression recognition; our audio and A+V systems are particularly strong on Parkinson, while fusion mainly improves depression relative to audio and can reduce Parkinson relative to audio. This is contextual rather than a strict leaderboard comparison: DEPART's article metrics are best compared on UAR, its manually cleaned Test is not automatically identical to TEST\_HARD, and our primary metric is Mean\_Score.
+
+\begin{table*}[t]
+\centering\small
+\caption{Contextual baselines. Dashes denote quantities not preserved as a matched WSM final-table metric. Published DEPART figures are external article results, not directly comparable leaderboard values.}
+\label{tab:context}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lll}
+\toprule
+System & Evidence/metric & Value\\
+\midrule
+DEPART-like V1 & WSM video family & CLIP+Transformer reference; see frozen baseline dossier\\
+DEPART-like V2 & WSM DEV D/P/Mean & .620101/.793043/.706572\\
+T1 XLM-R text & WSM DEV D/P/Mean (3 seeds) & .626806/.844725/.735765\\
+Published DEPART multitask & Article binary UAR D/P & 82.25\% / 66.82\%\\
+Published DEPART single-task & Article binary UAR D/P & 85.55\% / 78.58\%\\
+Published DEPART cleaned Test & Article multitask UAR D/P & 83.67\% / 80.71\%\\
+Shared fusion & WSM TEST\_HARD Mean (5 seeds) & .826483 [.810207,.842758]\\
+\bottomrule
+\end{tabular}%
+}
+\end{table*}
