@@ -1481,3 +1481,13 @@ Build verification: pdflatex, bibtex, and two final pdflatex passes completed; 1
 ### TASK-008A bibliography-only final fix
 
 Prior manuscript commit: a6b935e2fe90c42de786a285830350825111fc6f. Editorial metadata only: lin2024stch now matches the official ICML/PMLR record, and durand2019learning now matches the official CVPR 2019 partial-label record. The manuscript build still passes; no scientific text, equations, metrics, tables, figures, roles, Test evidence, or conclusions changed.
+
+
+
+### TASK-008B paper submission QA / appendix pass
+
+Branch: codex/task-008b-paper-submission-qa; final evidence commit SHA is recorded in the Git handoff. Paper-only submission QA added appendix_reproducibility.tex: frozen architecture, optimization, pseudo-cache, checkpoint, and evaluator identities; accepted five-seed DEV and one-shot Final-Test tables; and the exact Stage-6 claim traceability matrix. The DEPART context caption now explicitly limits the comparison to UAR, a different formulation, non-equivalence of cleaned DEPART Test and WSM TEST_HARD unless independently established, and no leaderboard use.
+
+QA audited the manuscript against the accepted final and stage ledgers: no Final-Test superiority, missing-label, comorbidity, clinical-validity, causal-corpus claims, or scientific role change was introduced. Roles remain frozen: shared fusion primary by the pre-Test DEV-only parsimony decision, full R4 secondary, temporal audio baseline; T1 standalone and T2 blocked. TACME remains a supplied manuscript with no formal venue/year asserted; n.d. avoids a BibTeX empty-year warning.
+
+Build verification used the required pdflatex, bibtex, pdflatex, pdflatex sequence: success, 14 pages, no undefined citations/references, no overfull boxes, and no BibTeX metadata warning. Rendered title/abstract, method figure, main-result and ablation tables, appendix tables, and bibliography transition were visually inspected; the method figure remains vector and legible, the claim matrix is unscaled readable 8-point text, the appendix follows the conclusion, and no floats appear after references. No training, inference, Test invocation, checkpoint loading, metric recomputation, or new statistics occurred; src/audio, source, configs, scripts, caches, and evidence ledgers remain unchanged.
