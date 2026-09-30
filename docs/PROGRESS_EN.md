@@ -1463,3 +1463,16 @@ Frozen roles remain unchanged: shared primary, full R4 secondary multimodal refe
 ## TASK-008A paper draft v1
 
 Branch: `codex/task-008a-paper-draft`. This presentation-only task created the internal-review manuscript package under `paper/`, including sectioned LaTeX, frozen-evidence result and ablation tables, bibliography, and the native vector SVG method overview. No training, inference, Test invocation, metric recomputation, checkpoint loading, or scientific-claim/role revision occurred. The research programme remains scientifically frozen; this is article drafting only, pending manager review.
+
+
+## TASK-008A paper draft v2 corrective
+
+Branch: codex/task-008a-paper-draft; prior reviewed commit: 89fbe9af57c5b2ab226fcbdf51480769025d8b0a (corrective evidence commit recorded in Git handoff). This manuscript-only correction expands the internal-review paper into a compact two-column, conference-like draft without claiming official EMNLP formatting.
+
+The revised method describes the actual equal-parameter shared-fusion forward path (projected audio/video, mean disease query, shared candidates, availability-masked gate, fused feature, independent D/P heads) and contrasts it with task-specific full R4. It gives the full frozen observed/pseudo/auxiliary/agreement loss decomposition, detached pseudo/reliability contract, warm-up (3 observed-only + 5 ramp), selected loss constants, and RA-STCH scalarization with its exact unsupported-contribution boundaries.
+
+The Results/Discussion now includes canonical protocol membership, final five-seed DEV/Test/paired summaries, the internal DEPART-like V1/V2 DEV/NONE/SOFT/HARD table, a separate non-leaderboard published-DEPART UAR context table, DEV calibration diagnostics, and a quantitative Stage-6 ablation companion. Frozen roles are unchanged: shared fusion is the primary parsimonious candidate, full R4 the secondary multimodal reference, temporal audio the baseline; T1 remains standalone and T2 remains blocked.
+
+The method figure was redrawn as [wsm_method_overview.svg](../paper/figures/wsm_method_overview.svg) and exported to the vector [wsm_method_overview.pdf](../paper/figures/wsm_method_overview.pdf), with primary inference and training-only supervision panels. The figure style is an original compact presentation informed only by the general readability of the supplied TACME manuscript. The bibliography corrects the full DEPART author/venue/DOI entry and identifies TACME as a supplied manuscript after title-page inspection.
+
+Build verification: pdflatex, bibtex, and two final pdflatex passes completed; 11 PDF pages including references (approximately nine pages of body/tables); no undefined citations/references, no overfull boxes, and no missing/raster figure. Rendered figure, primary-result, and ablation-table pages were visually inspected; final tables precede the bibliography. No training, inference, checkpoint loading, metric recomputation, Test invocation, cache/source/config/script change, or frozen scientific role/claim revision occurred. src/audio remains unchanged.
