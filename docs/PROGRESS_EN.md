@@ -1476,3 +1476,8 @@ The Results/Discussion now includes canonical protocol membership, final five-se
 The method figure was redrawn as [wsm_method_overview.svg](../paper/figures/wsm_method_overview.svg) and exported to the vector [wsm_method_overview.pdf](../paper/figures/wsm_method_overview.pdf), with primary inference and training-only supervision panels. The figure style is an original compact presentation informed only by the general readability of the supplied TACME manuscript. The bibliography corrects the full DEPART author/venue/DOI entry and identifies TACME as a supplied manuscript after title-page inspection.
 
 Build verification: pdflatex, bibtex, and two final pdflatex passes completed; 11 PDF pages including references (approximately nine pages of body/tables); no undefined citations/references, no overfull boxes, and no missing/raster figure. Rendered figure, primary-result, and ablation-table pages were visually inspected; final tables precede the bibliography. No training, inference, checkpoint loading, metric recomputation, Test invocation, cache/source/config/script change, or frozen scientific role/claim revision occurred. src/audio remains unchanged.
+
+
+### TASK-008A bibliography-only final fix
+
+Prior manuscript commit: a6b935e2fe90c42de786a285830350825111fc6f. Editorial metadata only: lin2024stch now matches the official ICML/PMLR record, and durand2019learning now matches the official CVPR 2019 partial-label record. The manuscript build still passes; no scientific text, equations, metrics, tables, figures, roles, Test evidence, or conclusions changed.
