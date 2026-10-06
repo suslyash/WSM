@@ -19,7 +19,13 @@ class WSMGradientMTLCallback(BaseCallback):
         return loss
 
     def on_fit_start(self, trainer: Any) -> None:
-        self._loss(trainer)
+        loss = self._loss(trainer)
+        model = getattr(trainer, "model", None)
+        if model is None or not hasattr(loss, "bind_model"):
+            raise TypeError("wsm_gradient_mtl_callback requires trainer.model and loss.bind_model")
+        loss.bind_model(model)
+        if loss.ownership_counts != {"shared": 14, "depression": 18, "parkinson": 18, "row": 1}:
+            raise ValueError(f"unexpected R4 structural ownership: {loss.ownership_counts}")
 
     def on_epoch_start(self, trainer: Any, epoch: int) -> None:
         self._loss(trainer).reset_epoch_diagnostics()

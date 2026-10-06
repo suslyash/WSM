@@ -4,6 +4,7 @@ from __future__ import annotations
 import math
 import random
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import Any, Iterable
 
 import numpy as np
@@ -127,6 +128,57 @@ def _graph_parameters(losses: Iterable[torch.Tensor]) -> list[torch.Tensor]:
     return [found[key] for key in sorted(found)]
 
 
+@dataclass(frozen=True)
+class _ParameterOwnership:
+    name: str
+    parameter: torch.Tensor
+    kind: str
+    row: int | None = None
+
+
+def _build_r4_ownership(model: Any) -> list[_ParameterOwnership]:
+    """Build the explicit structural ownership map for the fixed R4 model."""
+    shared_prefixes = ("audio_projection.", "video_projection.", "shared_query_gate.")
+    depression_prefixes = (
+        "task_candidate_norms.0.", "task_fusion_norms.0.", "main_heads.0.",
+        "audio_aux_heads.0.", "video_aux_heads.0.",
+    )
+    parkinson_prefixes = (
+        "task_candidate_norms.1.", "task_fusion_norms.1.", "main_heads.1.",
+        "audio_aux_heads.1.", "video_aux_heads.1.",
+    )
+    entries: list[_ParameterOwnership] = []
+    classified: set[str] = set()
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        if name == "task_queries":
+            if tuple(parameter.shape[:1]) != (2,):
+                raise ValueError("R4 task_queries must have shape [2, hidden_dim]")
+            entries.append(_ParameterOwnership(name, parameter, "row", None))
+            classified.add(name)
+            continue
+        if name.startswith(shared_prefixes):
+            kind = "shared"
+        elif name.startswith(depression_prefixes):
+            kind = "depression"
+        elif name.startswith(parkinson_prefixes):
+            kind = "parkinson"
+        else:
+            raise ValueError(f"unclassified trainable R4 parameter: {name}")
+        entries.append(_ParameterOwnership(name, parameter, kind, None))
+        classified.add(name)
+    if len(entries) != 51:
+        raise ValueError(f"expected 51 trainable R4 parameter tensors, found {len(entries)}")
+    counts = {kind: sum(entry.kind == kind for entry in entries)
+              for kind in ("shared", "depression", "parkinson", "row")}
+    if counts != {"shared": 14, "depression": 18, "parkinson": 18, "row": 1}:
+        raise ValueError(f"unexpected R4 structural ownership counts: {counts}")
+    if len(classified) != len(entries):
+        raise ValueError("R4 ownership registry did not classify every parameter")
+    return entries
+
+
 def _inject_parameter_gradients(
     reported_value: torch.Tensor,
     parameters: list[torch.Tensor],
@@ -195,7 +247,69 @@ class WSMGradientMTLLoss(WSMR4RampsBalanceLoss):
         self._gradnorm_initial_losses: torch.Tensor | None = None
         self._db_buffer: torch.Tensor | None = None
         self._db_step = 0
+        self._ownership: list[_ParameterOwnership] | None = None
+        self._parameter_indices: dict[str, int] = {}
+        self._shared_indices: list[int] = []
         self.reset_epoch_diagnostics()
+
+    def bind_model(self, model: Any) -> None:
+        """Bind the loss to the actual named R4 model before training."""
+        ownership = _build_r4_ownership(model)
+        self._ownership = ownership
+        self._parameter_indices = {entry.name: index for index, entry in enumerate(ownership)}
+        self._shared_indices = [index for index, entry in enumerate(ownership)
+                                if entry.kind == "shared"]
+        if len(self._shared_indices) != 14:
+            raise ValueError("R4 shared ownership registry must contain 14 tensors")
+
+    @property
+    def ownership_counts(self) -> dict[str, int]:
+        ownership = self._ownership
+        if ownership is None:
+            return {}
+        return {kind: sum(entry.kind == kind for entry in ownership)
+                for kind in ("shared", "depression", "parkinson", "row")}
+
+    def _require_ownership(self) -> list[_ParameterOwnership]:
+        if self._ownership is None:
+            raise RuntimeError("WSMGradientMTLLoss.bind_model(model) is required before training")
+        return self._ownership
+
+    @staticmethod
+    def _assert_zero_outside_row(gradient: torch.Tensor, row: int) -> None:
+        outside = gradient.detach().clone()
+        outside[row].zero_()
+        if outside.numel() and float(outside.abs().max()) > 1.0e-7:
+            raise RuntimeError("task_queries gradient crossed its structural task row")
+
+    def _task_gradients(
+        self,
+        objective: torch.Tensor,
+        task: int,
+        parameters: list[torch.Tensor],
+    ) -> list[torch.Tensor]:
+        raw = torch.autograd.grad(objective, parameters, retain_graph=True, allow_unused=True)
+        result: list[torch.Tensor] = []
+        for entry, gradient in zip(self._require_ownership(), raw, strict=True):
+            value = torch.zeros_like(entry.parameter) if gradient is None else gradient
+            if not torch.isfinite(value).all():
+                raise FloatingPointError(f"non-finite gradient for {entry.name}")
+            if entry.kind == "depression" and task == 1:
+                if value.numel() and float(value.abs().max()) > 1.0e-7:
+                    raise RuntimeError(f"Parkinson objective reached Depression-only parameter {entry.name}")
+                value = torch.zeros_like(value)
+            elif entry.kind == "parkinson" and task == 0:
+                if value.numel() and float(value.abs().max()) > 1.0e-7:
+                    raise RuntimeError(f"Depression objective reached Parkinson-only parameter {entry.name}")
+                value = torch.zeros_like(value)
+            elif entry.kind == "row":
+                row = task
+                self._assert_zero_outside_row(value, row)
+                masked = torch.zeros_like(value)
+                masked[row] = value[row]
+                value = masked
+            result.append(value)
+        return result
 
     def reset_epoch_diagnostics(self) -> None:
         self._epoch_stats: defaultdict[str, list[float]] = defaultdict(list)
@@ -251,16 +365,16 @@ class WSMGradientMTLLoss(WSMR4RampsBalanceLoss):
 
     def _gradnorm_combine(
         self,
-        grad_d: list[torch.Tensor | None],
-        grad_p: list[torch.Tensor | None],
+        grad_d: list[torch.Tensor],
+        grad_p: list[torch.Tensor],
         shared: list[int],
         objectives: list[torch.Tensor],
-    ) -> list[torch.Tensor | None]:
+    ) -> list[torch.Tensor]:
         self._ensure_gradnorm_state(objectives[0])
         assert self._gradnorm_weights is not None and self._gradnorm_optimizer is not None
         weights_before = self._gradnorm_weights.detach().clone()
-        shared_d = _flat(grad_d[index] for index in shared if grad_d[index] is not None)
-        shared_p = _flat(grad_p[index] for index in shared if grad_p[index] is not None)
+        shared_d = _flat(grad_d[index] for index in shared)
+        shared_p = _flat(grad_p[index] for index in shared)
         raw_norms = torch.stack([shared_d.norm(), shared_p.norm()]).detach()
         losses = torch.stack([objective.detach() for objective in objectives])
         if self._gradnorm_initial_losses is None:
@@ -295,16 +409,19 @@ class WSMGradientMTLLoss(WSMR4RampsBalanceLoss):
             target_parkinson=float(target[1].item()),
             auxiliary=auxiliary,
         )
-        combined: list[torch.Tensor | None] = []
-        for d_grad, p_grad in zip(grad_d, grad_p, strict=True):
-            if d_grad is not None and p_grad is not None:
-                combined.append(weights_before[0] * d_grad + weights_before[1] * p_grad)
-            elif d_grad is not None:
-                combined.append(weights_before[0] * d_grad)
-            elif p_grad is not None:
-                combined.append(weights_before[1] * p_grad)
+        if self._ownership is None:
+            return [weights_before[0] * d + weights_before[1] * p
+                    for d, p in zip(grad_d, grad_p, strict=True)]
+        combined: list[torch.Tensor] = []
+        for index, entry in enumerate(self._require_ownership()):
+            if entry.kind == "shared":
+                combined.append(weights_before[0] * grad_d[index] + weights_before[1] * grad_p[index])
+            elif entry.kind == "depression":
+                combined.append(weights_before[0] * grad_d[index])
+            elif entry.kind == "parkinson":
+                combined.append(weights_before[1] * grad_p[index])
             else:
-                combined.append(None)
+                combined.append(weights_before[0] * grad_d[index] + weights_before[1] * grad_p[index])
         return combined
 
     @staticmethod
@@ -323,20 +440,18 @@ class WSMGradientMTLLoss(WSMR4RampsBalanceLoss):
 
     def _combine_pair(
         self,
-        grad_d: list[torch.Tensor | None],
-        grad_p: list[torch.Tensor | None],
+        grad_d: list[torch.Tensor],
+        grad_p: list[torch.Tensor],
         shared: list[int],
         objectives: list[torch.Tensor],
-    ) -> list[torch.Tensor | None]:
+    ) -> list[torch.Tensor]:
         if self.method == "gradnorm":
             return self._gradnorm_combine(grad_d, grad_p, shared, objectives)
-        vector_d = _flat(grad_d[index] for index in shared if grad_d[index] is not None)
-        vector_p = _flat(grad_p[index] for index in shared if grad_p[index] is not None)
+        vector_d = _flat(grad_d[index] for index in shared)
+        vector_p = _flat(grad_p[index] for index in shared)
         pre_cosine = _safe_cosine(vector_d, vector_p)
         conflict = pre_cosine is not None and pre_cosine < 0.0
         if self.method == "pcgrad":
-            # The official shuffle is deterministic under the run seed. With two
-            # tasks there is exactly one opponent, so it cannot alter the result.
             self._pcgrad_rng.shuffle([0, 1])
             transformed_d, transformed_p = pcgrad_two(vector_d, vector_p)
             shared_vector = 0.5 * (transformed_d + transformed_p)
@@ -364,24 +479,19 @@ class WSMGradientMTLLoss(WSMR4RampsBalanceLoss):
                 simplex_weight_depression=float(weights[0]),
                 simplex_weight_parkinson=float(weights[1]),
             )
-        elif self.method == "dbmtl":
-            transformed_d = torch.autograd.grad(
-                torch.log(objectives[0] + EPS), [], allow_unused=True
-            )
-            raise AssertionError("DB-MTL transformed gradients are computed before _combine_pair")
         else:
             raise RuntimeError(f"unexpected method {self.method}")
         split = self._split(shared_vector, grad_d, shared)
-        combined: list[torch.Tensor | None] = []
-        for index, (d_grad, p_grad) in enumerate(zip(grad_d, grad_p, strict=True)):
-            if index in split:
+        combined: list[torch.Tensor] = []
+        for index, entry in enumerate(self._require_ownership()):
+            if entry.kind == "shared":
                 combined.append(split[index])
-            elif d_grad is not None:
-                combined.append(d_grad)
-            elif p_grad is not None:
-                combined.append(p_grad)
+            elif entry.kind == "depression":
+                combined.append(grad_d[index])
+            elif entry.kind == "parkinson":
+                combined.append(grad_p[index])
             else:
-                combined.append(None)
+                combined.append(grad_d[index] + grad_p[index])
         return combined
 
     def _dbmtl_combine(
@@ -389,12 +499,12 @@ class WSMGradientMTLLoss(WSMR4RampsBalanceLoss):
         parameters: list[torch.Tensor],
         objectives: list[torch.Tensor],
         shared: list[int],
-    ) -> list[torch.Tensor | None]:
+    ) -> list[torch.Tensor]:
         transformed = [torch.log(objective + EPS) for objective in objectives]
-        grad_d = list(torch.autograd.grad(transformed[0], parameters, retain_graph=True, allow_unused=True))
-        grad_p = list(torch.autograd.grad(transformed[1], parameters, retain_graph=True, allow_unused=True))
-        vector_d = _flat(grad_d[index] for index in shared if grad_d[index] is not None)
-        vector_p = _flat(grad_p[index] for index in shared if grad_p[index] is not None)
+        grad_d = self._task_gradients(transformed[0], 0, parameters)
+        grad_p = self._task_gradients(transformed[1], 1, parameters)
+        vector_d = _flat(grad_d[index] for index in shared)
+        vector_p = _flat(grad_p[index] for index in shared)
         self._db_step += 1
         shared_vector, self._db_buffer = dbmtl_update(
             vector_d, vector_p, self._db_buffer, beta=self.db_beta,
@@ -414,16 +524,16 @@ class WSMGradientMTLLoss(WSMR4RampsBalanceLoss):
             normalized_norm_parkinson=float((normalized[1] * norms[1]).item()),
         )
         split = self._split(shared_vector, grad_d, shared)
-        combined: list[torch.Tensor | None] = []
-        for index, (d_grad, p_grad) in enumerate(zip(grad_d, grad_p, strict=True)):
-            if index in split:
+        combined: list[torch.Tensor] = []
+        for index, entry in enumerate(self._require_ownership()):
+            if entry.kind == "shared":
                 combined.append(split[index])
-            elif d_grad is not None:
-                combined.append(d_grad)
-            elif p_grad is not None:
-                combined.append(p_grad)
+            elif entry.kind == "depression":
+                combined.append(grad_d[index])
+            elif entry.kind == "parkinson":
+                combined.append(grad_p[index])
             else:
-                combined.append(None)
+                combined.append(grad_d[index] + grad_p[index])
         return combined
 
     def __call__(self, output: Any, batch: Any) -> torch.Tensor:
@@ -435,23 +545,23 @@ class WSMGradientMTLLoss(WSMR4RampsBalanceLoss):
         reported = 0.5 * (objectives[0] + objectives[1])
         if not output.preds.requires_grad or not getattr(output.preds, "requires_grad", False):
             return reported
-        parameters = _graph_parameters(objectives)
-        if not parameters:
-            raise RuntimeError("gradient MTL could not find trainable parameters in task objectives")
+        ownership = self._require_ownership()
+        parameters = [entry.parameter for entry in ownership]
+        shared = self._shared_indices
+        if len(shared) != 14:
+            raise RuntimeError("R4 gradient MTL requires exactly 14 fully shared tensors")
         if self.method == "dbmtl":
-            raw_d = list(torch.autograd.grad(objectives[0], parameters, retain_graph=True, allow_unused=True))
-            raw_p = list(torch.autograd.grad(objectives[1], parameters, retain_graph=True, allow_unused=True))
-            shared = [index for index, pair in enumerate(zip(raw_d, raw_p, strict=True)) if pair[0] is not None and pair[1] is not None]
             combined = self._dbmtl_combine(parameters, objectives, shared)
         else:
-            grad_d = list(torch.autograd.grad(objectives[0], parameters, retain_graph=True, allow_unused=True))
-            grad_p = list(torch.autograd.grad(objectives[1], parameters, retain_graph=True, allow_unused=True))
-            shared = [index for index, pair in enumerate(zip(grad_d, grad_p, strict=True)) if pair[0] is not None and pair[1] is not None]
+            grad_d = self._task_gradients(objectives[0], 0, parameters)
+            grad_p = self._task_gradients(objectives[1], 1, parameters)
             combined = self._combine_pair(grad_d, grad_p, shared, objectives)
-        d_only = sum(d is not None and p is None for d, p in zip(raw_d if self.method == "dbmtl" else grad_d, raw_p if self.method == "dbmtl" else grad_p, strict=True))
-        p_only = sum(d is None and p is not None for d, p in zip(raw_d if self.method == "dbmtl" else grad_d, raw_p if self.method == "dbmtl" else grad_p, strict=True))
-        neither = sum(d is None and p is None for d, p in zip(raw_d if self.method == "dbmtl" else grad_d, raw_p if self.method == "dbmtl" else grad_p, strict=True))
-        self._record(parameters_depression_only=float(d_only), parameters_parkinson_only=float(p_only), parameters_both=float(len(shared)), parameters_neither=float(neither))
+        self._record(
+            parameter_tensors_shared=14.0,
+            parameter_tensors_depression_only=18.0,
+            parameter_tensors_parkinson_only=18.0,
+            parameter_tensors_row_partitioned=1.0,
+        )
         return _inject_parameter_gradients(reported, parameters, combined)
 
 

@@ -9,6 +9,7 @@ from chimera_ml.core.batch import Batch
 from fusion.loss.gradient_mtl_loss import (
     EPS,
     WSMGradientMTLLoss,
+    _ParameterOwnership,
     _inject_parameter_gradients,
     cagrad_two,
     dbmtl_update,
@@ -156,12 +157,13 @@ def test_pcgrad_injects_real_r4_parameter_gradients() -> None:
     model.train()
     batch = _batch()
     loss = WSMGradientMTLLoss(method="pcgrad", pseudo_scale=0.0)
+    loss.bind_model(model)
     scalar = loss(model(batch), batch)
     scalar.backward()
     gradients = [parameter.grad for parameter in model.parameters() if parameter.requires_grad]
     assert all(gradient is not None and torch.isfinite(gradient).all() for gradient in gradients)
     diagnostics = loss.epoch_diagnostics()
-    assert diagnostics["mtl/parameters_both"] > 0
+    assert diagnostics["mtl/parameter_tensors_shared"] == 14
 
 
 @pytest.mark.parametrize("method", ["cagrad", "gradnorm", "dbmtl"])
@@ -171,9 +173,67 @@ def test_other_methods_inject_real_r4_parameter_gradients(method: str) -> None:
     model.train()
     batch = _batch()
     loss = WSMGradientMTLLoss(method=method, pseudo_scale=0.0)
+    loss.bind_model(model)
     scalar = loss(model(batch), batch)
     scalar.backward()
     assert all(
         parameter.grad is not None and torch.isfinite(parameter.grad).all()
         for parameter in model.parameters() if parameter.requires_grad
     )
+
+
+def test_r4_named_ownership_map_has_exact_structural_counts() -> None:
+    model = WSMAVR3DiseaseQueryModel()
+    loss = WSMGradientMTLLoss(method="pcgrad", pseudo_scale=0.0)
+    loss.bind_model(model)
+    assert loss.ownership_counts == {"shared": 14, "depression": 18, "parkinson": 18, "row": 1}
+    assert len({entry.name for entry in loss._ownership or []}) == 51
+
+
+def test_task_specific_gradient_locality_and_shared_finiteness() -> None:
+    torch.manual_seed(91)
+    model = WSMAVR3DiseaseQueryModel()
+    loss = WSMGradientMTLLoss(method="pcgrad", pseudo_scale=0.0)
+    loss.bind_model(model)
+    batch = _batch()
+    output = model(batch)
+    objectives, active = loss._task_objectives(output, batch)
+    assert active == [True, True]
+    parameters = [entry.parameter for entry in loss._ownership or []]
+    grad_d = loss._task_gradients(objectives[0], 0, parameters)
+    grad_p = loss._task_gradients(objectives[1], 1, parameters)
+    for entry, d_grad, p_grad in zip(loss._ownership or [], grad_d, grad_p, strict=True):
+        if entry.kind == "depression":
+            assert torch.equal(p_grad, torch.zeros_like(p_grad))
+        elif entry.kind == "parkinson":
+            assert torch.equal(d_grad, torch.zeros_like(d_grad))
+        elif entry.kind == "row":
+            assert torch.equal(d_grad[1], torch.zeros_like(d_grad[1]))
+            assert torch.equal(p_grad[0], torch.zeros_like(p_grad[0]))
+        else:
+            assert torch.isfinite(d_grad).all() and torch.isfinite(p_grad).all()
+
+
+@pytest.mark.parametrize("method", ["pcgrad", "cagrad"])
+def test_task_specific_zero_gradient_is_not_misclassified_as_shared(method: str) -> None:
+    class Tiny(torch.nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.shared = torch.nn.Parameter(torch.tensor([1.0]))
+            self.d_only = torch.nn.Parameter(torch.tensor([2.0]))
+            self.p_only = torch.nn.Parameter(torch.tensor([3.0]))
+
+    tiny = Tiny()
+    loss = WSMGradientMTLLoss(method=method, pseudo_scale=0.0)
+    loss._ownership = [
+        _ParameterOwnership("shared", tiny.shared, "shared"),
+        _ParameterOwnership("d_only", tiny.d_only, "depression"),
+        _ParameterOwnership("p_only", tiny.p_only, "parkinson"),
+    ]
+    loss._shared_indices = [0]
+    grad_d = [torch.tensor([2.0]), torch.tensor([3.0]), torch.zeros(1)]
+    grad_p = [torch.tensor([-1.0]), torch.zeros(1), torch.tensor([4.0])]
+    combined = loss._combine_pair(grad_d, grad_p, [0], [torch.tensor(1.0), torch.tensor(1.0)])
+    assert torch.allclose(combined[1], grad_d[1])
+    assert torch.allclose(combined[2], grad_p[2])
+    assert not torch.allclose(combined[0], 0.5 * (grad_d[0] + grad_p[0]))

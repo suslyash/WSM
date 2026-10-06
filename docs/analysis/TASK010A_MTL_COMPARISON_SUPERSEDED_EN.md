@@ -1,3 +1,13 @@
+SUPERSEDED — INVALID GRADIENT OWNERSHIP IMPLEMENTATION; DO NOT USE AS SCIENTIFIC EVIDENCE
+
+This document preserves the prior TASK-010A values only as procedural history.
+The old implementation classified all 51 trainable parameter tensors as shared
+because it used autograd None/non-None behavior. Structural R4 ownership is
+14 fully shared tensors, 18 Depression-only tensors, 18 Parkinson-only tensors,
+and one row-partitioned task_queries tensor. The previous PCGrad, CAGrad,
+GradNorm, and DB-MTL results are scientifically invalidated and must not be
+used as comparator evidence.
+
 # TASK-010A gradient-aware multi-task comparator evidence
 
 ## Scope and boundary
@@ -16,7 +26,7 @@ All twelve configurations were validated before production, remained frozen
 after Commit A, and used the unchanged R4 model, loss contract, pseudo cache,
 optimizer, warm-up, and three seeds. Checkpoint selection used only maximum
 DEV `dev/mean_score`. The complete machine-readable selected-checkpoint
-ledger is [task010a_mtl_runs.csv](task010a_mtl_runs.csv).
+ledger is [task010a_mtl_runs_SUPERSEDED.csv](task010a_mtl_runs_SUPERSEDED.csv).
 
 The prior CAGrad seed43 process was interrupted by the user's stop command
 after TRAIN optimizer steps and before its accepted evidence handoff. The

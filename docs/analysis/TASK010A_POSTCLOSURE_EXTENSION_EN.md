@@ -1,25 +1,18 @@
 # POST-CLOSURE EXPERIMENTAL EXTENSION — DOES NOT REVISE FROZEN WSM EVIDENCE
 
-TASK-010A is a manager-authorized, DEV-only comparison of four
-actual-parameter gradient-aware multi-task training mechanisms on the frozen
-R4 composition. It is not a reopening of Stage 5, Stage 6, Stage 7, Final
-Test, the paper, or any frozen method role.
+## TASK-010A-FIX1 corrective status
 
-The authoritative evidence is:
+The original TASK-010A evidence is superseded due to an invalid gradient
+ownership implementation. It classified task-specific zero gradients as
+shared. FIX1 corrects this by binding the loss to structural named-parameter
+ownership: 14 fully shared tensors, 18 Depression-only tensors, 18
+Parkinson-only tensors, and one row-partitioned task_queries tensor.
 
-- [TASK010A_MTL_COMPARISON_EN.md](TASK010A_MTL_COMPARISON_EN.md);
-- [task010a_mtl_runs.csv](task010a_mtl_runs.csv);
-- [TASK010A_METHOD_SPEC.md](TASK010A_METHOD_SPEC.md);
-- [task010a_config_equivalence.json](task010a_config_equivalence.json).
+The previous 12 selected results are retained only as superseded procedural
+history and are not scientific evidence. FIX1 is pending/active until its
+corrective firewall is committed and pushed, followed by exactly twelve new
+DEV-only production runs. No Test or Final Test is authorized or used; no
+frozen role, paper, or ledger changes.
 
-Exactly twelve completed config/seed results are reported: PCGrad,
-CAGrad, GradNorm, and DB-MTL, each on seeds 42/43/44. A CAGrad seed43
-process was interrupted after TRAIN optimizer steps during the user's stop;
-the explicitly authorized replacement completed normally and is the only
-accepted seed43 CAGrad result. This procedural exception is recorded without
-changing the frozen scientific scope.
-
-All checkpoint selection was DEV-only. No Test loader was exposed or
-iterated, no Test metrics were inspected, and no method was promoted,
-demoted, selected, or recommended. No significance claim is made from three
-seeds. The extension remains descriptive evidence only.
+The FIX1 source specification remains in TASK010A_METHOD_SPEC.md. The final
+authoritative comparison and CSV will be created only after the FIX1 runs.

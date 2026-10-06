@@ -3,7 +3,7 @@ seed: 43
 experiment_info:
   params:
     experiment_name: wsm_mm_pd_dep_v1
-    run_name: stage10a_pcgrad_r4_seed43
+    run_name: stage10a_fix1_pcgrad_r4_seed43
 
 data:
   name: wsm_ramps_semantic_dev_only_datamodule
