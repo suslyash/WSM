@@ -12,11 +12,66 @@ Stage 7: **COMPLETE — FIVE-SEED DEV + ONE-SHOT FINAL TEST EVIDENCE FROZEN**.
 
 Final Test authorized: **completed once under TASK-007C; no further Test invocation authorized**.
 
-Current atomic task: **none — TASK-007D final research/program closure ledger complete**.
+Current atomic task: **NONE — TASK-010A COMPLETE; no further experiment authorized**.
 
-Expected Codex branch: `codex/task-007d`.
+Expected Codex branch: `codex/task-010a-gradient-mtl-comparators`.
 
-`TASK-007C` is accepted and merged. Exact result: `STAGE-7 FINAL TEST EVALUATION COMPLETE`. Stage 7 is COMPLETE. Shared fusion remains the primary parsimonious paper candidate, full R4 the secondary multimodal reference, and temporal audio the baseline. T1 remains standalone text evidence only; T2 remains blocked before implementation/training. TASK-007D completed the final ledger at [FINAL_RESEARCH_LEDGER_EN.md](FINAL_RESEARCH_LEDGER_EN.md). No experiment, Test invocation, recomputation, model selection, threshold change, or new claim was authorized.
+`TASK-007C` is accepted and merged. Exact result: `STAGE-7 FINAL TEST EVALUATION COMPLETE`. Stage 7 remains COMPLETE. Shared fusion remains the primary parsimonious paper candidate, full R4 the secondary multimodal reference, and temporal audio the baseline. T1 remains standalone text evidence only; T2 remains blocked before implementation/training. TASK-007D completed the final ledger at [FINAL_RESEARCH_LEDGER_EN.md](FINAL_RESEARCH_LEDGER_EN.md). TASK-010A is an explicit manager-authorized, DEV-only post-closure extension; it does not revise a frozen role, ledger, paper, or Final-Test result.
+
+## TASK-010A corrected evidence (scientific review PASS)
+
+- Source gate: `SOURCE GATE RESOLVED`; manager-authorized primary/official sources and pinned revisions are recorded in [analysis/TASK010A_METHOD_SPEC.md](analysis/TASK010A_METHOD_SPEC.md).
+- Scope: four actual-parameter gradient methods (PCGrad, CAGrad, GradNorm, DB-MTL) on the historical fixed R4 balancing composition only; no architecture, fusion, pseudo-cache, or `src/audio` change.
+- DEV firewall: `wsm_ramps_semantic_dev_only_datamodule` returns validation keys exactly `['dev']`; no Test loader, Test metric, or Final-Test operation was invoked.
+- Frozen cache verification: SHA256 `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`; accepted D/P `376/1801`, classes D `376/0`, P `212/1589`.
+- Model/loss construction: all four method implementations instantiate against the unchanged 403079 trainable-parameter R4 architecture. TRAIN/DEV-only PCGrad shape/forward/backward smoke passed with no optimizer step; pseudo target and reliability tensors were detached.
+- Deterministic CPU tests: `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_task010a_gradient_mtl.py` — `13 passed`; includes Equal component/gradient parity, method-specific hand/reference checks, and actual R4 gradient-injection smokes.
+- Configs: twelve validated configs under `configs/wsm_mm_pd_dep_v1/mtl_extension/`; [analysis/task010a_config_equivalence.json](analysis/task010a_config_equivalence.json) reports no forbidden difference versus the seed-matched Equal references.
+- Production evidence: authoritative FIX1 production is complete after firewall commit 858efb026bbfb8c5a49469218380ea28fe2bbf5a: exactly twelve runs in order PCGrad 42/43/44, CAGrad 42/43/44, GradNorm 42/43/44, and DB-MTL 42/43/44. No retry, sweep, extra seed, or tuning occurred; source/config remained frozen after the firewall. No Test loader, Test metric, or Final Test was used. Final scientific evidence is commit 4828412f62299abdab908596802f77f50d49a30c; manager scientific review is PASS, and FIX2 documentation correction is commit 71577004cdd0e8dc29722cbea31f2fdb27aaaa4b.
+
+### TASK-010A-FIX1 — corrected gradient-MTL comparator evidence complete; scientific review PASS
+
+The previous TASK-010A evidence is explicitly superseded: the old loss inferred
+ownership from autograd None/non-None behavior and reported 51 shared / 0
+D-only / 0 P-only, which is structurally invalid for R4. The superseded
+comparison and CSV are preserved at
+[analysis/TASK010A_MTL_COMPARISON_SUPERSEDED_EN.md](analysis/TASK010A_MTL_COMPARISON_SUPERSEDED_EN.md)
+and [analysis/task010a_mtl_runs_SUPERSEDED.csv](analysis/task010a_mtl_runs_SUPERSEDED.csv).
+
+FIX1 binds the loss to the named R4 model structure: 14 fully shared tensors,
+18 Depression-only tensors, 18 Parkinson-only tensors, and one
+row-partitioned task_queries tensor. The callback binds and asserts this
+registry before fit. Added deterministic ownership, row-locality, shared
+gradient, Equal-parity, and zero-gradient misclassification regression tests;
+the FIX1 suite passed `13 passed`. All twelve configs use only `_fix1` run
+names; scientific settings remained unchanged.
+
+The corrective firewall commit `858efb026bbfb8c5a49469218380ea28fe2bbf5a`
+was pushed before production. The exact twelve authorized FIX1 runs then
+completed in order: PCGrad seeds42/43/44, CAGrad seeds42/43/44, GradNorm
+seeds42/43/44, and DB-MTL seeds42/43/44. No retry, sweep, extra seed,
+metric-driven tuning, or post-firewall source/config change occurred.
+
+Final corrected evidence is recorded in
+[analysis/TASK010A_MTL_COMPARISON_EN.md](analysis/TASK010A_MTL_COMPARISON_EN.md)
+and [analysis/task010a_mtl_runs.csv](analysis/task010a_mtl_runs.csv). The
+selected-checkpoint ledger records DEV-only maximum `dev/mean_score`, selected
+epochs, checkpoint SHA256, run directories, runtime, exact structural counts,
+and finite method diagnostics. Corrected three-seed DEV Mean values are:
+PCGrad `0.7668203333`, CAGrad `0.7631166667`, GradNorm `0.7736443333`, and
+DB-MTL `0.7563373333`. The best scalar comparator remains frozen Progress at
+`0.7847510000`; these results are descriptive only and do not promote,
+demote, or select a method.
+
+Manager scientific review status: PASS. No rerun is required or authorized;
+the corrected evidence is complete as descriptive DEV-only post-closure
+evidence. No Test loader was iterated and no Test metrics, Final-Test outputs,
+or Test artifacts were inspected. src/audio stayed unchanged. Source/config
+scopes were frozen after the firewall; main/master were untouched. FIX2 is a
+documentation-only correction that closes the stale pending/active status and
+the method-family classification issue, with no new scientific result, role
+change, promotion, or demotion. This extension does not reopen the closed
+research programme or authorize a follow-up task.
 
 ## TASK-007D closure
 

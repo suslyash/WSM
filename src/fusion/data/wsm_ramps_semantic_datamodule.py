@@ -198,7 +198,28 @@ class WSMRampsSemanticDataModule(WSMAVFusionDataModule):
         context.set("data.pseudo_accepted_counts", self.audit["pseudo_accepted_counts"])
 
 
+class WSMRampsSemanticDevOnlyDataModule(WSMRampsSemanticDataModule):
+    """RAMPS data contract with validation restricted to canonical DEV.
+
+    The base module deliberately exposes the three Test protocols alongside DEV.
+    This narrow extension is for explicitly DEV-only experiments: it preserves the
+    canonical TRAIN and DEV datasets while making Test loaders unreachable from
+    the normal trainer validation loop.
+    """
+
+    def val_dataloader(self) -> dict[str, Any]:
+        return {"dev": self._make_loader(self.val_dataset, shuffle=False, drop_last=False)}
+
+
 @DATAMODULES.register("wsm_ramps_semantic_datamodule")
 def wsm_ramps_semantic_datamodule(context: Any | None = None, **params: Any) -> WSMRampsSemanticDataModule:
     del context
     return WSMRampsSemanticDataModule(**params)
+
+
+@DATAMODULES.register("wsm_ramps_semantic_dev_only_datamodule")
+def wsm_ramps_semantic_dev_only_datamodule(
+    context: Any | None = None, **params: Any
+) -> WSMRampsSemanticDevOnlyDataModule:
+    del context
+    return WSMRampsSemanticDevOnlyDataModule(**params)
