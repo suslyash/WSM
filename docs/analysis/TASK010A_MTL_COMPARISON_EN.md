@@ -70,25 +70,25 @@ DEV comparisons only.
 
 ## Paired DEV deltas
 
-Each tuple is `(D Score, P Score, Mean Score)` for seeds 42/43/44; the final
-tuple is the three-seed mean delta. `wins` counts positive Mean deltas across
-the three paired seeds. A regression flag marks a per-seed Mean delta below
-`-0.010`.
+Each tuple is (D Score, P Score, Mean Score) for seeds 42/43/44; the final
+tuple is the three-seed mean delta. wins counts positive Mean deltas across
+the three paired seeds. The three explicit regression columns flag each
+per-seed D, P, or Mean delta below -0.010.
 
-| Method | Reference | Seed42 | Seed43 | Seed44 | Mean delta | wins | regression < -0.010 |
-|---|---|---|---|---|---|---:|---|
-| PCGrad | Equal | (-.013511,+.002907,-.005302) | (+.000442,-.016474,-.008016) | (-.016046,-.031433,-.023739) | (-.009705,-.015000,-.012352) | 0/3 | 44 |
-| PCGrad | Progress | (-.002258,-.027105,-.014681) | (-.017856,-.023562,-.020709) | (-.010040,-.026763,-.018402) | (-.010051,-.025810,-.017931) | 0/3 | 42,43,44 |
-| PCGrad | RA-STCH | (-.002005,-.018049,-.010027) | (+.004902,-.025260,-.010179) | (+.012311,-.006320,+.002995) | (+.005069,-.016543,-.005737) | 1/3 | 42,43 |
-| CAGrad | Equal | (-.006620,-.030307,-.018463) | (+.004319,-.032816,-.014249) | (-.013267,-.017646,-.015456) | (-.005189,-.026923,-.016056) | 0/3 | 42,43,44 |
-| CAGrad | Progress | (+.004633,-.060319,-.027842) | (-.013979,-.039904,-.026942) | (-.007261,-.012976,-.010119) | (-.005536,-.037733,-.021634) | 0/3 | 42,43,44 |
-| CAGrad | RA-STCH | (+.004886,-.051263,-.023188) | (+.008779,-.041602,-.016412) | (+.015090,+.007467,+.011278) | (+.009585,-.028466,-.009441) | 1/3 | 42,43 |
-| GradNorm | Equal | (-.017164,+.028495,+.005665) | (-.002491,-.016474,-.009482) | (-.004671,-.020865,-.012768) | (-.008109,-.002948,-.005528) | 1/3 | 44 |
-| GradNorm | Progress | (-.005911,-.001517,-.003714) | (-.020789,-.023562,-.022175) | (+.001335,-.016195,-.007431) | (-.008455,-.013758,-.011107) | 0/3 | 43 |
-| GradNorm | RA-STCH | (-.005658,+.007539,+.000940) | (+.001969,-.025260,-.011645) | (+.023686,+.004248,+.013966) | (+.006666,-.004491,+.001087) | 2/3 | 43 |
-| DB-MTL | Equal | (+.006125,-.025565,-.009720) | (+.010607,-.082984,-.036188) | (+.018821,-.064018,-.022598) | (+.011851,-.057522,-.022835) | 0/3 | 43,44 |
-| DB-MTL | Progress | (+.017378,-.055577,-.019099) | (-.007691,-.090072,-.048881) | (+.024827,-.059348,-.017261) | (+.011505,-.068332,-.028414) | 0/3 | 42,43,44 |
-| DB-MTL | RA-STCH | (+.017631,-.046521,-.014445) | (+.015067,-.091770,-.038351) | (+.047178,-.038905,+.004136) | (+.026625,-.059065,-.016220) | 1/3 | 42,43 |
+| Method | Reference | Seed42 | Seed43 | Seed44 | Mean delta | wins | D regressions >0.010 | P regressions >0.010 | Mean regressions >0.010 |
+|---|---|---|---|---|---|---:|---|---|---|
+| PCGrad | Equal | (-.013511,+.002907,-.005302) | (+.000442,-.016474,-.008016) | (-.016046,-.031433,-.023739) | (-.009705,-.015000,-.012352) | 0/3 | 42,44 | 43,44 | 44 |
+| PCGrad | Progress | (-.002258,-.027105,-.014681) | (-.017856,-.023562,-.020709) | (-.010040,-.026763,-.018402) | (-.010051,-.025810,-.017931) | 0/3 | 43,44 | 42,43,44 | 42,43,44 |
+| PCGrad | RA-STCH | (-.002005,-.018049,-.010027) | (+.004902,-.025260,-.010179) | (+.012311,-.006320,+.002995) | (+.005069,-.016543,-.005737) | 1/3 | none | 42,43 | 42,43 |
+| CAGrad | Equal | (-.006620,-.030307,-.018463) | (+.004319,-.032816,-.014249) | (-.013267,-.017646,-.015456) | (-.005189,-.026923,-.016056) | 0/3 | 44 | 42,43,44 | 42,43,44 |
+| CAGrad | Progress | (+.004633,-.060319,-.027842) | (-.013979,-.039904,-.026942) | (-.007261,-.012976,-.010119) | (-.005536,-.037733,-.021634) | 0/3 | 43 | 42,43,44 | 42,43,44 |
+| CAGrad | RA-STCH | (+.004886,-.051263,-.023188) | (+.008779,-.041602,-.016412) | (+.015090,+.007467,+.011278) | (+.009585,-.028466,-.009441) | 1/3 | none | 42,43 | 42,43 |
+| GradNorm | Equal | (-.017164,+.028495,+.005665) | (-.002491,-.016474,-.009482) | (-.004671,-.020865,-.012768) | (-.008109,-.002948,-.005528) | 1/3 | 42 | 43,44 | 44 |
+| GradNorm | Progress | (-.005911,-.001517,-.003714) | (-.020789,-.023562,-.022175) | (+.001335,-.016195,-.007431) | (-.008455,-.013758,-.011107) | 0/3 | 43 | 43,44 | 43 |
+| GradNorm | RA-STCH | (-.005658,+.007539,+.000940) | (+.001969,-.025260,-.011645) | (+.023686,+.004248,+.013966) | (+.006666,-.004491,+.001087) | 2/3 | none | 43 | 43 |
+| DB-MTL | Equal | (+.006125,-.025565,-.009720) | (+.010607,-.082984,-.036188) | (+.018821,-.064018,-.022598) | (+.011851,-.057522,-.022835) | 0/3 | none | 42,43,44 | 43,44 |
+| DB-MTL | Progress | (+.017378,-.055577,-.019099) | (-.007691,-.090072,-.048881) | (+.024827,-.059348,-.017261) | (+.011505,-.068332,-.028414) | 0/3 | none | 42,43,44 | 42,43,44 |
+| DB-MTL | RA-STCH | (+.017631,-.046521,-.014445) | (+.015067,-.091770,-.038351) | (+.047178,-.038905,+.004136) | (+.026625,-.059065,-.016220) | 1/3 | none | 42,43,44 | 42,43 |
 
 No paired delta is a significance test. No method is promoted, demoted, or
 selected from this descriptive extension.
@@ -126,14 +126,29 @@ trunk, nor that any reduction caused a better DEV Mean.
 
 ## Descriptive synthesis and boundaries
 
-Among scalar/loss-balancing references, Progress has the highest three-seed
-DEV Mean point estimate (`0.784751`), followed by Static-STCH (`0.780397`),
-Equal (`0.779173`), and RA-STCH (`0.772557`). Among the corrected gradient
-methods, GradNorm is highest (`0.773644`), followed by PCGrad (`0.766820`),
-CAGrad (`0.763117`), and DB-MTL (`0.756337`). The contextual full R4 mean is
-`0.7869088179`. DB-MTL shows the largest Mean spread among the corrected
-gradient methods; CAGrad is comparatively tight but has a lower mean. These
-are descriptive research observations, not method-promotion decisions.
+### Method-family synthesis
+
+Scalar/loss balancing comprises Equal, Static-STCH, Progress, RA-STCH, and
+GradNorm. Explicit shared-gradient handling comprises PCGrad, CAGrad, and
+DB-MTL. GradNorm is therefore classified with scalar/loss balancing here;
+it is not described as an explicit gradient-conflict method.
+
+Among scalar/loss-balancing methods, Progress had the highest three-seed DEV
+Mean point estimate (0.7847510000), while GradNorm reached 0.7736443333.
+Among explicit shared-gradient handling methods, PCGrad was highest
+(0.7668203333), followed by CAGrad (0.7631166667) and DB-MTL
+(0.7563373333). The contextual full R4 mean is 0.7869088179.
+
+Under the fixed R4 composition, scalar/loss-balancing methods were
+descriptively stronger than the tested explicit shared-gradient handling
+methods. Progress had the highest three-seed DEV Mean among the balancing
+methods, while PCGrad was the strongest explicit gradient-handling method but
+remained below Equal and Progress.
+
+The eight-method main comparison is complete for Score/Mean; historical
+UAR/MF1 aggregates are omitted where the committed evidence does not fully
+ground every method/seed. These are descriptive research observations, not
+method-promotion decisions.
 
 This extension does not claim causality, statistical significance, pseudo-label
 correctness, missing-label recovery, comorbidity recovery, corpus-shortcut

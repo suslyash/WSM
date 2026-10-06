@@ -18,18 +18,18 @@ Expected Codex branch: `codex/task-010a-gradient-mtl-comparators`.
 
 `TASK-007C` is accepted and merged. Exact result: `STAGE-7 FINAL TEST EVALUATION COMPLETE`. Stage 7 remains COMPLETE. Shared fusion remains the primary parsimonious paper candidate, full R4 the secondary multimodal reference, and temporal audio the baseline. T1 remains standalone text evidence only; T2 remains blocked before implementation/training. TASK-007D completed the final ledger at [FINAL_RESEARCH_LEDGER_EN.md](FINAL_RESEARCH_LEDGER_EN.md). TASK-010A is an explicit manager-authorized, DEV-only post-closure extension; it does not revise a frozen role, ledger, paper, or Final-Test result.
 
-## TASK-010A pre-production firewall (source/config freeze pending commit)
+## TASK-010A corrected evidence (scientific review PASS)
 
 - Source gate: `SOURCE GATE RESOLVED`; manager-authorized primary/official sources and pinned revisions are recorded in [analysis/TASK010A_METHOD_SPEC.md](analysis/TASK010A_METHOD_SPEC.md).
 - Scope: four actual-parameter gradient methods (PCGrad, CAGrad, GradNorm, DB-MTL) on the historical fixed R4 balancing composition only; no architecture, fusion, pseudo-cache, or `src/audio` change.
 - DEV firewall: `wsm_ramps_semantic_dev_only_datamodule` returns validation keys exactly `['dev']`; no Test loader, Test metric, or Final-Test operation was invoked.
 - Frozen cache verification: SHA256 `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`; accepted D/P `376/1801`, classes D `376/0`, P `212/1589`.
 - Model/loss construction: all four method implementations instantiate against the unchanged 403079 trainable-parameter R4 architecture. TRAIN/DEV-only PCGrad shape/forward/backward smoke passed with no optimizer step; pseudo target and reliability tensors were detached.
-- Deterministic CPU tests: `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_task010a_gradient_mtl.py` — `9 passed`; includes Equal component/gradient parity, method-specific hand/reference checks, and actual R4 gradient-injection smokes.
+- Deterministic CPU tests: `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_task010a_gradient_mtl.py` — `13 passed`; includes Equal component/gradient parity, method-specific hand/reference checks, and actual R4 gradient-injection smokes.
 - Configs: twelve validated configs under `configs/wsm_mm_pd_dep_v1/mtl_extension/`; [analysis/task010a_config_equivalence.json](analysis/task010a_config_equivalence.json) reports no forbidden difference versus the seed-matched Equal references.
 - Production evidence: complete for the twelve authoritative config/seed results. Commit A `58f3f9d` was pushed before production; source/configs remained frozen thereafter. A CAGrad seed43 process was interrupted after TRAIN optimizer steps by the user's stop command; the explicitly authorized replacement run completed normally and is the only accepted CAGrad seed43 result. There were 13 physical invocations including that superseded attempt, but exactly 12 authoritative completed results are reported.
 
-### TASK-010A-FIX1 — corrected gradient-MTL comparator evidence complete
+### TASK-010A-FIX1 — corrected gradient-MTL comparator evidence complete; scientific review PASS
 
 The previous TASK-010A evidence is explicitly superseded: the old loss inferred
 ownership from autograd None/non-None behavior and reported 51 shared / 0
@@ -63,10 +63,15 @@ DB-MTL `0.7563373333`. The best scalar comparator remains frozen Progress at
 `0.7847510000`; these results are descriptive only and do not promote,
 demote, or select a method.
 
-No Test loader was iterated and no Test metrics, Final-Test outputs, or Test
-artifacts were inspected. `src/audio` stayed unchanged. Source/config scopes
-were frozen after the firewall; main/master were untouched. This extension
-does not reopen the closed research programme or authorize a follow-up task.
+Manager scientific review status: PASS. No rerun is required or authorized;
+the corrected evidence is complete as descriptive DEV-only post-closure
+evidence. No Test loader was iterated and no Test metrics, Final-Test outputs,
+or Test artifacts were inspected. src/audio stayed unchanged. Source/config
+scopes were frozen after the firewall; main/master were untouched. FIX2 is a
+documentation-only correction that closes the stale pending/active status and
+the method-family classification issue, with no new scientific result, role
+change, promotion, or demotion. This extension does not reopen the closed
+research programme or authorize a follow-up task.
 
 ## TASK-007D closure
 
