@@ -2,114 +2,131 @@
 
 ## Status
 
-**BLOCKED BEFORE IMPLEMENTATION AND PRODUCTION.**
+**SOURCE GATE RESOLVED.** This is a manager-authorized, DEV-only,
+post-closure extension. It does not revise a frozen ledger, paper, model role,
+or Final-Test result. The 12 production invocations remain forbidden until the
+separate pre-production firewall commit is pushed.
 
-TASK-010A authorizes a post-closure, DEV-only extension only if PCGrad,
-CAGrad, GradNorm, and DB-MTL can each be implemented faithfully from supplied
-sources. The repository contains the Smooth Tchebycheff paper
-`docs/2402.19078v3.pdf` and the gradient-based multi-objective survey
-`docs/2501.10945v3.pdf`; it does not contain the primary papers or an accepted
-implementation for any of the four requested methods. A repository-wide search
-found no supplied `PCGrad`, `CAGrad`, `GradNorm`, `DB-MTL`, or
-Dual-Balancing implementation/source artifact.
+## Source manifest
 
-No source, configuration, pseudo cache, model role, frozen ledger, paper, or
-`src/audio` file was changed. No model was instantiated, no dataset loader was
-iterated, no checkpoint was loaded, and no training, inference, DEV metric, or
-Test operation was run.
+| Method | Primary source | Authorized implementation source | Pin and relevant file | Resolved point |
+|---|---|---|---|---|
+| PCGrad | Yu et al., *Gradient Surgery for Multi-Task Learning*, [arXiv:2001.06782](https://arxiv.org/abs/2001.06782), NeurIPS 2020 | [official PCGrad](https://github.com/tianheyu927/PCGrad) | `c5fbd7c856526373828074f06875230f7f3ee79e`, `PCGrad_tf.py` | shuffled task order and projection implementation |
+| CAGrad | Liu et al., *Conflict-Averse Gradient Descent for Multi-task Learning*, [arXiv:2110.14048](https://arxiv.org/abs/2110.14048), NeurIPS 2021 | [official CAGrad](https://github.com/Cranial-XIX/CAGrad) | `dc3d48152b6196945cfd56144879b9d42353b095`, `toy.py`, `nyuv2/utils.py` | constrained simplex objective and combined direction |
+| GradNorm | Chen et al., *GradNorm: Gradient Normalization for Adaptive Loss Balancing in Deep Multitask Networks*, [PMLR 80](https://proceedings.mlr.press/v80/chen18a.html), ICML 2018 | primary algorithm, plus [LibMTL](https://github.com/median-research-group/LibMTL) | LibMTL `4336804847eaa5e0b924b743d76beec7ac3fdc97`, `LibMTL/weighting/GradNorm.py`, `config.py` | weight update, alpha and normalization convention |
+| DB-MTL | Lin et al., *Dual-Balancing for Multi-Task Learning*, [arXiv:2308.12029](https://arxiv.org/abs/2308.12029), Algorithm 1; *Neural Networks* 195 (2026) 108317 | [LibMTL](https://github.com/median-research-group/LibMTL) | `4336804847eaa5e0b924b743d76beec7ac3fdc97`, `LibMTL/weighting/DB_MTL.py`, `config.py` | Algorithm-1 EMA implementation defaults |
 
-## Frozen comparator check
+The pinned LibMTL revision is also the accepted reference for
+`PCGrad.py` and `CAGrad.py`. The repository does not vendor these sources and
+does not add a dependency. The existing `docs/2501.10945v3.pdf` is secondary
+context only.
 
-The accepted balancing comparison uses the fixed R4 composition and seeds
-42/43/44. The verified frozen three-seed DEV Mean values are Equal
-`0.7791726667`, static-STCH `0.7803973333`, Progress `0.7847510000`, and
-RA-STCH `0.7725573333`.
+## Common WSM contract
 
-Equal, Progress, and RA-STCH are recorded in `docs/STAGE6_CLAIM_LEDGER_EN.md`
-and `docs/PROGRESS_EN.md`. Static-STCH is recovered from the accepted selected
-DEV rows in `docs/PROGRESS_EN.md`: `0.787281`, `0.776064`, and `0.777847` for
-seeds 42, 43, and 44 respectively (arithmetic mean shown above). No historical
-method was rerun.
+Each batch first computes the Depression and Parkinson task objectives
+`L_D, L_P` through the same `_components(...)` semantics as the frozen
+`WSMR4RampsBalanceLoss`: observed BCE, reliability-weighted accepted-pseudo
+BCE, mutable pseudo-scale warm-up, both auxiliary losses, agreement loss,
+current masks, and detached pseudo targets/reliabilities. Observed truth
+therefore continues to override pseudo supervision.
 
-## Source review
+Per-task gradients are taken with respect to actual trainable model parameters,
+not features or logits. A parameter is shared precisely when both gradients are
+non-`None`; a D-only or P-only parameter receives its own task gradient, and a
+neither parameter remains absent. A custom autograd scalar injects the resulting
+per-parameter gradients before the existing trainer unscales, clips, and calls
+unchanged AdamW. This is an equivalent parameter-gradient construction, not a
+global PyTorch monkey patch. A single-active-task batch uses that original
+objective gradient unchanged. The implementation logs D-only/P-only/both/neither
+parameter counts.
 
-### PCGrad
+The extension uses a DEV-only DataModule whose validation mapping is exactly
+`{"dev": loader}`. No Test loader is returned or invoked.
 
-- **Supplied locator:** `docs/2501.10945v3.pdf`, Section 3.2.2, p. 11,
-  Equation (22); primary citation [217], Yu et al. (2020), *Gradient Surgery
-  for Multi-Task Learning*.
-- **Survey equation:** for conflicting task gradients
-  `g_hat_i^T g_j < 0`, update
-  `g_hat_i <- g_hat_i - (g_hat_i^T g_j / ||g_j||^2) g_j`; then sum corrected
-  gradients.
-- **Acts on:** actual model-parameter task gradients; it changes gradients,
-  not loss weights.
-- **Missing for faithful implementation:** the source-faithful ordering/
-  permutation semantics and exact aggregation/edge-case algorithm required by
-  TASK-010A are not specified by the supplied survey. The primary paper or an
-  accepted primary implementation is required; deterministic ordering cannot
-  be invented.
+## PCGrad
 
-### CAGrad
+For a shared two-task gradient pair `g_D, g_P`, if `g_D^T g_P < 0`:
 
-- **Supplied locator:** `docs/2501.10945v3.pdf`, Section 3.2.1, p. 10,
-  Equations (14)--(15); primary citation [106], Liu et al. (2021),
-  *Conflict-Averse Gradient Descent for Multi-task Learning*.
-- **Survey description:** it constrains the direction around the average
-  gradient `g0` within `c ||g0||`, and presents a simplex subproblem followed
-  by a conflict-averse direction.
-- **Acts on:** actual model-parameter task gradients; it is a gradient
-  weighting/conflict-averse update, not a loss-weight method.
-- **Missing for faithful implementation:** the supplied source does not fix
-  the canonical/default conflict-aversion constant `c`, nor provide an
-  unambiguous implementation-level subproblem/direction expression sufficient
-  for the required deterministic toy-reference test. TASK-010A prohibits a
-  substitute or a hyperparameter guess.
+`g'_D = g_D - (g_D^T g_P / (||g_P||^2 + eps)) g_P`
 
-### GradNorm
+`g'_P = g_P - (g_D^T g_P / (||g_D||^2 + eps)) g_D`.
 
-- **Supplied locator:** `docs/2501.10945v3.pdf`, Section 3.2.1, p. 11,
-  Equation (21); primary citation [21], Chen et al. (2018), *GradNorm:
-  Gradient Normalization for Adaptive Loss Balancing in Deep Multitask
-  Networks*.
-- **Survey equation:** learn positive task weights by minimizing the sum of
-  differences between scaled task gradient norms and `c * r_i^gamma`, where
-  `r_i` is the normalized inverse training rate and `c` is a detached average
-  scaled gradient norm.
-- **Acts on:** dynamic loss weights and therefore scaled task gradients.
-- **Missing for faithful implementation:** the canonical/default `gamma`
-  (GradNorm alpha), task-weight learning rate/optimizer update, and required
-  initialization/renormalization details are absent from supplied sources.
-  TASK-010A explicitly forbids selecting them by a sweep or from memory.
+Otherwise both gradients are unchanged. The shared final gradient is
+`0.5 (g'_D + g'_P)`: the official/LibMTL implementation sums task gradients,
+but the factor `0.5` preserves the fixed WSM Equal-loss global scale
+`0.5 L_D + 0.5 L_P`; the hand-calculation test verifies it. PCGrad acts on
+actual gradients, not loss weights. The official shuffle is represented by a
+local deterministic RNG initialized from the config’s run seed. With exactly
+two tasks, each task has only one opponent, so opponent order cannot change the
+projection. D-only/P-only parameters are unchanged.
 
-### DB-MTL
+Logged train diagnostics are pre/post cosine, conflict fraction, and pre/post
+norms.
 
-- **Supplied locator:** `docs/2501.10945v3.pdf`, Section 3.2.1, p. 11;
-  primary citation [94], Lin et al. (2023), *Dual-Balancing for Multi-Task
-  Learning*, arXiv:2308.12029.
-- **Survey equation:** normalize objective gradients using
-  `lambda_i = gamma / ||g_i||` with `gamma = max_i ||g_i||`, so all scaled
-  objective gradients have the same norm.
-- **Acts on:** gradient weighting/normalization according to the survey.
-- **Missing for faithful implementation:** the primary algorithm’s complete
-  update, canonical constants, two-task/task-specific-parameter handling, and
-  AdamW interaction are not supplied. The survey explicitly notes that update
-  magnitude affects performance, so choosing a substitute magnitude would be
-  an unauthorized tune/approximation.
+## CAGrad
 
-## Required blocker resolution
+Let `G` stack the two shared parameter-gradient vectors, `A=GG^T`,
+`g0_norm=sqrt(mean(A)+eps)`, `b=(1/2,1/2)`, and
+`c=calpha*g0_norm+eps`. The pinned exact constrained solve is:
 
-Before implementation can start, the manager must provide or explicitly
-authorize primary, versioned sources (or a faithful accepted implementation)
-that establish:
+`min_x x^T A b + c sqrt(x^T A x + eps)` subject to `0<=x_i<=1` and
+`sum_i x_i=1`, initialized at `b` and solved deterministically by SciPy SLSQP.
 
-1. PCGrad ordering and edge-case algorithm;
-2. CAGrad's canonical `c` and deterministic solver/direction formula;
-3. GradNorm's canonical alpha, task-weight update rule, and learning rate;
-4. DB-MTL's full algorithm, constants, task-specific-parameter semantics, and
-   optimizer interaction.
+Then `g_w=sum_i x_i g_i`, `lambda=c/(||g_w||+eps)`, and with the frozen
+`calpha=0.5`, `rescale=1`:
 
-Until then, adding a DEV-only wrapper, loss path, optimizer hook, tests, or
-configs would risk labeling an approximation as a published method. Therefore
-the mandatory pre-production firewall and all 12 production invocations are
-not authorized.
+`g = (mean_i g_i + lambda g_w) / (1 + calpha^2)`.
+
+CAGrad changes shared gradients only; D-only/P-only gradients are kept. There
+is no hyperparameter search. Logged diagnostics are raw cosine, combined and
+mean norm, adjustment magnitude, simplex weights, and solver convergence.
+
+## GradNorm
+
+GradNorm is dynamic **loss weighting**, not a projection method. Its manager
+frozen settings are `alpha=1.5`, initial weights `[1,1]`, a separate Adam for
+these two weights only with learning rate `0.025`, and renormalization after
+each update to a positive total of two. The frozen model optimizer remains
+AdamW (`lr=1e-4`, `weight_decay=0.01`).
+
+`L_i(0)` is captured on the first both-active TRAIN update and then fixed.
+Under the explicit WSM adaptation, the GradNorm measurement vector is the
+concatenation of parameters whose current gradients from both tasks are
+non-`None`. Let `G_i=w_i||grad_W L_i||`,
+`r_i=(L_i/L_i(0))/mean_j(L_j/L_j(0))`, and
+`target_i=detach(mean_j(G_j)*r_i^alpha)`. The separate weight optimizer
+minimizes `sum_i |G_i-target_i|`; the target is detached. The model receives
+`w_D grad L_D + w_P grad L_P` (and its corresponding task weight for a
+single-task parameter). If one task is inactive, weights are not updated and
+the active task uses its current weight. Logged diagnostics include weights,
+losses, rates, norms, targets, and auxiliary objective.
+
+## DB-MTL
+
+DB-MTL is a gradient magnitude-balancing method. Algorithm 1 first uses
+`h_i = grad log(L_i + 1e-8)` for shared task gradients. At step `k`, with
+manager-frozen LibMTL defaults `DB_beta=0.9` and `DB_beta_sigma=0.0`:
+
+`u_i <- h_i + (beta / k^beta_sigma) (u_i - h_i)`;
+
+`a_i = max_j ||u_j|| / (||u_i|| + 1e-8)`;
+
+`g_shared = sum_i a_i u_i`.
+
+Thus every nonzero normalized EMA term has the maximum EMA norm before the
+sum. D-only/P-only parameters receive their own transformed
+`grad log(L_i+eps)` without cross-task normalization, per Algorithm 1. For a
+single-active task, the extension’s common safety contract keeps its original
+gradient unchanged. The transformed `.grad` values are constructed before the
+unchanged WSM AdamW step. Logged diagnostics include raw/EMA cosine, conflict
+fraction, EMA norms, and normalized magnitudes.
+
+## Deterministic pre-production checks
+
+CPU tests cover Equal component/gradient parity, PCGrad aligned/orthogonal/
+conflicting hand cases and task-local gradients, CAGrad identical/opposite/
+unequal-norm cases against an independent constrained reference, GradNorm
+initialization/positivity/normalization/slower-task pressure, DB-MTL loss-log
+EMA/max-norm behavior and near-zero protection, plus an actual R4 backward
+smoke for every method. The firewall additionally checks cache identity,
+parameter count, DEV-only loader keys, and forbidden diffs before production.
