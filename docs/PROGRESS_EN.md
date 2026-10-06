@@ -29,7 +29,7 @@ Expected Codex branch: `codex/task-010a-gradient-mtl-comparators`.
 - Configs: twelve validated configs under `configs/wsm_mm_pd_dep_v1/mtl_extension/`; [analysis/task010a_config_equivalence.json](analysis/task010a_config_equivalence.json) reports no forbidden difference versus the seed-matched Equal references.
 - Production evidence: complete for the twelve authoritative config/seed results. Commit A `58f3f9d` was pushed before production; source/configs remained frozen thereafter. A CAGrad seed43 process was interrupted after TRAIN optimizer steps by the user's stop command; the explicitly authorized replacement run completed normally and is the only accepted CAGrad seed43 result. There were 13 physical invocations including that superseded attempt, but exactly 12 authoritative completed results are reported.
 
-### TASK-010A-FIX1 — corrective implementation pending/active
+### TASK-010A-FIX1 — corrected gradient-MTL comparator evidence complete
 
 The previous TASK-010A evidence is explicitly superseded: the old loss inferred
 ownership from autograd None/non-None behavior and reported 51 shared / 0
@@ -43,8 +43,30 @@ FIX1 binds the loss to the named R4 model structure: 14 fully shared tensors,
 row-partitioned task_queries tensor. The callback binds and asserts this
 registry before fit. Added deterministic ownership, row-locality, shared
 gradient, Equal-parity, and zero-gradient misclassification regression tests;
-the FIX1 suite passes 13 passed. All twelve configs now use only _fix1
-run names; scientific settings remain unchanged. Production has not started.
+the FIX1 suite passed `13 passed`. All twelve configs use only `_fix1` run
+names; scientific settings remained unchanged.
+
+The corrective firewall commit `858efb026bbfb8c5a49469218380ea28fe2bbf5a`
+was pushed before production. The exact twelve authorized FIX1 runs then
+completed in order: PCGrad seeds42/43/44, CAGrad seeds42/43/44, GradNorm
+seeds42/43/44, and DB-MTL seeds42/43/44. No retry, sweep, extra seed,
+metric-driven tuning, or post-firewall source/config change occurred.
+
+Final corrected evidence is recorded in
+[analysis/TASK010A_MTL_COMPARISON_EN.md](analysis/TASK010A_MTL_COMPARISON_EN.md)
+and [analysis/task010a_mtl_runs.csv](analysis/task010a_mtl_runs.csv). The
+selected-checkpoint ledger records DEV-only maximum `dev/mean_score`, selected
+epochs, checkpoint SHA256, run directories, runtime, exact structural counts,
+and finite method diagnostics. Corrected three-seed DEV Mean values are:
+PCGrad `0.7668203333`, CAGrad `0.7631166667`, GradNorm `0.7736443333`, and
+DB-MTL `0.7563373333`. The best scalar comparator remains frozen Progress at
+`0.7847510000`; these results are descriptive only and do not promote,
+demote, or select a method.
+
+No Test loader was iterated and no Test metrics, Final-Test outputs, or Test
+artifacts were inspected. `src/audio` stayed unchanged. Source/config scopes
+were frozen after the firewall; main/master were untouched. This extension
+does not reopen the closed research programme or authorize a follow-up task.
 
 ## TASK-007D closure
 
