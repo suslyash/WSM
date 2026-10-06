@@ -12,7 +12,7 @@ Stage 7: **COMPLETE — FIVE-SEED DEV + ONE-SHOT FINAL TEST EVIDENCE FROZEN**.
 
 Final Test authorized: **completed once under TASK-007C; no further Test invocation authorized**.
 
-Current atomic task: **TASK-010A — manager-authorized DEV-only post-closure gradient-MTL extension**.
+Current atomic task: **TASK-010A COMPLETE — awaiting manager-authorized merge only**.
 
 Expected Codex branch: `codex/task-010a-gradient-mtl-comparators`.
 
@@ -27,7 +27,7 @@ Expected Codex branch: `codex/task-010a-gradient-mtl-comparators`.
 - Model/loss construction: all four method implementations instantiate against the unchanged 403079 trainable-parameter R4 architecture. TRAIN/DEV-only PCGrad shape/forward/backward smoke passed with no optimizer step; pseudo target and reliability tensors were detached.
 - Deterministic CPU tests: `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_task010a_gradient_mtl.py` — `13 passed`; includes Equal component/gradient parity, method-specific hand/reference checks, and actual R4 gradient-injection smokes.
 - Configs: twelve validated configs under `configs/wsm_mm_pd_dep_v1/mtl_extension/`; [analysis/task010a_config_equivalence.json](analysis/task010a_config_equivalence.json) reports no forbidden difference versus the seed-matched Equal references.
-- Production evidence: complete for the twelve authoritative config/seed results. Commit A `58f3f9d` was pushed before production; source/configs remained frozen thereafter. A CAGrad seed43 process was interrupted after TRAIN optimizer steps by the user's stop command; the explicitly authorized replacement run completed normally and is the only accepted CAGrad seed43 result. There were 13 physical invocations including that superseded attempt, but exactly 12 authoritative completed results are reported.
+- Production evidence: authoritative FIX1 production is complete after firewall commit 858efb026bbfb8c5a49469218380ea28fe2bbf5a: exactly twelve runs in order PCGrad 42/43/44, CAGrad 42/43/44, GradNorm 42/43/44, and DB-MTL 42/43/44. No retry, sweep, extra seed, or tuning occurred; source/config remained frozen after the firewall. No Test loader, Test metric, or Final Test was used. Final scientific evidence is commit 4828412f62299abdab908596802f77f50d49a30c; manager scientific review is PASS, and FIX2 documentation correction is commit 71577004cdd0e8dc29722cbea31f2fdb27aaaa4b.
 
 ### TASK-010A-FIX1 — corrected gradient-MTL comparator evidence complete; scientific review PASS
 
