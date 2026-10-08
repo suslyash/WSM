@@ -12,7 +12,7 @@ Stage 7: **COMPLETE — FIVE-SEED DEV + ONE-SHOT FINAL TEST EVIDENCE FROZEN**.
 
 Final Test authorized: **completed once under TASK-007C; no further Test invocation authorized**.
 
-Current atomic task: **TASK-011A — post-closure DEV-only equal-budget Progress Optuna comparison; firewall pending**.
+Current atomic task: **TASK-011A COMPLETE WITH DOCUMENTED TEST-QUARANTINE PROCEDURAL DEVIATION — manager review pending**.
 
 Expected Codex branch: `codex/task-011a-progress-optuna-shared-r4`.
 
@@ -20,12 +20,16 @@ Expected Codex branch: `codex/task-011a-progress-optuna-shared-r4`.
 
 ## TASK-011A post-closure Progress Optuna extension
 
-- New branch: `codex/task-011a-progress-optuna-shared-r4`, based on `eff19d9987e79d99f29b0f5c7fff257341fe350d`.
-- Scope is a new DEV-only equal-budget comparison: one untuned seed42 baseline plus exactly 30 Optuna trials for Shared + Progress and one untuned seed42 baseline plus exactly 30 trials for Full R4 + Progress.
-- Six new configs are frozen under [postclosure_progress_optuna](../configs/wsm_mm_pd_dep_v1/postclosure_progress_optuna); both families use `mode: progress`, the same eight-variable space, seed42, 30 epochs, and `dev/mean_score` max-only selection. The only family difference is `task_aware_fusion: false` versus `true`.
-- Pre-firewall validation and dry-run passed: all six YAML files validate; both sweeps report 30 trials and exactly 8 variables; baseline trainable parameter count is `295239`; search-space maximum is below `1,000,000`.
-- Frozen pseudo cache SHA256 is `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945` with accepted D/P `376/1801`; TRAIN-only forward/loss/backward smoke passed for both families with two-logit output and finite gradients. No DEV/Test loader was iterated by the firewall.
-- Evidence dossier: [POSTCLOSURE_PROGRESS_OPTUNA_SHARED_R4_EN.md](POSTCLOSURE_PROGRESS_OPTUNA_SHARED_R4_EN.md). Production is pending the pushed firewall commit; confirmation seeds and Final Test remain not authorized.
+- Branch: `codex/task-011a-progress-optuna-shared-r4`, based on `eff19d9987e79d99f29b0f5c7fff257341fe350d`.
+- Firewall commit pushed before production: `a64068939bff12a198b73cf3d33131536a881d34`.
+- Production contract complete: exactly 62 invocations — two untuned seed42 baselines, Shared + Progress `30/30`, and Full R4 + Progress `30/30`. No retry, extra seed, second sweep, or post-firewall source/config change occurred.
+- Baseline DEV Mean: Shared `0.810388`; Full R4 `0.808575`; matched delta Shared `+0.001813`. Both baseline trainable counts were `295239`.
+- Objective winners: Shared trial 28 Mean `0.8336994328`, D/P Score `0.749256/0.918143`, params `552775`; Full R4 trial 8 Mean `0.8193449680`, D/P Score `0.740769/0.897921`, params `346759`. Balanced winner: `NONE` for both frozen gates.
+- Canonical pseudo cache SHA256: `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`; accepted D/P `376/1801`. Evidence dossier: [POSTCLOSURE_PROGRESS_OPTUNA_SHARED_R4_EN.md](POSTCLOSURE_PROGRESS_OPTUNA_SHARED_R4_EN.md).
+- Cross-family interpretation is DEV-only equal-budget family optimization; no causal architecture claim, leaderboard, promotion, demotion, confirmation seeds, or Final Test.
+- Procedural deviation: one raw summary was opened and rendered Test columns. Test values were not used for any decision or analysis and no Test numbers are reproduced. Strict quarantine compliance is not claimed.
+- Status: **TASK-011A COMPLETE WITH DOCUMENTED TEST-QUARANTINE PROCEDURAL DEVIATION**.
+- **DEV-ONLY SELECTION EVIDENCE RETAINED; STRICT QUARANTINE COMPLIANCE NOT MET**.
 
 ## TASK-010A corrected evidence (scientific review PASS)
 
