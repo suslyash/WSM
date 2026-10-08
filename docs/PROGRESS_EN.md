@@ -12,11 +12,24 @@ Stage 7: **COMPLETE — FIVE-SEED DEV + ONE-SHOT FINAL TEST EVIDENCE FROZEN**.
 
 Final Test authorized: **completed once under TASK-007C; no further Test invocation authorized**.
 
-Current atomic task: **NONE — TASK-010A COMPLETE; no further experiment authorized**.
+Current atomic task: **TASK-011A COMPLETE WITH DOCUMENTED TEST-QUARANTINE PROCEDURAL DEVIATION — manager review pending**.
 
-Expected Codex branch: `codex/task-010a-gradient-mtl-comparators`.
+Expected Codex branch: `codex/task-011a-progress-optuna-shared-r4`.
 
 `TASK-007C` is accepted and merged. Exact result: `STAGE-7 FINAL TEST EVALUATION COMPLETE`. Stage 7 remains COMPLETE. Shared fusion remains the primary parsimonious paper candidate, full R4 the secondary multimodal reference, and temporal audio the baseline. T1 remains standalone text evidence only; T2 remains blocked before implementation/training. TASK-007D completed the final ledger at [FINAL_RESEARCH_LEDGER_EN.md](FINAL_RESEARCH_LEDGER_EN.md). TASK-010A is an explicit manager-authorized, DEV-only post-closure extension; it does not revise a frozen role, ledger, paper, or Final-Test result.
+
+## TASK-011A post-closure Progress Optuna extension
+
+- Branch: `codex/task-011a-progress-optuna-shared-r4`, based on `eff19d9987e79d99f29b0f5c7fff257341fe350d`.
+- Firewall commit pushed before production: `a64068939bff12a198b73cf3d33131536a881d34`.
+- Production contract complete: exactly 62 invocations — two untuned seed42 baselines, Shared + Progress `30/30`, and Full R4 + Progress `30/30`. No retry, extra seed, second sweep, or post-firewall source/config change occurred.
+- Baseline DEV Mean: Shared `0.810388`; Full R4 `0.808575`; matched delta Shared `+0.001813`. Both baseline trainable counts were `295239`.
+- Objective winners: Shared trial 28 Mean `0.8336994328`, D/P Score `0.749256/0.918143`, params `552775`; Full R4 trial 8 Mean `0.8193449680`, D/P Score `0.740769/0.897921`, params `346759`. Balanced winner: `NONE` for both frozen gates.
+- Canonical pseudo cache SHA256: `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945`; accepted D/P `376/1801`. Evidence dossier: [POSTCLOSURE_PROGRESS_OPTUNA_SHARED_R4_EN.md](POSTCLOSURE_PROGRESS_OPTUNA_SHARED_R4_EN.md).
+- Cross-family interpretation is DEV-only equal-budget family optimization; no causal architecture claim, leaderboard, promotion, demotion, confirmation seeds, or Final Test.
+- Procedural deviation: one raw summary was opened and rendered Test columns. Test values were not used for any decision or analysis and no Test numbers are reproduced. Strict quarantine compliance is not claimed.
+- Status: **TASK-011A COMPLETE WITH DOCUMENTED TEST-QUARANTINE PROCEDURAL DEVIATION**.
+- **DEV-ONLY SELECTION EVIDENCE RETAINED; STRICT QUARANTINE COMPLIANCE NOT MET**.
 
 ## TASK-010A corrected evidence (scientific review PASS)
 
