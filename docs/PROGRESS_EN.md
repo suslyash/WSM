@@ -12,11 +12,20 @@ Stage 7: **COMPLETE — FIVE-SEED DEV + ONE-SHOT FINAL TEST EVIDENCE FROZEN**.
 
 Final Test authorized: **completed once under TASK-007C; no further Test invocation authorized**.
 
-Current atomic task: **NONE — TASK-010A COMPLETE; no further experiment authorized**.
+Current atomic task: **TASK-011A — post-closure DEV-only equal-budget Progress Optuna comparison; firewall pending**.
 
-Expected Codex branch: `codex/task-010a-gradient-mtl-comparators`.
+Expected Codex branch: `codex/task-011a-progress-optuna-shared-r4`.
 
 `TASK-007C` is accepted and merged. Exact result: `STAGE-7 FINAL TEST EVALUATION COMPLETE`. Stage 7 remains COMPLETE. Shared fusion remains the primary parsimonious paper candidate, full R4 the secondary multimodal reference, and temporal audio the baseline. T1 remains standalone text evidence only; T2 remains blocked before implementation/training. TASK-007D completed the final ledger at [FINAL_RESEARCH_LEDGER_EN.md](FINAL_RESEARCH_LEDGER_EN.md). TASK-010A is an explicit manager-authorized, DEV-only post-closure extension; it does not revise a frozen role, ledger, paper, or Final-Test result.
+
+## TASK-011A post-closure Progress Optuna extension
+
+- New branch: `codex/task-011a-progress-optuna-shared-r4`, based on `eff19d9987e79d99f29b0f5c7fff257341fe350d`.
+- Scope is a new DEV-only equal-budget comparison: one untuned seed42 baseline plus exactly 30 Optuna trials for Shared + Progress and one untuned seed42 baseline plus exactly 30 trials for Full R4 + Progress.
+- Six new configs are frozen under [postclosure_progress_optuna](../configs/wsm_mm_pd_dep_v1/postclosure_progress_optuna); both families use `mode: progress`, the same eight-variable space, seed42, 30 epochs, and `dev/mean_score` max-only selection. The only family difference is `task_aware_fusion: false` versus `true`.
+- Pre-firewall validation and dry-run passed: all six YAML files validate; both sweeps report 30 trials and exactly 8 variables; baseline trainable parameter count is `295239`; search-space maximum is below `1,000,000`.
+- Frozen pseudo cache SHA256 is `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945` with accepted D/P `376/1801`; TRAIN-only forward/loss/backward smoke passed for both families with two-logit output and finite gradients. No DEV/Test loader was iterated by the firewall.
+- Evidence dossier: [POSTCLOSURE_PROGRESS_OPTUNA_SHARED_R4_EN.md](POSTCLOSURE_PROGRESS_OPTUNA_SHARED_R4_EN.md). Production is pending the pushed firewall commit; confirmation seeds and Final Test remain not authorized.
 
 ## TASK-010A corrected evidence (scientific review PASS)
 
