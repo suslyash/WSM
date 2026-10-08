@@ -1568,3 +1568,12 @@ Branch: codex/task-008c-paper-release; final evidence commit SHA is recorded in 
 The required pdflatex, bibtex, pdflatex, pdflatex sequence passed with no undefined citations/references, missing figures, or overfull boxes. Rendered title/abstract, method figure, main results, DEPART context, Stage-6 ablations, reproducibility appendix, and references were visually inspected; the method figure remains vector-only. The release is venue-neutral: official class/style, authorship, limits, and required venue statements remain explicitly pending.
 
 No scientific content, roles, claims, thresholds, or results changed. Shared remains the DEV-only primary parsimonious candidate, full R4 the secondary multimodal reference, and temporal audio the baseline; T1 remains standalone and T2 blocked. No experiment, inference, Test invocation, checkpoint loading, metric recomputation, or new statistics occurred; src/audio, source, configs, scripts, caches, and evidence ledgers remain unchanged.
+
+
+### TASK-011B-BUNDLE-C1 — corrected Shared ownership firewall
+
+Status: pre-production firewall complete; production not started. Branch: `codex/task-011b-shared-progress-full-suite`; exact base: `1027209de07f65098adcb69fc41e9657cc77c1cf`. The Shared gradient-MTL ownership map now treats the full Shared path as shared: `23/14/14/0`; task-aware R4 remains `14/18/18/1`. The gradient-MTL callback validates the model boolean `task_aware_fusion` and rejects missing/non-boolean or mismatched ownership.
+
+Regression command `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_task010a_gradient_mtl.py` passed `25 passed`, including Shared PCGrad/CAGrad/GradNorm/DB-MTL finite smokes and callback compatibility/rejection tests. The orchestration script is [scripts/common/run_postclosure_shared_progress_full_suite.py](../scripts/common/run_postclosure_shared_progress_full_suite.py). `--prepare`, `--dry-run`, and `--validate` passed; the frozen manifest contains exactly `52` rows in the required A-G order. Validation proved config validity, canonical/DEV-only TRAIN/DEV membership equivalence, parameter count `552775`, cache contracts, both ownership modes, and TRAIN-only forward/loss/backward smokes. It reported `test_loader_accessed=False`.
+
+No production invocation has occurred (`0/52`), no Test loader/metric/mixed summary/Final-Test artifact was inspected, and no metric-bearing run has been retried. Firewall commit must be pushed before the exact `--run` production command. Main/master and `src/audio` remain untouched.

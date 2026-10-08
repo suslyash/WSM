@@ -24,8 +24,19 @@ class WSMGradientMTLCallback(BaseCallback):
         if model is None or not hasattr(loss, "bind_model"):
             raise TypeError("wsm_gradient_mtl_callback requires trainer.model and loss.bind_model")
         loss.bind_model(model)
-        if loss.ownership_counts != {"shared": 14, "depression": 18, "parkinson": 18, "row": 1}:
-            raise ValueError(f"unexpected R4 structural ownership: {loss.ownership_counts}")
+        task_aware = getattr(model, "task_aware_fusion", None)
+        if not isinstance(task_aware, bool):
+            raise ValueError("gradient MTL model must expose boolean task_aware_fusion")
+        expected = (
+            {"shared": 14, "depression": 18, "parkinson": 18, "row": 1}
+            if task_aware
+            else {"shared": 23, "depression": 14, "parkinson": 14, "row": 0}
+        )
+        if loss.ownership_counts != expected:
+            raise ValueError(
+                f"unexpected structural ownership for task_aware_fusion={task_aware}: "
+                f"{loss.ownership_counts}"
+            )
 
     def on_epoch_start(self, trainer: Any, epoch: int) -> None:
         self._loss(trainer).reset_epoch_diagnostics()
