@@ -231,26 +231,128 @@ def run(resume: bool) -> None:
     if len([x for x in current.values() if x.get("status")=="COMPLETE"]) != 52: stop("not 52 complete")
     print("RUN PASS rows=52")
 
-def mlflow_dev(run_name: str) -> tuple[str,dict[str,float]]:
-    db=sqlite3.connect(f"file:{REPO/'logs/mlflow.db'}?mode=ro",uri=True)
-    tag=db.execute("SELECT run_uuid FROM tags WHERE key='mlflow.runName' AND value=? ORDER BY run_uuid DESC LIMIT 1",(run_name,)).fetchone()
-    if tag is None: stop(f"MLflow run missing: {run_name}")
-    run_id=tag[0]; keys=[x[0] for x in db.execute("SELECT DISTINCT key FROM metrics WHERE run_uuid=? AND key LIKE 'dev/%'",(run_id,))]
-    if not keys: stop(f"no DEV metrics for {run_name}")
-    values={}
-    for key in keys: values[key]=[(int(s),float(v)) for _,v,s in db.execute("SELECT key,value,step FROM metrics WHERE run_uuid=? AND key=? ORDER BY step",(run_id,key))]
-    monitor="dev/mean_score" if "dev/mean_score" in values else "dev/depression/score" if "dev/depression/score" in values else "dev/parkinson/score"
-    epoch,_=max(values[monitor],key=lambda x:x[1]); selected={key:value for key,entries in values.items() for step,value in entries if step==epoch}; selected["selected_epoch"]=float(epoch)
-    db.close(); return run_id,selected
+DEV_KEYS = {
+    "dev/depression/uar", "dev/depression/mf1", "dev/depression/score",
+    "dev/parkinson/uar", "dev/parkinson/mf1", "dev/parkinson/score",
+    "dev/mean_score",
+}
 
-def checkpoint(run_name: str, epoch: int) -> tuple[str|None,str|None,int|None]:
-    found=[]
-    for root in (REPO/"logs/wsm_mm_pd_dep_v1").glob(f"{run_name}_*"):
-        for p in (root/"checkpoints").glob("epoch=*.pt"):
-            m=re.search(r"epoch=(\d+)",p.name)
-            if m and int(m.group(1))==epoch: found.append(p)
-    if not found: return None,None,None
-    p=sorted(found)[0]; state=torch.load(p,map_location="cpu",weights_only=False); vals=state.get("model_state_dict",{})
+def _dev_series(db: sqlite3.Connection, run_id: str) -> dict[str, list[tuple[int,float]]]:
+    keys=[x[0] for x in db.execute(
+        "SELECT DISTINCT key FROM metrics WHERE run_uuid=? AND key IN (?,?,?,?,?,?,?)",
+        (run_id,*sorted(DEV_KEYS)))]
+    if not keys:
+        stop(f"no allowlisted DEV metrics for {run_id}")
+    values={}
+    for key in keys:
+        values[key]=[(int(step),float(value)) for _,value,step in db.execute(
+            "SELECT key,value,step FROM metrics WHERE run_uuid=? AND key=? ORDER BY step",
+            (run_id,key))]
+    return values
+
+def _selected_dev(values: dict[str,list[tuple[int,float]]], selector_name: str) -> tuple[int, tuple[tuple[str,float],...]]:
+    if selector_name not in values:
+        stop(f"selector {selector_name} is missing from DEV metrics")
+    epoch,_=max(values[selector_name],key=lambda x:x[1])
+    selected=tuple(sorted((key,value) for key,entries in values.items()
+                          for step,value in entries if step==epoch))
+    return epoch,selected
+
+def _artifact_signature(db: sqlite3.Connection, row: dict[str,Any],
+                        run_id: str, actual_name: str, status: str) -> tuple[Any,...]:
+    if status != "FINISHED":
+        stop(f"non-FINISHED candidate {run_id}: {status}")
+    root=REPO/"logs/wsm_mm_pd_dep_v1"/actual_name
+    if not root.is_dir():
+        stop(f"run artifact directory missing for {run_id}: {root}")
+    snapshots=list(root.glob(Path(row["config_path"]).name))
+    if len(snapshots) != 1 or digest(snapshots[0]) != row["config_sha256"]:
+        stop(f"config identity mismatch for {run_id}: {snapshots}")
+    config=load(snapshots[0])
+    if config.get("seed") != row["seed"]:
+        stop(f"seed mismatch for {run_id}")
+    actual_mode = "task_aware" if config["model"]["params"].get("task_aware_fusion",True) else "shared"
+    if actual_mode != row["model_mode"]:
+        stop(f"model mode mismatch for {run_id}: {actual_mode} != {row['model_mode']}")
+    if config["loss"]["params"].get("mode") != row["loss_mode"] or config["loss"]["params"].get("method") != row["loss_method"]:
+        stop(f"loss identity mismatch for {run_id}")
+    params=dict(db.execute("SELECT key,value FROM params WHERE run_uuid=?",(run_id,)).fetchall())
+    if abs(float(params.get("optimizer_lr/group0","nan"))-float(config["optimizer"]["params"]["lr"])) > 1e-15:
+        stop(f"optimizer lr mismatch for {run_id}")
+    if abs(float(params.get("optimizer_weight_decay/group0","nan"))-float(config["optimizer"]["params"]["weight_decay"])) > 1e-15:
+        stop(f"optimizer weight decay mismatch for {run_id}")
+    epoch,selected=_selected_dev(_dev_series(db,run_id),row["selector"])
+    candidates=list((root/"checkpoints").glob(f"epoch={epoch}_*.pt"))
+    if len(candidates) != 1:
+        stop(f"selected checkpoint identity is not unique for {run_id}: {candidates}")
+    checkpoint_path=candidates[0]
+    return (status,row["group"],row["variant"],row["seed"],row["run_name"],
+            row["config_sha256"],actual_mode,row["loss_mode"],row["loss_method"],
+            float(config["optimizer"]["params"]["lr"]),
+            float(config["optimizer"]["params"]["weight_decay"]),epoch,
+            checkpoint_path.name,digest(checkpoint_path),selected)
+
+def resolve_runs(manifest_rows: list[dict[str, Any]]) -> dict[int,dict[str,Any]]:
+    db=sqlite3.connect(f"file:{REPO / 'logs/mlflow.db'}?mode=ro",uri=True)
+    tags=db.execute("SELECT run_uuid,value FROM tags WHERE key='mlflow.runName'").fetchall()
+    statuses=dict(db.execute("SELECT run_uuid,status FROM runs").fetchall())
+    resolved={}
+    referenced=set()
+    for row in manifest_rows:
+        prefix=row["run_name"]
+        pattern=re.compile(r"^"+re.escape(prefix)+r"(?:_|$)")
+        candidates=[(run_id,name,statuses.get(run_id,"")) for run_id,name in tags
+                    if pattern.match(name) and statuses.get(run_id)=="FINISHED"]
+        if not candidates:
+            db.close()
+            stop(f"no FINISHED candidate for row {row['index']} {prefix}")
+        checked=[(run_id,name,status,_artifact_signature(db,row,run_id,name,status))
+                 for run_id,name,status in candidates]
+        signatures={item[3] for item in checked}
+        if len(signatures) != 1:
+            db.close()
+            stop(f"alias equivalence mismatch for row {row['index']}: {[(x[0],x[3]) for x in checked]}")
+        ids={x[0] for x in checked}
+        if referenced.intersection(ids):
+            db.close()
+            stop(f"MLflow alias reused across manifest rows: {row['index']}")
+        referenced.update(ids)
+        canonical=min(ids)
+        selected=next(x for x in checked if x[0]==canonical)
+        resolved[row["index"]]={"canonical_run_id":canonical,"canonical_name":selected[1],
+                                "alias_run_ids":sorted(ids-{canonical}),
+                                "run_status":selected[2],"signature":selected[3]}
+    db.close()
+    if len(resolved) != 52 or len({x["signature"] for x in resolved.values()}) != 52:
+        stop(f"scientific result count failure: rows={len(resolved)} results={len({x['signature'] for x in resolved.values()})}")
+    return resolved
+
+def audit_collection(manifest_rows: list[dict[str, Any]]) -> dict[int,dict[str,Any]]:
+    resolved=resolve_runs(manifest_rows)
+    for row in manifest_rows:
+        item=resolved[row["index"]]
+        print(f"mapping {row['index']:02d} {row['run_name']} -> {item['canonical_run_id']} aliases={item['alias_run_ids']} {item['run_status']}")
+    alias_rows=sum(bool(x["alias_run_ids"]) for x in resolved.values())
+    referenced=sum(1+len(x["alias_run_ids"]) for x in resolved.values())
+    print(f"COLLECTION AUDIT PASS rows=52 scientific_results=52 referenced_mlflow_runs={referenced} duplicate_alias_rows={alias_rows} test_keys_requested=False")
+    return resolved
+
+def mlflow_dev(db: sqlite3.Connection, run_id: str, run_name: str, selector_name: str) -> dict[str,float]:
+    values=_dev_series(db,run_id)
+    epoch,_=_selected_dev(values,selector_name)
+    selected={key:value for key,entries in values.items() for step,value in entries if step==epoch}
+    selected["selected_epoch"]=float(epoch)
+    return selected
+
+def checkpoint(actual_name: str, epoch: int) -> tuple[str|None,str|None,int|None]:
+    root=REPO/"logs/wsm_mm_pd_dep_v1"/actual_name
+    found=list((root/"checkpoints").glob(f"epoch={epoch}_*.pt"))
+    if len(found) != 1:
+        stop(f"selected checkpoint is not unique for {actual_name}: {found}")
+    p=found[0]
+    import torch
+    state=torch.load(p,map_location="cpu",weights_only=False)
+    vals=state.get("model_state_dict",{})
     return str(p.relative_to(REPO)),digest(p),sum(v.numel() for v in vals.values() if hasattr(v,"numel"))
 
 def write_report(result: list[dict[str,Any]]) -> None:
@@ -277,23 +379,43 @@ def write_report(result: list[dict[str,Any]]) -> None:
     REPORT.write_text("\n".join(lines)+"\n")
 
 def collect() -> None:
-    m=manifest(); ledger=json.loads(LEDGER.read_text()) if LEDGER.is_file() else {}
-    if len([x for x in ledger.get("rows",[]) if x.get("status")=="COMPLETE"]) != 52: stop("collect requires 52 COMPLETE rows")
+    m=manifest()
+    ledger=json.loads(LEDGER.read_text()) if LEDGER.is_file() else {}
+    if len([x for x in ledger.get("rows",[]) if x.get("status")=="COMPLETE"]) != 52:
+        stop("collect requires 52 COMPLETE rows")
+    resolved=audit_collection(m["rows"])
+    db=sqlite3.connect(f"file:{REPO / 'logs/mlflow.db'}?mode=ro",uri=True)
     out=[]
     for r in m["rows"]:
-        run_id,metrics=mlflow_dev(r["run_name"]); epoch=int(metrics.pop("selected_epoch")); path,csha,params=checkpoint(r["run_name"],epoch)
-        out.append({k:r[k] for k in ("index","group","variant","seed","run_name","selector","config_path","config_sha256")}|{"run_id":run_id,"selected_epoch":epoch,"metrics":metrics,"checkpoint_path":path,"checkpoint_sha256":csha,"parameters":params})
-    RESULTS.parent.mkdir(parents=True,exist_ok=True); RESULTS.write_text(json.dumps({"schema":"task011b-dev-only-results-v1","test_access":False,"rows":out},indent=2,sort_keys=True)+"\n")
-    write_report(out); print(f"COLLECT PASS rows=52 test_metrics_read=False report={REPORT.relative_to(REPO)}")
+        item=resolved[r["index"]]
+        run_id=item["canonical_run_id"]
+        actual=item["canonical_name"]
+        metrics=mlflow_dev(db,run_id,actual,r["selector"])
+        epoch=int(metrics.pop("selected_epoch"))
+        path,csha,params=checkpoint(actual,epoch)
+        out.append({k:r[k] for k in ("index","group","variant","seed","run_name","selector","config_path","config_sha256")}|{
+            "run_id":run_id,"alias_run_ids":item["alias_run_ids"],"mlflow_run_name":actual,
+            "run_status":item["run_status"],"selected_epoch":epoch,"metrics":metrics,
+            "checkpoint_path":path,"checkpoint_sha256":csha,"parameters":params})
+    db.close()
+    RESULTS.parent.mkdir(parents=True,exist_ok=True)
+    RESULTS.write_text(json.dumps({"schema":"task011b-dev-only-results-v1","test_access":False,
+        "manifest_rows":52,"scientific_results":52,
+        "referenced_mlflow_runs":sum(1+len(x["alias_run_ids"]) for x in resolved.values()),
+        "duplicate_alias_rows":sum(bool(x["alias_run_ids"]) for x in resolved.values()),
+        "rows":out},indent=2,sort_keys=True)+"\n")
+    write_report(out)
+    print(f"COLLECT PASS rows=52 scientific_results=52 test_metrics_read=False report={REPORT.relative_to(REPO)}")
 
 def main() -> None:
     p=argparse.ArgumentParser(); g=p.add_mutually_exclusive_group(required=True)
-    for x in ("prepare","validate","dry-run","run","resume","collect"): g.add_argument("--"+x,action="store_true")
+    for x in ("prepare","validate","dry-run","run","resume","audit-collection","collect"): g.add_argument("--"+x,action="store_true")
     a=p.parse_args()
     if a.prepare: prepare()
     elif a.validate: validate()
     elif a.dry_run: dry_run()
     elif a.run: run(False)
     elif a.resume: run(True)
+    elif a.audit_collection: audit_collection(manifest()["rows"])
     else: collect()
 if __name__=="__main__": main()
