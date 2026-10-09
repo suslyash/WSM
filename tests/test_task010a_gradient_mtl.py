@@ -17,6 +17,7 @@ from fusion.loss.gradient_mtl_loss import (
 )
 from fusion.loss.r4_ramps_balance_loss import WSMR4RampsBalanceLoss
 from fusion.models.av_r3_disease_query import WSMAVR3DiseaseQueryModel
+from common.callbacks.wsm_gradient_mtl_callback import WSMGradientMTLCallback
 
 
 def _cagrad_reference(gd: torch.Tensor, gp: torch.Tensor) -> torch.Tensor:
@@ -237,3 +238,106 @@ def test_task_specific_zero_gradient_is_not_misclassified_as_shared(method: str)
     assert torch.allclose(combined[1], grad_d[1])
     assert torch.allclose(combined[2], grad_p[2])
     assert not torch.allclose(combined[0], 0.5 * (grad_d[0] + grad_p[0]))
+
+def test_shared_named_ownership_map_has_exact_structural_counts() -> None:
+    model = WSMAVR3DiseaseQueryModel(task_aware_fusion=False)
+    loss = WSMGradientMTLLoss(method="pcgrad", pseudo_scale=0.0)
+    loss.bind_model(model)
+    assert loss.ownership_counts == {"shared": 23, "depression": 14, "parkinson": 14, "row": 0}
+    names = {entry.name for entry in loss._ownership or []}
+    assert "task_queries" in names
+    assert len(names) == 51
+
+
+def test_shared_ownership_reaches_both_task_objectives() -> None:
+    torch.manual_seed(121)
+    model = WSMAVR3DiseaseQueryModel(task_aware_fusion=False)
+    loss = WSMGradientMTLLoss(method="pcgrad", pseudo_scale=0.0)
+    loss.bind_model(model)
+    output = model(_batch())
+    objectives, active = loss._task_objectives(output, _batch())
+    assert active == [True, True]
+    parameters = [entry.parameter for entry in loss._ownership or []]
+    raw_d = torch.autograd.grad(objectives[0], parameters, retain_graph=True, allow_unused=True)
+    raw_p = torch.autograd.grad(objectives[1], parameters, retain_graph=True, allow_unused=True)
+    for entry, d_grad, p_grad in zip(loss._ownership or [], raw_d, raw_p, strict=True):
+        if entry.kind == "shared":
+            assert d_grad is not None and p_grad is not None
+        elif entry.kind == "depression":
+            assert d_grad is not None
+            assert p_grad is None or torch.equal(p_grad, torch.zeros_like(p_grad))
+        elif entry.kind == "parkinson":
+            assert p_grad is not None
+            assert d_grad is None or torch.equal(d_grad, torch.zeros_like(d_grad))
+        else:
+            raise AssertionError("Shared fusion must not classify parameters as row-partitioned")
+
+
+@pytest.mark.parametrize(
+    ("task_aware_fusion", "expected"),
+    [
+        (True, {"shared": 14, "depression": 18, "parkinson": 18, "row": 1}),
+        (False, {"shared": 23, "depression": 14, "parkinson": 14, "row": 0}),
+    ],
+)
+def test_gradient_mtl_callback_binds_both_model_modes(task_aware_fusion: bool, expected: dict[str, int]) -> None:
+    model = WSMAVR3DiseaseQueryModel(task_aware_fusion=task_aware_fusion)
+    loss = WSMGradientMTLLoss(method="pcgrad", pseudo_scale=0.0)
+    trainer = type("Trainer", (), {"model": model, "loss_fn": loss})()
+    WSMGradientMTLCallback().on_fit_start(trainer)
+    assert loss.ownership_counts == expected
+
+
+class _FakeCallbackLoss:
+    def __init__(self, counts: dict[str, int]) -> None:
+        self._counts = counts
+        self.method = "pcgrad"
+
+    @property
+    def ownership_counts(self) -> dict[str, int]:
+        return self._counts
+
+    def bind_model(self, model: object) -> None:
+        del model
+
+    def epoch_diagnostics(self) -> dict[str, float]:
+        return {}
+
+    def reset_epoch_diagnostics(self) -> None:
+        return None
+
+
+def test_gradient_mtl_callback_rejects_mismatched_ownership() -> None:
+    model = WSMAVR3DiseaseQueryModel(task_aware_fusion=False)
+    loss = _FakeCallbackLoss({"shared": 14, "depression": 18, "parkinson": 18, "row": 1})
+    trainer = type("Trainer", (), {"model": model, "loss_fn": loss})()
+    with pytest.raises(ValueError, match="task_aware_fusion=False"):
+        WSMGradientMTLCallback().on_fit_start(trainer)
+
+
+@pytest.mark.parametrize("value", [None, "false", 1])
+def test_gradient_mtl_callback_rejects_missing_or_nonboolean_mode(value: object) -> None:
+    model = type("Model", (), {})()
+    if value is not None:
+        model.task_aware_fusion = value
+    loss = _FakeCallbackLoss({"shared": 23, "depression": 14, "parkinson": 14, "row": 0})
+    trainer = type("Trainer", (), {"model": model, "loss_fn": loss})()
+    with pytest.raises(ValueError, match="boolean task_aware_fusion"):
+        WSMGradientMTLCallback().on_fit_start(trainer)
+
+
+@pytest.mark.parametrize("method", ["pcgrad", "cagrad", "gradnorm", "dbmtl"])
+def test_shared_gradient_mtl_methods_inject_finite_gradients(method: str) -> None:
+    torch.manual_seed(211)
+    model = WSMAVR3DiseaseQueryModel(task_aware_fusion=False)
+    model.train()
+    loss = WSMGradientMTLLoss(method=method, pseudo_scale=0.0, pcgrad_seed=211)
+    loss.bind_model(model)
+    scalar = loss(model(_batch()), _batch())
+    scalar.backward()
+    assert torch.isfinite(scalar)
+    assert all(
+        parameter.grad is not None and torch.isfinite(parameter.grad).all()
+        for parameter in model.parameters() if parameter.requires_grad
+    )
+    assert loss.ownership_counts == {"shared": 23, "depression": 14, "parkinson": 14, "row": 0}

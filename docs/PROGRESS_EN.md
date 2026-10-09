@@ -1568,3 +1568,32 @@ Branch: codex/task-008c-paper-release; final evidence commit SHA is recorded in 
 The required pdflatex, bibtex, pdflatex, pdflatex sequence passed with no undefined citations/references, missing figures, or overfull boxes. Rendered title/abstract, method figure, main results, DEPART context, Stage-6 ablations, reproducibility appendix, and references were visually inspected; the method figure remains vector-only. The release is venue-neutral: official class/style, authorship, limits, and required venue statements remain explicitly pending.
 
 No scientific content, roles, claims, thresholds, or results changed. Shared remains the DEV-only primary parsimonious candidate, full R4 the secondary multimodal reference, and temporal audio the baseline; T1 remains standalone and T2 blocked. No experiment, inference, Test invocation, checkpoint loading, metric recomputation, or new statistics occurred; src/audio, source, configs, scripts, caches, and evidence ledgers remain unchanged.
+
+
+### TASK-011B-BUNDLE-C1 — corrected Shared ownership firewall
+
+Status: pre-production firewall complete; production not started. Branch: `codex/task-011b-shared-progress-full-suite`; exact base: `1027209de07f65098adcb69fc41e9657cc77c1cf`. The Shared gradient-MTL ownership map now treats the full Shared path as shared: `23/14/14/0`; task-aware R4 remains `14/18/18/1`. The gradient-MTL callback validates the model boolean `task_aware_fusion` and rejects missing/non-boolean or mismatched ownership.
+
+Regression command `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_task010a_gradient_mtl.py` passed `25 passed`, including Shared PCGrad/CAGrad/GradNorm/DB-MTL finite smokes and callback compatibility/rejection tests. The orchestration script is [scripts/common/run_postclosure_shared_progress_full_suite.py](../scripts/common/run_postclosure_shared_progress_full_suite.py). `--prepare`, `--dry-run`, and `--validate` passed; the frozen manifest contains exactly `52` rows in the required A-G order. Validation proved config validity, canonical/DEV-only TRAIN/DEV membership equivalence, parameter count `552775`, cache contracts, both ownership modes, and TRAIN-only forward/loss/backward smokes. It reported `test_loader_accessed=False`.
+
+No production invocation has occurred (`0/52`), no Test loader/metric/mixed summary/Final-Test artifact was inspected, and no metric-bearing run has been retried. Firewall commit must be pushed before the exact `--run` production command. Main/master and `src/audio` remain untouched.
+
+
+### TASK-011B-BUNDLE-R2 — post-production DEV-only collection recovery
+
+Status: complete; production evidence remains frozen at `52/52`, `0` failed, with no production rerun. Branch: `codex/task-011b-shared-progress-full-suite`; firewall commit: `c05703667bf7337fe0af8e5e4d15690ffb1a003b`.
+
+`POST-PRODUCTION REPORTING-ONLY COLLECTION RECOVERY` resolved MLflow logger suffixes using anchored prefixes, FINISHED status, frozen config snapshots/SHA, seed/model/loss/optimizer identity, selected checkpoint identity/SHA, selected epoch, and allowlisted DEV-only metrics. Mapping audit passed `52/52` manifest rows to `52` scientific results, referencing `53` MLflow IDs with exactly one duplicate-alias row. Row 34 aliases `44455703f7de44f6b032b4cde21ddd5d` and `b43e09ce179a49f199993628ad3c063d` matched exactly; canonical ID is the lexicographically smaller ID, bookkeeping only. Row-34 selected epoch `5`, checkpoint SHA `4215e95623afe66cd42706f42f0f72e2662a679561cff844e89a7fde836e40f1`, DEV Mean `0.8073689041`.
+
+Safe `--collect` passed with `test_metrics_read=False` and generated [POSTCLOSURE_SHARED_PROGRESS_FULL_SUITE_EN.md](POSTCLOSURE_SHARED_PROGRESS_FULL_SUITE_EN.md). Five-seed parent DEV Mean mean/std/range/95% CI: `0.801826/0.029208/0.078680/[0.765559,0.838092]`. All Group B/C/D/E/F/G DEV-only means and paired same-seed deltas are recorded in the dossier. Progress/gradient-MTL substitution results remain descriptive because common hyperparameters were tuned under Progress. No Test loader, Test metric, mixed raw summary, Final-Test artifact, production config, manifest, checkpoint, or model/training semantics changed.
+
+
+### TASK-011B-BUNDLE-R3 — corrected DEV synthesis semantics
+
+Status: complete; reporting-only correction on `codex/task-011b-shared-progress-full-suite`. No production run, sweep, retry, inference, or Test access occurred. The accepted production ledger remains exactly `52/52` COMPLETE with `0` failed; safe collection remains `52` scientific results, `53` referenced MLflow IDs, and exactly `1` equivalent alias row. `dev_only_results.json` retains `test_access: false` and no Test metric keys.
+
+The corrected dossier is [POSTCLOSURE_SHARED_PROGRESS_FULL_SUITE_EN.md](POSTCLOSURE_SHARED_PROGRESS_FULL_SUITE_EN.md), SHA256 `5ec40adf96954b8fe5c99876bc3c8c8575b6a94b76fbc7a31b25166f8c3cd624`. D-only and P-only controls now report only their selected task UAR/F1/Score, task Score mean/sample SD, and paired task-Score deltas versus the joint parent; joint Mean is explicitly absent. All Group B/C/D/F/G two-task rows now include D/P UAR/F1/Score means, Mean mean/sample SD, paired same-seed DEV Mean deltas, and wins/3.
+
+The dossier includes the five-seed tuned-parent versus frozen Shared trial012 DEV comparison: tuned-minus-frozen Mean deltas `+0.0092344328/-0.0163041676/+0.0307886787/+0.0176691360/+0.0131680720`, mean delta/sample SD/95% exploratory paired t CI `+0.0109112304/0.0172435866/[-0.0104995103,+0.0323219710]`, wins `4/5`; task-score mean deltas D `-0.0014224191` with `2/5` wins and P `+0.0232447067` with `4/5` wins. These are descriptive DEV-only post-closure comparisons, not Final-Test superiority claims. Progress/gradient-MTL rows remain frozen-recipe substitution audits, not globally tuned rankings.
+
+No source/config/manifest/ledger/checkpoint/model/loss semantics changed; `src/audio` remains unchanged; main/master remain untouched.

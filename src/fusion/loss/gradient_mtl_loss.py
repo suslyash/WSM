@@ -137,16 +137,27 @@ class _ParameterOwnership:
 
 
 def _build_r4_ownership(model: Any) -> list[_ParameterOwnership]:
-    """Build the explicit structural ownership map for the fixed R4 model."""
-    shared_prefixes = ("audio_projection.", "video_projection.", "shared_query_gate.")
-    depression_prefixes = (
-        "task_candidate_norms.0.", "task_fusion_norms.0.", "main_heads.0.",
-        "audio_aux_heads.0.", "video_aux_heads.0.",
-    )
-    parkinson_prefixes = (
-        "task_candidate_norms.1.", "task_fusion_norms.1.", "main_heads.1.",
-        "audio_aux_heads.1.", "video_aux_heads.1.",
-    )
+    """Build structural ownership for task-aware R4 or shared fusion."""
+    task_aware = bool(getattr(model, "task_aware_fusion", True))
+    if task_aware:
+        shared_prefixes = ("audio_projection.", "video_projection.", "shared_query_gate.")
+        depression_prefixes = (
+            "task_candidate_norms.0.", "task_fusion_norms.0.", "main_heads.0.",
+            "audio_aux_heads.0.", "video_aux_heads.0.",
+        )
+        parkinson_prefixes = (
+            "task_candidate_norms.1.", "task_fusion_norms.1.", "main_heads.1.",
+            "audio_aux_heads.1.", "video_aux_heads.1.",
+        )
+        expected = {"shared": 14, "depression": 18, "parkinson": 18, "row": 1}
+    else:
+        shared_prefixes = (
+            "audio_projection.", "video_projection.", "task_candidate_norms.",
+            "task_fusion_norms.", "shared_query_gate.",
+        )
+        depression_prefixes = ("main_heads.0.", "audio_aux_heads.0.", "video_aux_heads.0.")
+        parkinson_prefixes = ("main_heads.1.", "audio_aux_heads.1.", "video_aux_heads.1.")
+        expected = {"shared": 23, "depression": 14, "parkinson": 14, "row": 0}
     entries: list[_ParameterOwnership] = []
     classified: set[str] = set()
     for name, parameter in model.named_parameters():
@@ -154,8 +165,9 @@ def _build_r4_ownership(model: Any) -> list[_ParameterOwnership]:
             continue
         if name == "task_queries":
             if tuple(parameter.shape[:1]) != (2,):
-                raise ValueError("R4 task_queries must have shape [2, hidden_dim]")
-            entries.append(_ParameterOwnership(name, parameter, "row", None))
+                raise ValueError("task_queries must have shape [2, hidden_dim]")
+            kind = "row" if task_aware else "shared"
+            entries.append(_ParameterOwnership(name, parameter, kind, None))
             classified.add(name)
             continue
         if name.startswith(shared_prefixes):
@@ -168,12 +180,13 @@ def _build_r4_ownership(model: Any) -> list[_ParameterOwnership]:
             raise ValueError(f"unclassified trainable R4 parameter: {name}")
         entries.append(_ParameterOwnership(name, parameter, kind, None))
         classified.add(name)
-    if len(entries) != 51:
-        raise ValueError(f"expected 51 trainable R4 parameter tensors, found {len(entries)}")
+    if len(entries) != sum(expected.values()):
+        raise ValueError(f"expected 51 trainable parameter tensors, found {len(entries)}")
     counts = {kind: sum(entry.kind == kind for entry in entries)
               for kind in ("shared", "depression", "parkinson", "row")}
-    if counts != {"shared": 14, "depression": 18, "parkinson": 18, "row": 1}:
-        raise ValueError(f"unexpected R4 structural ownership counts: {counts}")
+    if counts != expected:
+        label = "R4" if task_aware else "Shared"
+        raise ValueError(f"unexpected {label} structural ownership counts: {counts}")
     if len(classified) != len(entries):
         raise ValueError("R4 ownership registry did not classify every parameter")
     return entries
@@ -255,12 +268,15 @@ class WSMGradientMTLLoss(WSMR4RampsBalanceLoss):
     def bind_model(self, model: Any) -> None:
         """Bind the loss to the actual named R4 model before training."""
         ownership = _build_r4_ownership(model)
+        task_aware = bool(getattr(model, "task_aware_fusion", True))
         self._ownership = ownership
+        self._task_aware_fusion = task_aware
         self._parameter_indices = {entry.name: index for index, entry in enumerate(ownership)}
         self._shared_indices = [index for index, entry in enumerate(ownership)
                                 if entry.kind == "shared"]
-        if len(self._shared_indices) != 14:
-            raise ValueError("R4 shared ownership registry must contain 14 tensors")
+        expected_shared = 14 if task_aware else 23
+        if len(self._shared_indices) != expected_shared:
+            raise ValueError(f"shared ownership registry must contain {expected_shared} tensors")
 
     @property
     def ownership_counts(self) -> dict[str, int]:
@@ -548,19 +564,20 @@ class WSMGradientMTLLoss(WSMR4RampsBalanceLoss):
         ownership = self._require_ownership()
         parameters = [entry.parameter for entry in ownership]
         shared = self._shared_indices
-        if len(shared) != 14:
-            raise RuntimeError("R4 gradient MTL requires exactly 14 fully shared tensors")
+        if not shared:
+            raise RuntimeError("gradient MTL requires at least one fully shared tensor")
         if self.method == "dbmtl":
             combined = self._dbmtl_combine(parameters, objectives, shared)
         else:
             grad_d = self._task_gradients(objectives[0], 0, parameters)
             grad_p = self._task_gradients(objectives[1], 1, parameters)
             combined = self._combine_pair(grad_d, grad_p, shared, objectives)
+        counts = self.ownership_counts
         self._record(
-            parameter_tensors_shared=14.0,
-            parameter_tensors_depression_only=18.0,
-            parameter_tensors_parkinson_only=18.0,
-            parameter_tensors_row_partitioned=1.0,
+            parameter_tensors_shared=float(counts["shared"]),
+            parameter_tensors_depression_only=float(counts["depression"]),
+            parameter_tensors_parkinson_only=float(counts["parkinson"]),
+            parameter_tensors_row_partitioned=float(counts["row"]),
         )
         return _inject_parameter_gradients(reported, parameters, combined)
 
