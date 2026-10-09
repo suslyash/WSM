@@ -1608,3 +1608,26 @@ The corrected dossier is [POSTCLOSURE_SHARED_PROGRESS_FULL_SUITE_EN.md](POSTCLOS
 The dossier includes the five-seed tuned-parent versus frozen Shared trial012 DEV comparison: tuned-minus-frozen Mean deltas `+0.0092344328/-0.0163041676/+0.0307886787/+0.0176691360/+0.0131680720`, mean delta/sample SD/95% exploratory paired t CI `+0.0109112304/0.0172435866/[-0.0104995103,+0.0323219710]`, wins `4/5`; task-score mean deltas D `-0.0014224191` with `2/5` wins and P `+0.0232447067` with `4/5` wins. These are descriptive DEV-only post-closure comparisons, not Final-Test superiority claims. Progress/gradient-MTL rows remain frozen-recipe substitution audits, not globally tuned rankings.
 
 No source/config/manifest/ledger/checkpoint/model/loss semantics changed; `src/audio` remains unchanged; main/master remain untouched.
+
+
+### TASK-012B-C2 — aggregate coverage and synthetic evidence correction
+
+Status: complete; overall audit remains INCONCLUSIVE — pending manager review. C2 changes only audit completeness/coverage, not the original scientific numbers or verdict. The offline output now exposes all seven series (D/P UAR, MF1, Score, and joint Mean), each with mean, sample SD, min/max/range, and Student-t CI, for DEV plus TEST_NONE/SOFT/HARD. DEV Mean is 0.801825630372/0.029207897030/[0.765559236167,0.838092024578]; Test Mean summaries remain 0.768738/0.764781/0.755323 with direct deltas -0.037265101865/-0.050567885186/-0.071159977989, wins 0/5 each.
+
+Synthetic coverage now demonstrates unequal observed counts D=4/P=3 with expected D confusion (0,2,1,1), Score 0.225, P confusion (1,0,0,2), Score 1.0, joint Mean 0.6125; and unequal fake batches of sizes 2/3 with global confusion (1,3,0,1), UAR 0.625, MF1 0.4, Score/Mean 0.5125 versus unweighted batch 0.5. The suite remains 8 passed; strict validator remains OFFLINE_CHECKS_PASS.
+
+New untracked output: logs/task012b_shared_progress_test_correctness_audit/audit_summary_c2.json, 14,902 bytes, SHA256 94543e6c0fc8be4e9baf1c55382deed3668139c002c7ee312bc8a51fd475e29f. Original DEV/Test/marker hashes are unchanged. No production inference, dataset/model construction, Test rerun, training, tuning, or selection occurred; src/audio remains unchanged.
+
+### TASK-012B-C1 — Corrective Shared + Progress Test correctness audit
+
+Status: complete as an offline read-only audit; **Codex audit verdict — pending manager review: INCONCLUSIVE**. Branch: `codex/task-012b-shared-progress-test-correctness-audit`, based on `origin/main` at `11231ca0c528236441bf4f4dae09e8fd616e1928`.
+
+Changed files remain the four scoped TASK-012B files: [corrective dossier](TASK012B_SHARED_PROGRESS_TEST_CORRECTNESS_AUDIT_EN.md), [strict offline validator](../scripts/common/audit_task012a_saved_evidence.py), [synthetic audit tests](../tests/test_task012b_shared_progress_test_correctness_audit.py), and this ledger. The validator now enforces exact artifact identity/length, DEV/Test cardinality and identity joins, observed counts, finite/range checks, tight arithmetic, frozen config/checkpoint SHA checks, explicit heading/key historical parsing, all seven aggregates, direct paired Mean deltas, task contributions, and rounding residuals. The unchanged production metric function was compared with an independent oracle on fabricated tensors; malformed fixtures are rejected.
+
+Verification: `.venv/bin/python -m pytest -q tests/test_task012b_shared_progress_test_correctness_audit.py` — `8 passed` at `2026-10-09T11:07:06Z–11:07:16Z`; strict offline validator — exit `0`, `OFFLINE_CHECKS_PASS` at `2026-10-09T11:07:26Z`. Authentic artifact hashes remain DEV `67a7c70754070dd0594262ab706aac8d3d853d9b2a84f349adf97e08e8ac2e64`, Test `ddcae2835c04a346c1a27d3e9fa9d7c2b2afc96980b46d206dd2e79120baf285`, marker `3a37730e932f29c5928b930263d6c745c6c9f9171b9c42b34990320de329e12d`. Test Mean means remain `0.768738/0.764781/0.755323`; direct deltas remain `-0.037265101865/-0.050567885186/-0.071159977989`, wins `0/5` each.
+
+No original TASK-012A correctness defect was demonstrated. The corrected audit is intentionally INCONCLUSIVE because raw predictions, sample IDs/membership fingerprints, exact historical command transcript, and exact autocast dtype are unavailable. No production evaluator, DataModule/model construction, forward/inference, training, tuning, Test rerun, or follow-up experiment occurred; `src/audio` stayed unchanged and Test metrics were not used for selection.
+
+### TASK-012B — manager review closure
+
+Manager accepted TASK-012B including C1/C2 as a completed bounded offline audit of reviewed HEAD `c0cb035a64139c4c92ecedd9eb8624f5bde59ae5`. Historical Test correctness remains **INCONCLUSIVE**: no original production defect was demonstrated, while prediction-level/membership/exact-runtime evidence is missing. Manager independently verified all 28 scalar series and the reconstructed 14,902-byte C2 output; full SHA256 `94543e6c0fc8be4e9baf1c55382deed3668139c002c7ee312bc8a51fd475e29f` (the handoff digest omitted the final `f`). Original numbers and scientific roles remain unchanged. No production correction, inference, training, tuning, Test rerun, or follow-up experiment is authorized. Manager merge is recorded in the resulting PR.
