@@ -230,12 +230,22 @@ def summarize(values: list[float]) -> dict[str, float]:
     return {"mean": avg, "sample_sd": sd, "min": min(values), "max": max(values), "range": max(values) - min(values), "ci95_low": avg - T_MULTIPLIER * sd / math.sqrt(len(values)), "ci95_high": avg + T_MULTIPLIER * sd / math.sqrt(len(values))}
 
 
-def aggregates(rows: dict[tuple[int, str], dict[str, Any]], historical: dict[tuple[str, str, int], dict[str, float]]) -> dict[str, Any]:
-    output: dict[str, Any] = {}
+def aggregate_series(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    values = {
+        task: {metric: [row["metrics"][task][metric] for row in rows] for metric in ("uar", "mf1", "score")}
+        for task in TASKS
+    }
+    values["mean"] = {"mean": [row["metrics"]["mean"] for row in rows]}
+    return {
+        task: {metric: summarize(series) for metric, series in metric_values.items()}
+        for task, metric_values in values.items()
+    }
+
+
+def aggregates(dev_rows: list[dict[str, Any]], rows: dict[tuple[int, str], dict[str, Any]], historical: dict[tuple[str, str, int], dict[str, float]]) -> dict[str, Any]:
+    output: dict[str, Any] = {"dev": aggregate_series(dev_rows)}
     for protocol in PROTOCOLS:
-        values = {task: [rows[(seed, protocol)]["metrics"][task]["score"] for seed in SEEDS] for task in TASKS}
-        values["mean"] = [rows[(seed, protocol)]["metrics"]["mean"] for seed in SEEDS]
-        output[protocol] = {metric: summarize(series) for metric, series in values.items()}
+        output[protocol] = aggregate_series([rows[(seed, protocol)] for seed in SEEDS])
         direct = [rows[(seed, protocol)]["metrics"]["mean"] - historical[(protocol, "equal-parameter shared fusion", seed)]["mean"] for seed in SEEDS]
         output[protocol]["paired_mean_delta"] = {**summarize(direct), "deltas": direct, "wins": sum(value > 0 for value in direct), "wins_over_5": f"{sum(value > 0 for value in direct)}/5"}
         decomposition = {}
@@ -258,7 +268,7 @@ def audit(dev_path: Path, test_path: Path, marker_path: Path, stage7_path: Path,
     validate_dev(dev, repo)
     rows = validate_test(test, dev)
     historical = parse_historical_rows(stage7_path.read_text())
-    aggregates_result = aggregates(rows, historical)
+    aggregates_result = aggregates(dev["results"], rows, historical)
     return {"status": "OFFLINE_CHECKS_PASS", "verdict": "PENDING MANAGER REVIEW", "artifact_hashes": {"dev": sha256(dev_path), "test": sha256(test_path), "marker": sha256(marker_path)}, "artifact_bytes": {"dev": dev_path.stat().st_size, "test": test_path.stat().st_size, "marker": marker_path.stat().st_size}, "independent_oracle": explicit_metric_oracle(), "historical_rows": len(historical), "aggregates": aggregates_result}
 
 

@@ -33,13 +33,27 @@ def production_task(metric, task):
 def test_oracle_matches_unchanged_production_metric_on_sparse_nan_fixture():
     logits = torch.tensor([[0.0, -1e-12], [1e-12, 2.0], [-2.0, 0.0], [3.0, -3.0], [4.0, 4.0]])
     targets = torch.tensor([[0.0, float("nan")], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0], [float("nan"), 1.0]])
-    observed = torch.tensor([[True, False], [True, True], [True, True], [True, True], [False, True]])
+    observed = torch.tensor([[True, False], [True, True], [True, False], [True, True], [False, True]])
     production = compute_sparse_two_task_metrics(logits, targets, observed, "synthetic")
+    assert production["synthetic/depression/num_samples"] == 4
+    assert production["synthetic/parkinson/num_samples"] == 3
     for task_id, task in enumerate(("depression", "parkinson")):
         selected = observed[:, task_id]
         expected = oracle_metrics(logits[selected, task_id].tolist(), targets[selected, task_id].tolist())
         actual = production_task(production, task)
         assert actual == expected
+    assert production["synthetic/depression/tn"] == 0
+    assert production["synthetic/depression/fp"] == 2
+    assert production["synthetic/depression/fn"] == 1
+    assert production["synthetic/depression/tp"] == 1
+    assert production["synthetic/parkinson/tn"] == 1
+    assert production["synthetic/parkinson/fp"] == 0
+    assert production["synthetic/parkinson/fn"] == 0
+    assert production["synthetic/parkinson/tp"] == 2
+    assert production["synthetic/depression/uar"] == pytest.approx(0.25)
+    assert production["synthetic/depression/mf1"] == pytest.approx(0.20)
+    assert production["synthetic/depression/score"] == pytest.approx(0.225)
+    assert production["synthetic/mean_score"] == pytest.approx(0.6125)
     assert production["synthetic/mean_score"] == pytest.approx(
         (production["synthetic/depression/score"] + production["synthetic/parkinson/score"]) / 2
     )
@@ -66,13 +80,22 @@ def test_metric_edge_contract_and_zero_boundary():
 
 def test_global_concat_differs_from_unweighted_batch_average():
     batch_a = (torch.tensor([[-2.0, -2.0], [2.0, 2.0]]), torch.tensor([[0.0, 0.0], [1.0, 1.0]]), torch.ones(2, 2, dtype=torch.bool))
-    batch_b = (torch.tensor([[2.0, 2.0], [2.0, 2.0]]), torch.tensor([[0.0, 0.0], [0.0, 0.0]]), torch.ones(2, 2, dtype=torch.bool))
+    batch_b = (torch.tensor([[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]), torch.tensor([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]), torch.ones(3, 2, dtype=torch.bool))
     first = compute_sparse_two_task_metrics(*batch_a, "batch")
     second = compute_sparse_two_task_metrics(*batch_b, "batch")
     concatenated = compute_sparse_two_task_metrics(
         torch.cat([batch_a[0], batch_b[0]]), torch.cat([batch_a[1], batch_b[1]]), torch.cat([batch_a[2], batch_b[2]]), "batch"
     )
     average_of_batches = (first["batch/mean_score"] + second["batch/mean_score"]) / 2
+    assert len(batch_a[0]) == 2 and len(batch_b[0]) == 3
+    assert concatenated["batch/depression/tn"] == 1
+    assert concatenated["batch/depression/fp"] == 3
+    assert concatenated["batch/depression/fn"] == 0
+    assert concatenated["batch/depression/tp"] == 1
+    assert concatenated["batch/depression/uar"] == pytest.approx(0.625)
+    assert concatenated["batch/depression/mf1"] == pytest.approx(0.4)
+    assert concatenated["batch/mean_score"] == pytest.approx(0.5125)
+    assert average_of_batches == pytest.approx(0.5)
     assert concatenated["batch/mean_score"] != average_of_batches
 
 
@@ -147,10 +170,21 @@ def test_validator_rejects_hash_nan_range_count_and_identity_failures():
 
 
 def test_metric_aggregate_contract_has_all_seven_series():
+    dev = json.loads(Path("logs/task012a_postclosure_shared_progress_test/dev_preflight.json").read_text())
     test = json.loads(Path("logs/task012a_postclosure_shared_progress_test/test_results.json").read_text())
     rows = {(row["seed"], row["protocol"]): row for row in test["results"]}
     historical = parse_historical_rows(Path("docs/STAGE7_FINAL_TEST_EVIDENCE_EN.md").read_text())
-    result = aggregates(rows, historical)
+    result = aggregates(dev["results"], rows, historical)
+    for protocol in ("dev", *PROTOCOLS):
+        assert set(result[protocol]["depression"]) == {"uar", "mf1", "score"}
+        assert set(result[protocol]["parkinson"]) == {"uar", "mf1", "score"}
+        assert set(result[protocol]["mean"]) == {"mean"}
+        for task in ("depression", "parkinson"):
+            for metric in ("uar", "mf1", "score"):
+                assert set(result[protocol][task][metric]) == {"mean", "sample_sd", "min", "max", "range", "ci95_low", "ci95_high"}
+        assert set(result[protocol]["mean"]["mean"]) == {"mean", "sample_sd", "min", "max", "range", "ci95_low", "ci95_high"}
+    assert result["dev"]["mean"]["mean"]["mean"] == pytest.approx(0.801825630372)
+    assert result["test_none"]["mean"]["mean"]["ci95_low"] == pytest.approx(0.730996720645)
+    assert result["test_none"]["depression"]["uar"]["mean"] == pytest.approx(0.7664, abs=0.0001)
     for protocol in PROTOCOLS:
-        assert set(result[protocol]) == {"depression", "parkinson", "mean", "paired_mean_delta", "task_decomposition"}
         assert result[protocol]["paired_mean_delta"]["wins_over_5"] == "0/5"

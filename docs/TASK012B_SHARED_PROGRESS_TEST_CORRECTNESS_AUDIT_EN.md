@@ -35,6 +35,8 @@ Synthetic coverage includes exact zero and tiny positive/negative logits, unequa
 
 ## 3. Historical parsing and aggregates
 
+The C2 synthetic coverage correction is explicit: the five-row sparse fixture has unequal observed counts D=4 and P=3. Expected confusion is D (tn=0, fp=2, fn=1, tp=1), UAR 0.25, macro-F1 0.20, Score 0.225; P (tn=1, fp=0, fn=0, tp=2), UAR/macro-F1/Score 1.0; joint Mean 0.6125. The global fake-batch fixture has sizes 2 and 3, expected per-task (tn=1, fp=3, fn=0, tp=1), UAR 0.625, macro-F1 0.4, Score 0.5125, joint Mean 0.5125, versus unweighted batch Score 0.5. C2 corrects audit completeness and coverage only; it does not change scientific numbers or the verdict.
+
 Stage-7 rows are parsed from explicit `#### test_none`, `#### test_soft`, and `#### test_hard` boundaries. Rows are joined by `(protocol, exact method identity, seed)`; missing or duplicate rows fail. Reordering the protocol sections still produces the same 15 records; duplicate and missing rows are rejected. Historical six-decimal Mean fields are retained directly for paired deltas; task decomposition reports the rounding residual rather than silently substituting the average of rounded task Scores.
 
 All seven series are recomputed with mean, sample SD (`ddof=1`), min, max, range, and Student-t CI using `2.7764451051977987` with df=4. The independent saved-row report percentages are:
@@ -46,6 +48,15 @@ All seven series are recomputed with mean, sample SD (`ddof=1`), min, max, range
 | TEST_SOFT | 75.70/74.72/75.21 | 78.77/76.72/77.75 | 76.48 |
 | TEST_HARD | 75.78/74.62/75.20 | 77.09/74.64/75.86 | 75.53 |
 
+The retained C2 output schema is aggregates[split][depression|parkinson][uar|mf1|score] plus aggregates[split].mean.mean. Every series contains mean, sample_sd, min, max, range, ci95_low, and ci95_high. Values below are mean / sample SD / [95% CI]:
+
+| Split | D UAR | D MF1 | D Score | P UAR | P MF1 | P Score | Joint Mean |
+|---|---|---|---|---|---|---|---|
+| DEV | .736965452848/.016990911558/[.715868449670,.758062456026] | .735570428311/.016284969940/[.715349967425,.755790889198] | .736267940580/.016620068683/[.715631399648,.756904481511] | .863395445135/.047093690349/[.804920905286,.921869984984] | .871371195195/.039822125361/[.821925495803,.920816894588] | .867383320165/.043437926848/[.813448010241,.921318630089] | .801825630372/.029207897030/[.765559236167,.838092024578] |
+| TEST_NONE | .766406382721/.029645432857/[.729596716031,.803216049410] | .757185046034/.035552493689/[.713040794573,.801329297494] | .761795714377/.032486185974/[.721458786815,.802132641940] | .787270155587/.031447781872/[.748222577013,.826317734161] | .764092408200/.039047892385/[.715608046020,.812576770380] | .775681281894/.034424412219/[.732937728582,.818424835205] | .768738498135/.030396127732/[.730996720645,.806480275625] |
+| TEST_SOFT | .757000607165/.038446437272/[.709263050145,.804738164184] | .747216347202/.044477174098/[.691990641383,.802442053021] | .752108477183/.041380547928/[.700727740596,.803489213771] | .787691838158/.030873560615/[.749357249447,.826026426870] | .767216466731/.039845934958/[.717741203819,.816691729643] | .777454152445/.034560739710/[.734541326195,.820366978694] | .764781314814/.034859987506/[.721496923351,.808065706278] |
+| TEST_HARD | .757826455189/.043252472312/[.704121417487,.811531492892] | .746200928639/.049707855746/[.684480473731,.807921383546] | .752013691914/.046387678194/[.694415781940,.809611601888] | .770881914446/.031242662349/[.732089025399,.809674803493] | .746381989770/.044539696660/[.691078651936,.801685327604] | .758631952108/.037815675558/[.711677589200,.805586315017] | .755322822011/.041687958453/[.703560384842,.807085259180] |
+
 | Protocol | Test Mean mean | Direct Test−Stage-7 Mean delta mean | Paired wins |
 |---|---:|---:|---:|
 | TEST_NONE | 0.768738498135 | -0.037265101865 | 0/5 |
@@ -53,6 +64,8 @@ All seven series are recomputed with mean, sample SD (`ddof=1`), min, max, range
 | TEST_HARD | 0.755322822011 | -0.071159977989 | 0/5 |
 
 Task decomposition is retained in the utility output and dossier source: each D/P Score delta is divided by two, summed, and compared with the direct historical-Mean delta. Rounding residuals are approximately 0, ±0.0000005, or machine epsilon. These are arithmetic descriptions only; no causal explanation is assigned to Progress, overfitting, or dataset shift.
+
+New untracked output: logs/task012b_shared_progress_test_correctness_audit/audit_summary_c2.json; schema includes status, verdict, artifact hashes/bytes, independent oracle, historical row count, and aggregates. It is 14,902 bytes with SHA-256 94543e6c0fc8be4e9baf1c55382deed3668139c002c7ee312bc8a51fd475e29 and is separate from the original evidence directory.
 
 ## 4. Source/config/snapshot comparison
 
@@ -118,6 +131,9 @@ At `2026-10-09T11:06:11Z`, the real UTC timestamp was recorded before the final 
 
 The final recorded commands and results are:
 
+2026-10-09T11:28:55Z–11:29:05Z  .venv/bin/python -m pytest -q tests/test_task012b_shared_progress_test_correctness_audit.py -> exit 0, 8 passed (C2 final synthetic run).
+2026-10-09T11:25:45Z  .venv/bin/python scripts/common/audit_task012a_saved_evidence.py --dev logs/task012a_postclosure_shared_progress_test/dev_preflight.json --test logs/task012a_postclosure_shared_progress_test/test_results.json --marker logs/task012a_postclosure_shared_progress_test/test_invocation.marker --stage7 docs/STAGE7_FINAL_TEST_EVIDENCE_EN.md --output logs/task012b_shared_progress_test_correctness_audit/audit_summary_c2.json -> exit 0, OFFLINE_CHECKS_PASS; output 14902 bytes, SHA-256 94543e6c0fc8be4e9baf1c55382deed3668139c002c7ee312bc8a51fd475e29.
+
 ```text
 2026-10-09T11:07:06Z–11:07:16Z  .venv/bin/python -m pytest -q tests/test_task012b_shared_progress_test_correctness_audit.py  -> exit 0, 8 passed
 2026-10-09T11:07:26Z  .venv/bin/python scripts/common/audit_task012a_saved_evidence.py --dev ... --test ... --marker ... --stage7 ... --output /tmp/task012b_c1_audit.json -> exit 0, OFFLINE_CHECKS_PASS
@@ -126,5 +142,7 @@ The final recorded commands and results are:
 The authentic input/output schemas, bytes, and SHA-256 values are listed in Section 1. The audit output is a new untracked `/tmp` file; no original artifact directory was overwritten.
 
 ## 7. Final status
+
+This C2 commit corrects audit aggregate completeness and synthetic coverage only; it does not alter the original numbers or scientific verdict.
 
 The corrected audit is **INCONCLUSIVE pending manager review**: the saved scalars pass strict structural/arithmetic validation and no original production defect was found, but material historical Test provenance is absent. Original negative numbers remain unchanged. No causal attribution or follow-up authorization is made.

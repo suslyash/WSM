@@ -1610,6 +1610,14 @@ The dossier includes the five-seed tuned-parent versus frozen Shared trial012 DE
 No source/config/manifest/ledger/checkpoint/model/loss semantics changed; `src/audio` remains unchanged; main/master remain untouched.
 
 
+### TASK-012B-C2 — aggregate coverage and synthetic evidence correction
+
+Status: complete; overall audit remains INCONCLUSIVE — pending manager review. C2 changes only audit completeness/coverage, not the original scientific numbers or verdict. The offline output now exposes all seven series (D/P UAR, MF1, Score, and joint Mean), each with mean, sample SD, min/max/range, and Student-t CI, for DEV plus TEST_NONE/SOFT/HARD. DEV Mean is 0.801825630372/0.029207897030/[0.765559236167,0.838092024578]; Test Mean summaries remain 0.768738/0.764781/0.755323 with direct deltas -0.037265101865/-0.050567885186/-0.071159977989, wins 0/5 each.
+
+Synthetic coverage now demonstrates unequal observed counts D=4/P=3 with expected D confusion (0,2,1,1), Score 0.225, P confusion (1,0,0,2), Score 1.0, joint Mean 0.6125; and unequal fake batches of sizes 2/3 with global confusion (1,3,0,1), UAR 0.625, MF1 0.4, Score/Mean 0.5125 versus unweighted batch 0.5. The suite remains 8 passed; strict validator remains OFFLINE_CHECKS_PASS.
+
+New untracked output: logs/task012b_shared_progress_test_correctness_audit/audit_summary_c2.json, 14,902 bytes, SHA256 94543e6c0fc8be4e9baf1c55382deed3668139c002c7ee312bc8a51fd475e29. Original DEV/Test/marker hashes are unchanged. No production inference, dataset/model construction, Test rerun, training, tuning, or selection occurred; src/audio remains unchanged.
+
 ### TASK-012B-C1 — Corrective Shared + Progress Test correctness audit
 
 Status: complete as an offline read-only audit; **Codex audit verdict — pending manager review: INCONCLUSIVE**. Branch: `codex/task-012b-shared-progress-test-correctness-audit`, based on `origin/main` at `11231ca0c528236441bf4f4dae09e8fd616e1928`.
