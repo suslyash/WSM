@@ -1,100 +1,130 @@
-# TASK-012B — Shared + Progress Test correctness audit
+# TASK-012B-C1 — Corrective independent correctness audit
 
-## 1. Boundary and verdict
+## Scope and Codex audit verdict — pending manager review
 
-This is a read-only correctness audit of the already-saved TASK-012A post-closure evidence. No production evaluator, DataModule, model, forward pass, inference, training, tuning, Test rerun, or new experiment was executed. The saved closure evaluator and original evidence dossier were not modified.
+This corrective audit fixes defects in the first TASK-012B audit itself. It remains strictly offline: no production evaluator entrypoint, DataModule construction, model construction/forward, real inference, training, tuning, calibration, Test rerun, or new experiment was performed. The original TASK-012A evaluator, closure evaluator, saved artifacts, and Stage-7 evidence were not modified.
 
-Overall verdict: **VERIFIED WITH STATED LIMITATIONS**. The inspected source/config/artifact relationships contain no confirmed scientific or metric-correctness defect. The verdict is not a claim that the historical predictions, sample membership, or exact runtime transcript have been independently reproduced: those inputs were intentionally not retained in the supplied artifacts.
+**Codex audit verdict — pending manager review: INCONCLUSIVE.** No original TASK-012A production defect was demonstrated. The retained scalar evidence and source contracts are internally consistent, but raw predictions, sample IDs/membership fingerprints, exact historical command transcript, and exact autocast dtype are unavailable. Those gaps are material to a historical Test correctness judgment; therefore this audit does not claim `VERIFIED WITH STATED LIMITATIONS` or historical reconstruction.
 
-## 2. Evidence identity and immutability checks
+## 1. Input identity and strict validator
 
-The audit read the following frozen evidence:
+The production CLI now enforces exact identity before accepting the saved inputs, while structural/arithmetic functions remain directly testable with synthetic malformed payloads. It uses explicit `ValueError` failures rather than assertions.
 
-| Evidence | Bytes | SHA-256 |
-|---|---:|---|
-| `logs/task012a_postclosure_shared_progress_test/dev_preflight.json` | 11,291 | `67a7c70754070dd0594262ab706aac8d3d853d9b2a84f349adf97e08e8ac2e64` |
-| `logs/task012a_postclosure_shared_progress_test/test_results.json` | 12,875 | `ddcae2835c04a346c1a27d3e9fa9d7c2b2afc96980b46d206dd2e79120baf285` |
-| `logs/task012a_postclosure_shared_progress_test/test_invocation.marker` | 48 | `3a37730e932f29c5928b930263d6c745c6c9f9171b9c42b34990320de329e12d` |
+| Input | Bytes | Expected SHA-256 | Status |
+|---|---:|---|---|
+| `dev_preflight.json` | 11,291 | `67a7c70754070dd0594262ab706aac8d3d853d9b2a84f349adf97e08e8ac2e64` | pass |
+| `test_results.json` | 12,875 | `ddcae2835c04a346c1a27d3e9fa9d7c2b2afc96980b46d206dd2e79120baf285` | pass |
+| `test_invocation.marker` | 48 | `3a37730e932f29c5928b930263d6c745c6c9f9171b9c42b34990320de329e12d` | pass; `COMPLETED`, count 15 |
 
-The original evaluator SHA is `7157f32253b6f3e831a00992c180f39fdd0d86d47c4718517b0b7e6584d2a5b7`; the closure evaluator SHA is `108079eb382ac580b3293f8716a58848e4d6e1123f952141f48aa3041a247317`. The closure diff is limited to the permanent `RuntimeError` guard at the start of `test_pass`; no metric, loader, model, or protocol semantics changed.
+The validator checks:
 
-The five checkpoint payloads were inspected with CPU-only `torch.load(..., map_location="cpu", weights_only=True)`. Each had exactly `epoch`, `global_step`, `model_state_dict`, and `optimizer_state_dict`; each model state had 51 float32 keys and no non-float buffers. The observed epochs/global steps were 7/1386, 9/1782, 5/990, 19/3762, and 3/594 for seeds 42–46. Static inspection supports checkpoint-shape compatibility; it does not replace the prohibited model construction or strict-load execution.
+- DEV schema, `test_iteration=false`, exactly five unique seeds, five ledger rows, frozen run/MLflow/epoch/config/checkpoint identities, model/recipe/pseudo-cache invariants, and per-seed config/checkpoint SHA files;
+- DEV counts 933 with D/P 621/312, all finite in-range metrics, reconstructed score/Mean arithmetic, expected-value gates within 0.0005, and retained `reproduction_difference` values recomputed from the scalar values;
+- Test schema, `test_iteration=true`, invocation count 15, exactly 15 rows before indexing, the exact 5×3 seed/protocol Cartesian set, protocol counts 1364/1208/1014, observed D/P counts 827/537, 710/498, 654/360, identity joins to DEV/frozen ledger, raw-evidence declarations, finite ranges, and tight per-row score arithmetic;
+- counts as integer non-negative values bounded by protocol membership; retained device/autocast/model/output-dtype fields as metadata, not proof of historical execution.
 
-## 3. Protocol and task semantics
+The negative fixtures now reject: altered UAR with stale Score, a 16th duplicate row, empty DEV results/ledger, invalid artifact SHA, NaN/out-of-range metrics, wrong observed counts, and bad identities. These checks are covered in the synthetic test suite.
 
-| Check | Finding | Status |
-|---|---|---|
-| Protocol coverage | 15 rows = 5 seeds × `test_none`, `test_soft`, `test_hard`; counts 1364/1208/1014 | Confirmed in saved JSON |
-| Task order | Depression then Parkinson in model auxiliary outputs and metric task names | Confirmed by source inspection |
-| Unknown labels | `observed_*` masks control inclusion; unobserved targets remain NaN/neutral in the evaluation path | Confirmed by source inspection |
-| Decision rule | Raw logits are thresholded at zero; no sigmoid/probability threshold is used | Confirmed by source inspection |
-| Per-task score | `Score = (UAR + MF1)/2`; row `Mean = (D Score + P Score)/2` | Independently recomputed from saved JSON |
-| Accumulation | Saved result declares model and output accumulation dtype `torch.float32` | Confirmed in all 15 rows |
-| Test selection | The saved Test rows are monitoring outputs; no Test row is used for epoch/threshold/model selection | Confirmed from evaluator/source and closure context |
+## 2. Independent metric contract
 
-The seed-42 run names the production semantic DataModule; seeds 43–46 name its DEV-only wrapper. The wrapper changes trainer validation exposure, while the evaluator directly requests the base `test_dataset` streams. This is an intentional evaluation-path distinction, not evidence that the Test protocol changed. The evaluator also overrides construction-time training-loader knobs (`num_workers=0`, `shuffle_train=False`, and related flags); its Test DataLoader is explicitly non-shuffled, non-dropping, and single-process. The saved YAML values therefore must not be read as proof of the effective Test loader settings.
+The audit oracle and the unchanged production function were run on the same fabricated tensors. The production function was imported only for pure metric computation; no model, dataset, runtime, or evaluator was initialized. Production source identity: `src/common/callbacks/wsm_segment_callback.py` at accepted source/snapshot hash `5e3ca71cc1e9f65be0137ca0e434366cc949ae769324d39a5358010d5558961d`, lines 18–70.
 
-## 4. Independent metric and aggregate audit
+The exact contract is: logits `>=0` are positive; targets must be finite binary values on observed rows; undefined class recall/F1 terms are omitted rather than replaced with zero; empty observed tasks are rejected; `Score=(UAR+MF1)/2`; joint Mean is the arithmetic mean of the two task Scores. The all-negative perfectly predicted task therefore scores 1.0 under both implementations, while a false-positive-only all-negative task exposes the expected undefined-positive-class policy.
 
-`scripts/common/audit_task012a_saved_evidence.py` contains a standalone oracle. It imports no production evaluator, model, DataModule, callback, loss, or inference entry point. On fabricated observed labels/scores it independently checks zero-threshold confusion arithmetic, per-class recall/F1, sparse masking convention, task-mean arithmetic, and five-seed sample-standard-deviation confidence intervals. The oracle passed both fabricated cases and all 15 saved rows passed the structural checks.
+Synthetic coverage includes exact zero and tiny positive/negative logits, unequal observed D/P counts, sparse `[N,2]` masks with NaN unobserved values, head-order swaps, imperfect confusion counts, perfect and false-positive one-class tasks, empty-task rejection, malformed target/shape/mask rejection, two differently sized fake batches where global concatenation differs from unweighted batch averaging, and a nonconstant five-value Student-t CI fixture. Result: **8 passed**.
 
-The saved rows independently summarize as follows (95% intervals use the frozen multiplier `2.7764451051977987` and sample SD):
+## 3. Historical parsing and aggregates
 
-| Protocol | D mean | P mean | Mean mean |
+Stage-7 rows are parsed from explicit `#### test_none`, `#### test_soft`, and `#### test_hard` boundaries. Rows are joined by `(protocol, exact method identity, seed)`; missing or duplicate rows fail. Reordering the protocol sections still produces the same 15 records; duplicate and missing rows are rejected. Historical six-decimal Mean fields are retained directly for paired deltas; task decomposition reports the rounding residual rather than silently substituting the average of rounded task Scores.
+
+All seven series are recomputed with mean, sample SD (`ddof=1`), min, max, range, and Student-t CI using `2.7764451051977987` with df=4. The independent saved-row report percentages are:
+
+| Protocol | D UAR/F1/Score % | P UAR/F1/Score % | Mean % |
 |---|---:|---:|---:|
-| `test_none` | 0.761796 | 0.775681 | 0.768738 |
-| `test_soft` | 0.752108 | 0.777454 | 0.764781 |
-| `test_hard` | 0.752014 | 0.758632 | 0.755323 |
+| DEV | 73.70/73.56/73.63 | 86.34/87.14/86.74 | 80.18 |
+| TEST_NONE | 76.64/75.72/76.18 | 78.73/76.41/77.57 | 76.87 |
+| TEST_SOFT | 75.70/74.72/75.21 | 78.77/76.72/77.75 | 76.48 |
+| TEST_HARD | 75.78/74.62/75.20 | 77.09/74.64/75.86 | 75.53 |
 
-Compared with the frozen Stage-7 per-seed shared-fusion rows, the saved TASK-012A Test result mean deltas are:
-
-| Protocol | D delta mean | P delta mean | Mean delta mean |
+| Protocol | Test Mean mean | Direct Test−Stage-7 Mean delta mean | Paired wins |
 |---|---:|---:|---:|
-| `test_none` | -0.037437 | -0.037093 | -0.037265 |
-| `test_soft` | -0.060649 | -0.040486 | -0.050568 |
-| `test_hard` | -0.063903 | -0.078417 | -0.071160 |
+| TEST_NONE | 0.768738498135 | -0.037265101865 | 0/5 |
+| TEST_SOFT | 0.764781314814 | -0.050567885186 | 0/5 |
+| TEST_HARD | 0.755322822011 | -0.071159977989 | 0/5 |
 
-This decomposition is arithmetic over saved rounded historical rows, so the last displayed digits can differ from a decomposition made from unreleased full-precision predictions. It is evidence about where the reported Mean change comes from, not a causal diagnosis.
+Task decomposition is retained in the utility output and dossier source: each D/P Score delta is divided by two, summed, and compared with the direct historical-Mean delta. Rounding residuals are approximately 0, ±0.0000005, or machine epsilon. These are arithmetic descriptions only; no causal explanation is assigned to Progress, overfitting, or dataset shift.
 
-## 5. Correctness findings
+## 4. Source/config/snapshot comparison
 
-### Confirmed consistent
+The original TASK-012A firewall is revision `00e4569d988d6fbd95194d9d4c0e1ff4c20f1a1b`, evaluator SHA `7157f32253b6f3e831a00992c180f39fdd0d86d47c4718517b0b7e6584d2a5b7`. The permanent closure revision is evaluator SHA `108079eb382ac580b3293f8716a58848e4d6e1123f952141f48aa3041a247317`; its only semantic change is the unconditional closed-task guard at `test_pass` line 219. Stage-7 evaluator source is `scripts/common/evaluate_stage7_final_test.py` at the accepted Stage-7 revision; relevant lines are cited below.
 
-- The closure guard is administrative only and leaves the original evaluator semantics unchanged.
-- Artifact schemas, byte lengths, hashes, protocol counts, row cardinality, task ordering, score arithmetic, and float32 output declarations are internally consistent.
-- The source model has two independent disease heads with the documented depression/Parkinson ordering; static checkpoint keys and shapes match the configured 768/512/256/160 architecture family.
-- The source DataModule separates `DEV`, `TEST_NONE`, `TEST_SOFT`, and `TEST_HARD`, preserves observed-label masks, and uses the expected protocol counts.
-- The saved Test output contains no raw logits, raw predictions, probabilities, labels, or sample metadata, as required by the closure evidence boundary.
+Snapshot archives were inspected as inert text only. Seed 42 `code.zip` SHA is `b2b92c58f6209b1df19aa7ef0de1249f7e987c23248b278e7adc9a67726568f2`; seeds 43–46 share `52de31a38c779b052c8ef06163727c7cf6d1cb2186dd7ced39f16d8ea51a93de`. The model/data/callback members were checked against the seed-43–46 snapshot family; audio/video member hashes below were checked in seed 42 and seed 43 archives.
 
-### Harmless or intentional differences
+| Snapshot member | SHA-256 |
+|---|---|
+| `src/common/callbacks/wsm_segment_callback.py` | `5e3ca71cc1e9f65be0137ca0e434366cc949ae769324d39a5358010d5558961d` |
+| `src/fusion/models/av_r3_disease_query.py` | `3e87cebab421df5ee4a307dcae0c12dc630bc765fbbddfde05deb0783f624f16` |
+| `src/fusion/data/wsm_av_fusion_datamodule.py` | `406f7f23a12117de311883b42caa4f5da5d56456cda252430181462d9542d4cc` |
+| `src/fusion/data/wsm_ramps_semantic_datamodule.py` | `3311e62845022b44a1f1d0ff442cc3a255a6628e5acfa160ed2c47058fe47659` |
+| `src/audio/features/wsm_audio_feature_extractor.py` | `f932c122c666a83ce562022715c2047f78ae2b73b49ec27d6bf56f3aa71429ee` |
+| `src/video/data/wsm_video_cache_datamodule.py` | `e2d1b03101996a3ab3344173cc351988c90ec72222fbc1c187361728df3555fa` |
+| `src/video/features/clip_video_features.py` | `d224cefd23368ebf6ef91ebf261b2850f4e0c333f133c838b3beba00a901c414` |
 
-- The current closure evaluator cannot be run by design; the source-level permanent guard is the expected TASK-012A-C1 behavior.
-- The saved config names and evaluator constructor overrides differ for training-loader settings. The evaluator’s explicit evaluation loader settings, not the training-loader fields, govern the reported Test pass.
-- The negative Test result relative to Stage 7 is not itself a correctness defect. It is decomposed above and requires prediction-level evidence for any causal explanation.
+| Stage | Original TASK-012A source at firewall | Stage-7 source | Training validation / snapshot source | Actual difference | Evidence/status |
+|---|---|---|---|---|---|
+| Model construction/loading | `evaluate_postclosure_shared_progress_test.py:126–137`; config-native params; `weights_only=False`, strict state load, `eval()` | `evaluate_stage7_final_test.py:150–153`; hardcoded 768/512/160/96 and method-aware flag | Snapshot model member above; checkpoint payloads statically inspected CPU-only with `weights_only=True` | Stage-7 is a different historical model family/config; TASK-012A uses 256/160 | Static payloads: 51 keys, float32, epochs 7/9/5/19/3; strict load not executed |
+| Head order/output | Model snapshot/current `av_r3_disease_query.py:133–148`; independent heads and explicit D/P mapping | Stage-7 calls same model class but different dimensions | Snapshot member hash matches current relevant source | No task-order difference identified | Confirmed source; no forward run |
+| Eval mode/no-grad | Original `:140–153` | Stage-7 `:170–205` | Snapshot callback source hash above | Both use no-grad, eval model, CPU float accumulation | Source-confirmed intent only |
+| Saved config vs evaluator args/defaults | Config seed42 `task...yaml:6–18`; seeds43–46 equivalent with DEV-only name; evaluator `:175–187` passes batch32, workers0, pin false, persistent false, shuffle false, drop-last false | Stage-7 `:207–210` directly constructs fusion DM with those eval defaults | Snapshot configs preserve saved training values batch32/workers4/pin true/persistent true/shuffle true/drop-last false | Training-loader fields are overridden; eval DataLoader explicitly batch32, workers0, shuffle false, drop_last false at original `:142` and Stage-7 `:198` | Eval-relevant loader semantics source-confirmed; historical runtime not reconstructed |
+| Base vs DEV-only module | Base `wsm_av_fusion_datamodule.py:175–230`; RAMPS wrapper `wsm_ramps_semantic_datamodule.py:85–192` | Stage-7 `:207–214` uses base RAMPS module | Snapshot hashes match | DEV-only wrapper only restricts trainer `val_dataloader` at `:201–211`; evaluator directly uses `test_dataset` | Intentional distinction; no production DM instantiated |
+| NONE/SOFT/HARD | Base module `:210–217`, filters raw flags; counts `:21–27` | Stage-7 dispatch `:213–224` | Snapshot base-module hash matches | NONE is all non-train/test rows; SOFT/HARD are flag filters | Source contract confirmed; exact membership unavailable |
+| Audio input | Base constants `wsm_av_fusion_datamodule.py:21–27`; layer9/pool4; extractor `wsm_audio_feature_extractor.py:18–66` uses WavLM and temporal mean for `audio_cls` | Stage-7 audio path uses separate audio model/evaluation branch `:143–192` | Snapshot audio extractor hash `f932c122…` | Fusion Test uses cached audio features; Stage-7 audio baseline is not the fusion audio path | Cache membership/content unavailable |
+| Video representation/fallback | Video cache constants `wsm_video_cache_datamodule.py:18–23`; validation `:70–143`; CLIP extractor `clip_video_features.py:11–25,138–180` | Stage-7 fusion uses same RAMPS/base video cache path | Snapshot video member hashes match | Body ROI when detected, full-frame fallback otherwise; 60 frames, 512 dims | Source/config contract confirmed; no cache read |
+| Transforms/augmentation | Cache extraction is frozen; fusion collate `wsm_av_fusion_datamodule.py:152–172` pads and masks; no training augmentation in evaluator | Stage-7 uses same collate through DM | Snapshot collate/data hashes match | Evaluation has padding/valid masks only; training augmentation is not invoked by evaluator | Source-confirmed intent |
+| Observed/pseudo targets | `_targets`/collate base `:120–170`; RAMPS pseudo validation `wsm_ramps_semantic_datamodule.py:125–163`; eval pseudo fields neutral `:184–192` | Stage-7 uses sparse observed masks via `:139–141` | Snapshot RAMPS hash matches | Pseudo fields are training-only; observed ground truth drives Test metrics | Source contract confirmed; no labels loaded |
+| Logits/threshold/accumulation/row pairing | Original `:143–159`; concatenates all batches before metric call | Stage-7 `:198–205`; same concatenation and sparse metric | Snapshot callback hash matches | No per-batch metric averaging; zero threshold and D/P pairing agree | Synthetic proof; historical predictions unavailable |
+| Loader ordering | Original `:142`, Stage-7 `:198`: batch32, shuffle false, drop_last false, workers0 | Same | Snapshot source hashes match | No loader difference found on eval path | Source-confirmed intent; membership/order not retained |
+| Device/autocast | Original `:90–95,136–137,148`; config-native CUDA fallback and AMP gate; output cast float32 | Stage-7 `:155–161,196–205`; same gate | Saved artifacts retain CUDA, AMP enabled, float32 model/output | Exact autocast dtype and historical command transcript unavailable | Metadata retained; execution provenance unresolved |
+| Stage-7 report runtime | Stage-7 effective path `:155–161,196–205` can use CUDA/AMP, but report construction `:252` writes `device:"cpu", dtype:"float32"` | Same file | Stage-7 evidence text separately states float16 autocast assertion | Report header is not a reliable record of effective fusion runtime | Provenance/reporting limitation, not demonstrated TASK-012A defect |
 
-### Unresolved provenance limitations
+The DEV gate is useful evidence for model/config/metric compatibility, but it cannot exclude Test-specific filtering, preprocessing, membership, or runtime differences. Counts are not membership fingerprints. No saved metadata permits exact sample-membership or historical row-order verification.
 
-- No raw predictions/logits, labels, sample IDs, row order, or per-sample masks were retained; confusion matrices, class counts, and membership identity cannot be independently recomputed from the saved artifacts.
-- Exact UTC command transcript and exact historical autocast dtype are not retained in the TASK-012A artifacts. The source/evidence states CUDA plus enabled autocast and float32 CPU accumulation, but this audit does not infer missing runtime details from current defaults.
-- CPU-only static checkpoint inspection cannot independently prove strict `load_state_dict` success or historical forward compatibility; it only verifies payload schema, key count, dtype, and representative shapes.
-- The Stage-7 evidence text records an environment/runtime assertion about float16 autocast, while its report-level runtime identity is a separate presentation layer. This is a provenance/reporting limitation, not a demonstrated TASK-012A metric defect.
+## 5. Findings and limitations
 
-## 6. Commands and scope
+### Corrective audit defects fixed
 
-Required repository docs, active-task context, source/config paths, frozen evaluator sources, artifact hashes, and checkpoint payloads were inspected read-only. The reproducible audit command was:
+- hash/length identity is now enforced rather than merely printed;
+- DEV/test cardinality, uniqueness, Cartesian identity, counts, finite ranges, arithmetic, and identity joins are now explicit;
+- historical parsing is heading-based and key-joined rather than ordinal;
+- production metric policy is matched for undefined class terms;
+- synthetic tests compare the unchanged production metric implementation and independent oracle;
+- seven aggregates, direct paired deltas, wins, task contributions, and rounding residuals are retained.
 
-```bash
-python3 scripts/common/audit_task012a_saved_evidence.py \
-  --dev logs/task012a_postclosure_shared_progress_test/dev_preflight.json \
-  --test logs/task012a_postclosure_shared_progress_test/test_results.json \
-  --stage7 docs/STAGE7_FINAL_TEST_EVIDENCE_EN.md \
-  --output /tmp/task012b_audit_summary.json
+### Original evaluation defects
+
+No original TASK-012A production correctness defect was demonstrated. The original evaluator’s source-level limitations remain documented: retained scalar evidence does not prove sample membership or exact historical runtime, and the closure guard is administrative only.
+
+### Harmless/intentional differences
+
+The DEV-only wrapper, evaluator loader overrides, cached video fallback policy, and Stage-7’s different hardcoded model dimensions are identifiable source/config differences, not silently conflated as the same run.
+
+### Historical provenance limitations
+
+No raw predictions/logits/labels/sample IDs were retained. Exact autocast dtype, exact UTC command/push transcript, and exact membership/row order are unavailable. The first TASK-012B execution log was not retained and is not reconstructed here. The corrective commands below are the only timestamps recorded for this audit.
+
+## 6. Corrective command record
+
+At `2026-10-09T11:06:11Z`, the real UTC timestamp was recorded before the final corrective verification sequence. The first TASK-012B command transcript is unavailable; no historical timestamps are invented.
+
+The final recorded commands and results are:
+
+```text
+2026-10-09T11:07:06Z–11:07:16Z  .venv/bin/python -m pytest -q tests/test_task012b_shared_progress_test_correctness_audit.py  -> exit 0, 8 passed
+2026-10-09T11:07:26Z  .venv/bin/python scripts/common/audit_task012a_saved_evidence.py --dev ... --test ... --marker ... --stage7 ... --output /tmp/task012b_c1_audit.json -> exit 0, OFFLINE_CHECKS_PASS
 ```
 
-Result: exit 0; independent oracle passed; 15/15 saved rows passed structural checks; verdict `VERIFIED WITH STATED LIMITATIONS`. Synthetic tests were run separately with `pytest tests/test_task012b_shared_progress_test_correctness_audit.py`.
+The authentic input/output schemas, bytes, and SHA-256 values are listed in Section 1. The audit output is a new untracked `/tmp` file; no original artifact directory was overwritten.
 
-No production evaluation command, DataModule/model construction, forward pass, inference, training, tuning, Test rerun, or follow-up experiment was run. No Test metric was used to select anything.
+## 7. Final status
 
-## 7. Manager conclusion
-
-TASK-012B is complete as a correctness audit. There is no confirmed correction to authorize from the retained evidence. Any future causal investigation would require a separately authorized task that preserves prediction-level and sample-level provenance; it is outside this audit.
+The corrected audit is **INCONCLUSIVE pending manager review**: the saved scalars pass strict structural/arithmetic validation and no original production defect was found, but material historical Test provenance is absent. Original negative numbers remain unchanged. No causal attribution or follow-up authorization is made.
