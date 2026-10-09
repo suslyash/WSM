@@ -1616,7 +1616,7 @@ Status: complete; overall audit remains INCONCLUSIVE — pending manager review.
 
 Synthetic coverage now demonstrates unequal observed counts D=4/P=3 with expected D confusion (0,2,1,1), Score 0.225, P confusion (1,0,0,2), Score 1.0, joint Mean 0.6125; and unequal fake batches of sizes 2/3 with global confusion (1,3,0,1), UAR 0.625, MF1 0.4, Score/Mean 0.5125 versus unweighted batch 0.5. The suite remains 8 passed; strict validator remains OFFLINE_CHECKS_PASS.
 
-New untracked output: logs/task012b_shared_progress_test_correctness_audit/audit_summary_c2.json, 14,902 bytes, SHA256 94543e6c0fc8be4e9baf1c55382deed3668139c002c7ee312bc8a51fd475e29. Original DEV/Test/marker hashes are unchanged. No production inference, dataset/model construction, Test rerun, training, tuning, or selection occurred; src/audio remains unchanged.
+New untracked output: logs/task012b_shared_progress_test_correctness_audit/audit_summary_c2.json, 14,902 bytes, SHA256 94543e6c0fc8be4e9baf1c55382deed3668139c002c7ee312bc8a51fd475e29f. Original DEV/Test/marker hashes are unchanged. No production inference, dataset/model construction, Test rerun, training, tuning, or selection occurred; src/audio remains unchanged.
 
 ### TASK-012B-C1 — Corrective Shared + Progress Test correctness audit
 
@@ -1627,3 +1627,7 @@ Changed files remain the four scoped TASK-012B files: [corrective dossier](TASK0
 Verification: `.venv/bin/python -m pytest -q tests/test_task012b_shared_progress_test_correctness_audit.py` — `8 passed` at `2026-10-09T11:07:06Z–11:07:16Z`; strict offline validator — exit `0`, `OFFLINE_CHECKS_PASS` at `2026-10-09T11:07:26Z`. Authentic artifact hashes remain DEV `67a7c70754070dd0594262ab706aac8d3d853d9b2a84f349adf97e08e8ac2e64`, Test `ddcae2835c04a346c1a27d3e9fa9d7c2b2afc96980b46d206dd2e79120baf285`, marker `3a37730e932f29c5928b930263d6c745c6c9f9171b9c42b34990320de329e12d`. Test Mean means remain `0.768738/0.764781/0.755323`; direct deltas remain `-0.037265101865/-0.050567885186/-0.071159977989`, wins `0/5` each.
 
 No original TASK-012A correctness defect was demonstrated. The corrected audit is intentionally INCONCLUSIVE because raw predictions, sample IDs/membership fingerprints, exact historical command transcript, and exact autocast dtype are unavailable. No production evaluator, DataModule/model construction, forward/inference, training, tuning, Test rerun, or follow-up experiment occurred; `src/audio` stayed unchanged and Test metrics were not used for selection.
+
+### TASK-012B — manager review closure
+
+Manager accepted TASK-012B including C1/C2 as a completed bounded offline audit of reviewed HEAD `c0cb035a64139c4c92ecedd9eb8624f5bde59ae5`. Historical Test correctness remains **INCONCLUSIVE**: no original production defect was demonstrated, while prediction-level/membership/exact-runtime evidence is missing. Manager independently verified all 28 scalar series and the reconstructed 14,902-byte C2 output; full SHA256 `94543e6c0fc8be4e9baf1c55382deed3668139c002c7ee312bc8a51fd475e29f` (the handoff digest omitted the final `f`). Original numbers and scientific roles remain unchanged. No production correction, inference, training, tuning, Test rerun, or follow-up experiment is authorized. Manager merge is recorded in the resulting PR.

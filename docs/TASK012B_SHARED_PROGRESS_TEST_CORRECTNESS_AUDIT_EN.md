@@ -65,7 +65,7 @@ The retained C2 output schema is aggregates[split][depression|parkinson][uar|mf1
 
 Task decomposition is retained in the utility output and dossier source: each D/P Score delta is divided by two, summed, and compared with the direct historical-Mean delta. Rounding residuals are approximately 0, ±0.0000005, or machine epsilon. These are arithmetic descriptions only; no causal explanation is assigned to Progress, overfitting, or dataset shift.
 
-New untracked output: logs/task012b_shared_progress_test_correctness_audit/audit_summary_c2.json; schema includes status, verdict, artifact hashes/bytes, independent oracle, historical row count, and aggregates. It is 14,902 bytes with SHA-256 94543e6c0fc8be4e9baf1c55382deed3668139c002c7ee312bc8a51fd475e29 and is separate from the original evidence directory.
+New untracked output: logs/task012b_shared_progress_test_correctness_audit/audit_summary_c2.json; schema includes status, verdict, artifact hashes/bytes, independent oracle, historical row count, and aggregates. It is 14,902 bytes with SHA-256 94543e6c0fc8be4e9baf1c55382deed3668139c002c7ee312bc8a51fd475e29f and is separate from the original evidence directory.
 
 ## 4. Source/config/snapshot comparison
 
@@ -132,17 +132,27 @@ At `2026-10-09T11:06:11Z`, the real UTC timestamp was recorded before the final 
 The final recorded commands and results are:
 
 2026-10-09T11:28:55Z–11:29:05Z  .venv/bin/python -m pytest -q tests/test_task012b_shared_progress_test_correctness_audit.py -> exit 0, 8 passed (C2 final synthetic run).
-2026-10-09T11:25:45Z  .venv/bin/python scripts/common/audit_task012a_saved_evidence.py --dev logs/task012a_postclosure_shared_progress_test/dev_preflight.json --test logs/task012a_postclosure_shared_progress_test/test_results.json --marker logs/task012a_postclosure_shared_progress_test/test_invocation.marker --stage7 docs/STAGE7_FINAL_TEST_EVIDENCE_EN.md --output logs/task012b_shared_progress_test_correctness_audit/audit_summary_c2.json -> exit 0, OFFLINE_CHECKS_PASS; output 14902 bytes, SHA-256 94543e6c0fc8be4e9baf1c55382deed3668139c002c7ee312bc8a51fd475e29.
+2026-10-09T11:25:45Z  .venv/bin/python scripts/common/audit_task012a_saved_evidence.py --dev logs/task012a_postclosure_shared_progress_test/dev_preflight.json --test logs/task012a_postclosure_shared_progress_test/test_results.json --marker logs/task012a_postclosure_shared_progress_test/test_invocation.marker --stage7 docs/STAGE7_FINAL_TEST_EVIDENCE_EN.md --output logs/task012b_shared_progress_test_correctness_audit/audit_summary_c2.json -> exit 0, OFFLINE_CHECKS_PASS; output 14902 bytes, SHA-256 94543e6c0fc8be4e9baf1c55382deed3668139c002c7ee312bc8a51fd475e29f.
 
 ```text
 2026-10-09T11:07:06Z–11:07:16Z  .venv/bin/python -m pytest -q tests/test_task012b_shared_progress_test_correctness_audit.py  -> exit 0, 8 passed
 2026-10-09T11:07:26Z  .venv/bin/python scripts/common/audit_task012a_saved_evidence.py --dev ... --test ... --marker ... --stage7 ... --output /tmp/task012b_c1_audit.json -> exit 0, OFFLINE_CHECKS_PASS
 ```
 
-The authentic input/output schemas, bytes, and SHA-256 values are listed in Section 1. The audit output is a new untracked `/tmp` file; no original artifact directory was overwritten.
+The original input identities are listed in Section 1. C1 wrote a separate `/tmp` audit output; the final C2 output and its full identity are recorded in Sections 3 and 6. No original artifact directory was overwritten.
 
 ## 7. Final status
 
 This C2 commit corrects audit aggregate completeness and synthetic coverage only; it does not alter the original numbers or scientific verdict.
 
 The corrected audit is **INCONCLUSIVE pending manager review**: the saved scalars pass strict structural/arithmetic validation and no original production defect was found, but material historical Test provenance is absent. Original negative numbers remain unchanged. No causal attribution or follow-up authorization is made.
+
+## 8. Manager review and closure decision
+
+Manager reviewed task HEAD `c0cb035a64139c4c92ecedd9eb8624f5bde59ae5` against base `11231ca0c528236441bf4f4dae09e8fd616e1928`. The three task commits affect only the four authorized audit files. Production source, the permanent Test interlock, frozen evidence, and original TASK-012A artifacts remain unchanged in the tracked diff.
+
+Accepted as a completed bounded offline audit. The technical verdict remains **INCONCLUSIVE for complete historical Test correctness**. No original TASK-012A production defect has been demonstrated. This acceptance does not certify missing historical predictions, sample membership, or exact execution provenance.
+
+Manager independently recalculated all 28 DEV/Test metric series and their seven summary fields using the original saved scalars, verified the direct paired deltas and negative-fixture rejection, and checked the unequal-count/batch fixture arithmetic. The 14,902-byte C2 output was reconstructed byte-identically; its complete SHA256 is `94543e6c0fc8be4e9baf1c55382deed3668139c002c7ee312bc8a51fd475e29f`. The prior dossier/handoff digest omitted the final `f`; this administrative typo is corrected without changing output contents or scientific metrics. Codex's production-metric synthetic suite reports 8 passed; manager inspected those tests and their expected counts. PyTorch/pytest are unavailable in the manager runtime, so that suite was not rerun there.
+
+No training, production inference, dataset/model construction, Test rerun, selection, scientific role revision, or new experiment is authorized by this closure. Saved Test numbers and report tables stay unchanged. Any later attempt to establish missing prediction-level or membership provenance requires a separately specified and authorized task.
