@@ -216,6 +216,7 @@ def preflight(args: argparse.Namespace) -> int:
 
 
 def test_pass(args: argparse.Namespace) -> int:
+    raise RuntimeError("TASK-012A is closed: Test execution is permanently disabled")
     preflight_path = Path(args.preflight)
     if not preflight_path.is_file():
         raise RuntimeError("DEV preflight artifact is missing")

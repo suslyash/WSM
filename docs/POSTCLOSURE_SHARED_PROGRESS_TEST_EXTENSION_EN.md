@@ -80,4 +80,851 @@ Firewall command: `python3 -m py_compile scripts/common/evaluate_postclosure_sha
 
 External artifact SHA256: `dev_preflight.json` `67a7c70754070dd0594262ab706aac8d3d853d9b2a84f349adf97e08e8ac2e64`; `test_results.json` `ddcae2835c04a346c1a27d3e9fa9d7c2b2afc96980b46d206dd2e79120baf285`; `test_invocation.marker` `3a37730e932f29c5928b930263d6c745c6c9f9171b9c42b34990320de329e12d`; evaluator `7157f32253b6f3e831a00992c180f39fdd0d86d47c4718517b0b7e6584d2a5b7`.
 
-The evaluator uses config-native CUDA/autocast semantics: Python 3.12.3, torch 2.10.0+cu128, NumPy 2.5.1, CUDA 12.8, cuDNN 91002, CUDA device, autocast enabled with the config’s mixed-precision setting, model parameters loaded in float32, and CPU float32 output accumulation. No Test result was used for selection, tuning, thresholding, or a follow-up run. The historical TASK-011A raw-summary Test-column exposure remains a documented procedural caveat; strict quarantine compliance is not claimed. `src/audio`, model/data/loss semantics, production configs, the historical Stage-7 evaluator, Stage-7 evidence, and README/NEXT_TASK/requirements/plans were unchanged.
+The original artifacts record Python 3.12.3, torch 2.10.0+cu128, NumPy 2.5.1, CUDA 12.8, cuDNN 91002, CUDA device, `autocast_enabled=true`, model parameters `torch.float32`, and CPU output accumulation `torch.float32`; the exact autocast dtype was not retained and is not inferred here. No Test result was used for selection, tuning, thresholding, or a follow-up run. The historical TASK-011A raw-summary Test-column exposure remains a documented procedural caveat; strict quarantine compliance is not claimed. `src/audio`, model/data/loss semantics, production configs, the historical Stage-7 evaluator, Stage-7 evidence, and README/NEXT_TASK/requirements/plans were unchanged.
+
+## TASK-012A-C1 read-only audit and closure guard
+
+This section audits the original TASK-012A evidence without inference, dataset access, model loading, or evaluator execution. The original evaluator at the immutable firewall commit was SHA256 `7157f32253b6f3e831a00992c180f39fdd0d86d47c4718517b0b7e6584d2a5b7`. It generated the reported results. The post-evaluation closure revision is a separate code revision and is not attributed to the historical evaluation.
+
+### Original artifact audit
+
+| artifact | schema/status | bytes | SHA256 | audit result |
+|---|---|---:|---|---|
+| `dev_preflight.json` | `task012a-dev-preflight-v1`, `test_iteration=false` | 11291 | `67a7c70754070dd0594262ab706aac8d3d853d9b2a84f349adf97e08e8ac2e64` | seeds 42–46 exactly once; complete scalar metrics; finite arithmetic; all DEV differences ≤0.0005 |
+| `test_results.json` | `task012a-test-v1`, `test_iteration=true` | 12875 | `ddcae2835c04a346c1a27d3e9fa9d7c2b2afc96980b46d206dd2e79120baf285` | exactly 15 unique seed/protocol pairs; scalar metrics and counts complete |
+| `test_invocation.marker` | `status=COMPLETED`, `evaluation_count=15` | 48 | `3a37730e932f29c5928b930263d6c745c6c9f9171b9c42b34990320de329e12d` | completed marker; does not by itself prove absence of every prior invocation |
+
+The DEV ledger matches the immutable firewall `LEDGER`: config SHA, checkpoint SHA, epochs `7/9/5/19/3`, model dimensions 256/160, shared fusion, Progress balancing, 552775 trainable parameters, and canonical pseudo-cache SHA. The literal invariant counts are not treated as independent proof: the unchanged RAMPS DataModule validation path checks the cache and canonical TRAIN alignment in `src/fusion/data/wsm_ramps_semantic_datamodule.py` lines 114–163, including accepted D/P counts. This audit did not instantiate that production DataModule.
+
+DEV observed counts were D/P `621/312` for every seed. Test observed counts were identical across seeds: NONE D/P `827/537`, SOFT `710/498`, HARD `654/360`; protocol membership was respectively `1364/1208/1014`. Score and Mean arithmetic, finite values, reproduction differences, and the complete Cartesian pair set were independently checked from the saved scalar JSON.
+
+The JSON field `invocation_count=15` counts checkpoint/protocol evaluations. The authorized Phase-B CLI invocation count was one; the completed marker records `evaluation_count=15` and is not rewritten.
+
+### Original command and provenance record
+
+The exact commands retained in the preceding Codex execution context were run from `/media/maxim/Programs/Projects/WSM` using the direct `.venv/bin/python` executable, with no explicit `PYTHONPATH` or other environment prefix recorded:
+
+```text
+.venv/bin/python scripts/common/evaluate_postclosure_shared_progress_test.py --mode dev-preflight --data-root /media/maxim/Databases/WSM_NEW --audio-feature-cache-root /media/maxim/Databases/WSM_NEW/features --video-cache-root /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache --pseudo-cache-path /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt --output logs/task012a_postclosure_shared_progress_test/dev_preflight.json
+
+.venv/bin/python scripts/common/evaluate_postclosure_shared_progress_test.py --mode test --data-root /media/maxim/Databases/WSM_NEW --audio-feature-cache-root /media/maxim/Databases/WSM_NEW/features --video-cache-root /media/maxim/Programs/Features/WSM/video_depart_v1_fullframe_fallback/cache --pseudo-cache-path /media/maxim/Programs/Features/WSM/ramps_r2_semantic_v1/train_missing_targets.pt --preflight logs/task012a_postclosure_shared_progress_test/dev_preflight.json --marker logs/task012a_postclosure_shared_progress_test/test_invocation.marker --firewall-sha 00e4569d988d6fbd95194d9d4c0e1ff4c20f1a1b --output logs/task012a_postclosure_shared_progress_test/test_results.json
+```
+
+The retained execution context records the firewall commit `00e4569d988d6fbd95194d9d4c0e1ff4c20f1a1b`, its ordinary push, and a pre-Test remote-ref check matching that SHA. Exact UTC timestamps and a complete original shell transcript were not retained; no precise chronology is inferred from commit or filesystem timestamps. The original evidence establishes the completed metric pass and artifact contents, while absence of metric-bearing retries or checkpoint changes is supported by the retained task execution assertions and immutable identities, not by the marker alone.
+
+Original runtime fields record `device=cuda`, `autocast_enabled=true`, model dtype `torch.float32`, and output accumulation dtype `torch.float32` for every saved row. The exact autocast dtype was not recorded.
+
+### Historical guard limitation and post-evaluation closure
+
+The original `test_pass` checked an existing output only inside `atomic_json`, after all Test evaluations. Its preflight gate checked only `test_iteration=false` and five result rows; firewall SHA was optional and local-HEAD-only. These are historical procedural limitations, not claims about the original result values. The original synthetic checks also did not cover zero-boundary logits, Student-t CI construction, or paired aggregation.
+
+The new post-evaluation closure revision adds one unconditional first statement in `test_pass`: every Test-mode request raises `TASK-012A is closed: Test execution is permanently disabled`, before preflight reads, marker creation, output writes, DataModule construction, model loading, or inference. It has no CLI bypass. The original inference/metric/LEDGER/scientific code is otherwise unchanged. Original evaluator SHA256: `7157f32253b6f3e831a00992c180f39fdd0d86d47c4718517b0b7e6584d2a5b7`; new closure evaluator SHA256: `108079eb382ac580b3293f8716a58848e4d6e1123f952141f48aa3041a247317`. Post-evaluation synthetic checks use only fabricated inputs and verify the closed path with spies, zero-boundary/masked metrics, sample SD/Student-t CI, and paired arithmetic: `4 passed`.
+
+### Numeric preservation
+
+All original per-seed DEV/Test scalar rows, protocol counts, aggregate values, paired historical Shared deltas, negative results, and artifact hashes remain unchanged. The original task remains a completed comparative extension, not a pristine first-use final evaluation.
+
+### Appendix A — complete original `dev_preflight.json` bytes
+
+The following fenced block is the complete original file content, including its trailing newline:
+
+```json
+{
+  "invariants": {
+    "accepted_pseudo_counts": [
+      376,
+      1801
+    ],
+    "model": "wsm_av_r3_disease_query_model",
+    "progress_balancing": true,
+    "pseudo_cache_sha256": "17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945",
+    "task_aware_fusion": false,
+    "trainable_parameters": 552775
+  },
+  "ledger": [
+    {
+      "checkpoint": "logs/wsm_mm_pd_dep_v1/postclosure_shared_progress_optuna_seed42_2026-10-08_15-14_wsm_av_r3_disease_query_model_task011a-shared-progress-8a53-029_f5dbef29/checkpoints/epoch=7_dev_mean_score=0.8337.pt",
+      "checkpoint_sha256": "ba02ea341800d8d6330ecca32e8a31dde3afaf61e5fb1e1eca4fd144d1ff0346",
+      "checkpoint_sha256_actual": "ba02ea341800d8d6330ecca32e8a31dde3afaf61e5fb1e1eca4fd144d1ff0346",
+      "config": "logs/wsm_mm_pd_dep_v1/postclosure_shared_progress_optuna_seed42_2026-10-08_15-14_wsm_av_r3_disease_query_model_task011a-shared-progress-8a53-029_f5dbef29/task011a-shared-progress-8a53-029.yaml",
+      "config_sha256": "a5bcb56f48b223f6156281183b72c8b53200cff320b3895c4cb3247fd86878d6",
+      "config_sha256_actual": "a5bcb56f48b223f6156281183b72c8b53200cff320b3895c4cb3247fd86878d6",
+      "epoch": 7,
+      "expected": [
+        0.749256,
+        0.918143,
+        0.8336994328
+      ],
+      "mlflow_run_id": "90a5adebf43c46808814f29374e092d0",
+      "run_name": "task011a-shared-progress-8a53-029",
+      "seed": 42,
+      "trainable_parameters": 552775
+    },
+    {
+      "checkpoint": "logs/wsm_mm_pd_dep_v1/task011b_shared_progress_parent_seed43_2026-10-08_20-35_wsm_av_r3_disease_query_model_967a8e52/checkpoints/epoch=9_dev_mean_score=0.7550.pt",
+      "checkpoint_sha256": "ba280153b2a1dca9808f25c05e581fec72ab3404a3602233154ef26c9f62b926",
+      "checkpoint_sha256_actual": "ba280153b2a1dca9808f25c05e581fec72ab3404a3602233154ef26c9f62b926",
+      "config": "configs/wsm_mm_pd_dep_v1/postclosure_shared_progress_suite/01_A_shared_progress_parent_seed43.yaml",
+      "config_sha256": "dda16afd9478f935107a00ddf901956b3318eb37d8385ce169e2b2e2dbb25a52",
+      "config_sha256_actual": "dda16afd9478f935107a00ddf901956b3318eb37d8385ce169e2b2e2dbb25a52",
+      "epoch": 9,
+      "expected": [
+        0.7103060305,
+        0.7997336342,
+        0.7550198324
+      ],
+      "mlflow_run_id": "009b4d3c9be44220b6d3169989c518e4",
+      "run_name": "task011b_shared_progress_parent_seed43",
+      "seed": 43,
+      "trainable_parameters": 552775
+    },
+    {
+      "checkpoint": "logs/wsm_mm_pd_dep_v1/task011b_shared_progress_parent_seed44_2026-10-08_20-38_wsm_av_r3_disease_query_model_d47b97e1/checkpoints/epoch=5_dev_mean_score=0.8157.pt",
+      "checkpoint_sha256": "775826bf903fced08e24eb9bfff267e414c1ea7d5e94201a466bc40642e93100",
+      "checkpoint_sha256_actual": "775826bf903fced08e24eb9bfff267e414c1ea7d5e94201a466bc40642e93100",
+      "config": "configs/wsm_mm_pd_dep_v1/postclosure_shared_progress_suite/02_A_shared_progress_parent_seed44.yaml",
+      "config_sha256": "44c7cad4879a3635c7eff6d9a1f9a1a5cbbdbaf123ba4d19f3f9a3f2effe775b",
+      "config_sha256_actual": "44c7cad4879a3635c7eff6d9a1f9a1a5cbbdbaf123ba4d19f3f9a3f2effe775b",
+      "epoch": 5,
+      "expected": [
+        0.7506546698,
+        0.8807426876,
+        0.8156986787
+      ],
+      "mlflow_run_id": "28b2b383cc244c8b98011c60c73ac14e",
+      "run_name": "task011b_shared_progress_parent_seed44",
+      "seed": 44,
+      "trainable_parameters": 552775
+    },
+    {
+      "checkpoint": "logs/wsm_mm_pd_dep_v1/task011b_shared_progress_parent_seed45_2026-10-08_20-41_wsm_av_r3_disease_query_model_87fac8f5/checkpoints/epoch=19_dev_mean_score=0.8049.pt",
+      "checkpoint_sha256": "e4a6776902ca57885ceb8f1c5444736d16fb8257618181c027b2fc8ad996e3d9",
+      "checkpoint_sha256_actual": "e4a6776902ca57885ceb8f1c5444736d16fb8257618181c027b2fc8ad996e3d9",
+      "config": "configs/wsm_mm_pd_dep_v1/postclosure_shared_progress_suite/03_A_shared_progress_parent_seed45.yaml",
+      "config_sha256": "f411e86536681dc69903d01d23961714e9045df9d92e431281d688c8f0145a88",
+      "config_sha256_actual": "f411e86536681dc69903d01d23961714e9045df9d92e431281d688c8f0145a88",
+      "epoch": 19,
+      "expected": [
+        0.7303546019,
+        0.87938767,
+        0.804871136
+      ],
+      "mlflow_run_id": "ff2b0e3033ef4688ab46841585e49bcf",
+      "run_name": "task011b_shared_progress_parent_seed45",
+      "seed": 45,
+      "trainable_parameters": 552775
+    },
+    {
+      "checkpoint": "logs/wsm_mm_pd_dep_v1/task011b_shared_progress_parent_seed46_2026-10-08_20-47_wsm_av_r3_disease_query_model_b26025ee/checkpoints/epoch=3_dev_mean_score=0.7998.pt",
+      "checkpoint_sha256": "374efc91f7ecf153f85ce42bee6af92475a229795d1221e6c8dfa4c0bb267478",
+      "checkpoint_sha256_actual": "374efc91f7ecf153f85ce42bee6af92475a229795d1221e6c8dfa4c0bb267478",
+      "config": "configs/wsm_mm_pd_dep_v1/postclosure_shared_progress_suite/04_A_shared_progress_parent_seed46.yaml",
+      "config_sha256": "bb3db27f3ce216403cb5390ba235a8f8a0fa8f410bb6424891b5187cdcf56c60",
+      "config_sha256_actual": "bb3db27f3ce216403cb5390ba235a8f8a0fa8f410bb6424891b5187cdcf56c60",
+      "epoch": 3,
+      "expected": [
+        0.7407686022,
+        0.8589095418,
+        0.799839072
+      ],
+      "mlflow_run_id": "aa76a8669b09431ba9c6fbe3f4f98b0c",
+      "run_name": "task011b_shared_progress_parent_seed46",
+      "seed": 46,
+      "trainable_parameters": 552775
+    }
+  ],
+  "protocol_metadata": {
+    "test_hard": {
+      "count": 1014,
+      "expected_count": 1014
+    },
+    "test_none": {
+      "count": 1364,
+      "expected_count": 1364
+    },
+    "test_soft": {
+      "count": 1208,
+      "expected_count": 1208
+    }
+  },
+  "results": [
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 7,
+      "expected": {
+        "d_score": 0.749256,
+        "mean": 0.8336994328,
+        "p_score": 0.918143
+      },
+      "metrics": {
+        "depression": {
+          "mf1": 0.7470643513354506,
+          "score": 0.7492557984501715,
+          "uar": 0.7514472455648926
+        },
+        "mean": 0.8336994328212888,
+        "observed_counts": {
+          "depression": 621,
+          "parkinson": 312
+        },
+        "parkinson": {
+          "mf1": 0.9176525940121409,
+          "score": 0.9181430671924059,
+          "uar": 0.9186335403726709
+        },
+        "protocol_count": 933
+      },
+      "mlflow_run_id": "90a5adebf43c46808814f29374e092d0",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "reproduction_difference": [
+        -2.015498284935191e-07,
+        6.719240586150477e-08,
+        2.1288748541792302e-11
+      ],
+      "run_name": "task011a-shared-progress-8a53-029",
+      "seed": 42
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 9,
+      "expected": {
+        "d_score": 0.7103060305,
+        "mean": 0.7550198324,
+        "p_score": 0.7997336342
+      },
+      "metrics": {
+        "depression": {
+          "mf1": 0.709874432650121,
+          "score": 0.710306030517404,
+          "uar": 0.7107376283846871
+        },
+        "mean": 0.7550198323800305,
+        "observed_counts": {
+          "depression": 621,
+          "parkinson": 312
+        },
+        "parkinson": {
+          "mf1": 0.80933614357158,
+          "score": 0.7997336342426569,
+          "uar": 0.7901311249137336
+        },
+        "protocol_count": 933
+      },
+      "mlflow_run_id": "009b4d3c9be44220b6d3169989c518e4",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "reproduction_difference": [
+        1.740407817862888e-11,
+        4.26568780298453e-11,
+        -1.996958154393269e-11
+      ],
+      "run_name": "task011b_shared_progress_parent_seed43",
+      "seed": 43
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 5,
+      "expected": {
+        "d_score": 0.7506546698,
+        "mean": 0.8156986787,
+        "p_score": 0.8807426876
+      },
+      "metrics": {
+        "depression": {
+          "mf1": 0.7503289473684212,
+          "score": 0.750654669762642,
+          "uar": 0.7509803921568627
+        },
+        "mean": 0.815698678670457,
+        "observed_counts": {
+          "depression": 621,
+          "parkinson": 312
+        },
+        "parkinson": {
+          "mf1": 0.8856399645285249,
+          "score": 0.8807426875782721,
+          "uar": 0.8758454106280193
+        },
+        "protocol_count": 933
+      },
+      "mlflow_run_id": "28b2b383cc244c8b98011c60c73ac14e",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "reproduction_difference": [
+        -3.7358005577914355e-11,
+        -2.172784174803155e-11,
+        -2.9543034685275416e-11
+      ],
+      "run_name": "task011b_shared_progress_parent_seed44",
+      "seed": 44
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 19,
+      "expected": {
+        "d_score": 0.7303546019,
+        "mean": 0.804871136,
+        "p_score": 0.87938767
+      },
+      "metrics": {
+        "depression": {
+          "mf1": 0.7302703616526003,
+          "score": 0.7303546019280742,
+          "uar": 0.7304388422035482
+        },
+        "mean": 0.8048711359581536,
+        "observed_counts": {
+          "depression": 621,
+          "parkinson": 312
+        },
+        "parkinson": {
+          "mf1": 0.8807215097487228,
+          "score": 0.879387669988233,
+          "uar": 0.8780538302277433
+        },
+        "protocol_count": 933
+      },
+      "mlflow_run_id": "ff2b0e3033ef4688ab46841585e49bcf",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "reproduction_difference": [
+        2.8074209623696333e-11,
+        -1.1766920771094647e-11,
+        -4.184641522186894e-11
+      ],
+      "run_name": "task011b_shared_progress_parent_seed45",
+      "seed": 45
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 3,
+      "expected": {
+        "d_score": 0.7407686022,
+        "mean": 0.799839072,
+        "p_score": 0.8589095418
+      },
+      "metrics": {
+        "depression": {
+          "mf1": 0.7403140485499822,
+          "score": 0.7407686022395102,
+          "uar": 0.7412231559290383
+        },
+        "mean": 0.7998390720311056,
+        "observed_counts": {
+          "depression": 621,
+          "parkinson": 312
+        },
+        "parkinson": {
+          "mf1": 0.863505764114691,
+          "score": 0.858909541822701,
+          "uar": 0.8543133195307109
+        },
+        "protocol_count": 933
+      },
+      "mlflow_run_id": "aa76a8669b09431ba9c6fbe3f4f98b0c",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "reproduction_difference": [
+        3.9510283933452683e-11,
+        2.27009522291155e-11,
+        3.110556257013286e-11
+      ],
+      "run_name": "task011b_shared_progress_parent_seed46",
+      "seed": 46
+    }
+  ],
+  "runtime": {
+    "cuda": "12.8",
+    "cudnn": 91002,
+    "numpy": "2.5.1",
+    "python": "3.12.3",
+    "torch": "2.10.0+cu128"
+  },
+  "schema": "task012a-dev-preflight-v1",
+  "synthetic_checks": {
+    "metric_arithmetic": true,
+    "raw_logit_threshold": true,
+    "sparse_mask": true,
+    "student_t_ddof1": true
+  },
+  "test_iteration": false
+}
+```
+
+### Appendix B — complete original `test_results.json` bytes
+
+The following fenced block is the complete original file content, including its trailing newline:
+
+```json
+{
+  "invocation_count": 15,
+  "no_labels": true,
+  "no_raw_logits": true,
+  "no_raw_predictions": true,
+  "no_raw_probabilities": true,
+  "no_sample_metadata": true,
+  "protocol_counts": {
+    "test_hard": 1014,
+    "test_none": 1364,
+    "test_soft": 1208
+  },
+  "results": [
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 7,
+      "metrics": {
+        "depression": {
+          "mf1": 0.7265467718526148,
+          "score": 0.7377197516586215,
+          "uar": 0.7488927314646281
+        },
+        "mean": 0.7472679269974125,
+        "observed_counts": {
+          "depression": 827,
+          "parkinson": 537
+        },
+        "parkinson": {
+          "mf1": 0.7391309763540866,
+          "score": 0.7568161023362037,
+          "uar": 0.7745012283183206
+        },
+        "protocol_count": 1364
+      },
+      "mlflow_run_id": "90a5adebf43c46808814f29374e092d0",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "protocol": "test_none",
+      "run_name": "task011a-shared-progress-8a53-029",
+      "seed": 42
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 7,
+      "metrics": {
+        "depression": {
+          "mf1": 0.7047429359364399,
+          "score": 0.7162755359706486,
+          "uar": 0.7278081360048574
+        },
+        "mean": 0.7375307130399946,
+        "observed_counts": {
+          "depression": 710,
+          "parkinson": 498
+        },
+        "parkinson": {
+          "mf1": 0.7430252158656989,
+          "score": 0.7587858901093406,
+          "uar": 0.7745465643529823
+        },
+        "protocol_count": 1208
+      },
+      "mlflow_run_id": "90a5adebf43c46808814f29374e092d0",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "protocol": "test_soft",
+      "run_name": "task011a-shared-progress-8a53-029",
+      "seed": 42
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 7,
+      "metrics": {
+        "depression": {
+          "mf1": 0.698465859224153,
+          "score": 0.7115722043271981,
+          "uar": 0.7246785494302432
+        },
+        "mean": 0.721218789361756,
+        "observed_counts": {
+          "depression": 654,
+          "parkinson": 360
+        },
+        "parkinson": {
+          "mf1": 0.7148367543738807,
+          "score": 0.7308653743963138,
+          "uar": 0.7468939944187469
+        },
+        "protocol_count": 1014
+      },
+      "mlflow_run_id": "90a5adebf43c46808814f29374e092d0",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "protocol": "test_hard",
+      "run_name": "task011a-shared-progress-8a53-029",
+      "seed": 42
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 9,
+      "metrics": {
+        "depression": {
+          "mf1": 0.7718103488134496,
+          "score": 0.7747551319361509,
+          "uar": 0.7776999150588522
+        },
+        "mean": 0.7575920830204845,
+        "observed_counts": {
+          "depression": 827,
+          "parkinson": 537
+        },
+        "parkinson": {
+          "mf1": 0.7355200945626478,
+          "score": 0.7404290341048183,
+          "uar": 0.7453379736469887
+        },
+        "protocol_count": 1364
+      },
+      "mlflow_run_id": "009b4d3c9be44220b6d3169989c518e4",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "protocol": "test_none",
+      "run_name": "task011b_shared_progress_parent_seed43",
+      "seed": 43
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 9,
+      "metrics": {
+        "depression": {
+          "mf1": 0.7604277519661536,
+          "score": 0.7631424329553496,
+          "uar": 0.7658571139445456
+        },
+        "mean": 0.7515376466226878,
+        "observed_counts": {
+          "depression": 710,
+          "parkinson": 498
+        },
+        "parkinson": {
+          "mf1": 0.7345526755852843,
+          "score": 0.7399328602900261,
+          "uar": 0.745313044994768
+        },
+        "protocol_count": 1208
+      },
+      "mlflow_run_id": "009b4d3c9be44220b6d3169989c518e4",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "protocol": "test_soft",
+      "run_name": "task011b_shared_progress_parent_seed43",
+      "seed": 43
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 9,
+      "metrics": {
+        "depression": {
+          "mf1": 0.7572365854523531,
+          "score": 0.7605188932805345,
+          "uar": 0.7638012011087157
+        },
+        "mean": 0.7547397778757527,
+        "observed_counts": {
+          "depression": 654,
+          "parkinson": 360
+        },
+        "parkinson": {
+          "mf1": 0.7366728062676807,
+          "score": 0.748960662470971,
+          "uar": 0.7612485186742612
+        },
+        "protocol_count": 1014
+      },
+      "mlflow_run_id": "009b4d3c9be44220b6d3169989c518e4",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "protocol": "test_hard",
+      "run_name": "task011b_shared_progress_parent_seed43",
+      "seed": 43
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 5,
+      "metrics": {
+        "depression": {
+          "mf1": 0.7838408662108085,
+          "score": 0.7854072672274768,
+          "uar": 0.786973668244145
+        },
+        "mean": 0.7957083895449683,
+        "observed_counts": {
+          "depression": 827,
+          "parkinson": 537
+        },
+        "parkinson": {
+          "mf1": 0.7979138350105592,
+          "score": 0.8060095118624597,
+          "uar": 0.8141051887143602
+        },
+        "protocol_count": 1364
+      },
+      "mlflow_run_id": "28b2b383cc244c8b98011c60c73ac14e",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "protocol": "test_none",
+      "run_name": "task011b_shared_progress_parent_seed44",
+      "seed": 44
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 5,
+      "metrics": {
+        "depression": {
+          "mf1": 0.7854130513539535,
+          "score": 0.7875557464824816,
+          "uar": 0.7896984416110099
+        },
+        "mean": 0.7982232571167369,
+        "observed_counts": {
+          "depression": 710,
+          "parkinson": 498
+        },
+        "parkinson": {
+          "mf1": 0.8033413541277254,
+          "score": 0.8088907677509921,
+          "uar": 0.8144401813742588
+        },
+        "protocol_count": 1208
+      },
+      "mlflow_run_id": "28b2b383cc244c8b98011c60c73ac14e",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "protocol": "test_soft",
+      "run_name": "task011b_shared_progress_parent_seed44",
+      "seed": 44
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 5,
+      "metrics": {
+        "depression": {
+          "mf1": 0.7844741540161266,
+          "score": 0.7872411192008567,
+          "uar": 0.7900080843855868
+        },
+        "mean": 0.7930039319144937,
+        "observed_counts": {
+          "depression": 654,
+          "parkinson": 360
+        },
+        "parkinson": {
+          "mf1": 0.7905454545454546,
+          "score": 0.7987667446281308,
+          "uar": 0.8069880347108069
+        },
+        "protocol_count": 1014
+      },
+      "mlflow_run_id": "28b2b383cc244c8b98011c60c73ac14e",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "protocol": "test_hard",
+      "run_name": "task011b_shared_progress_parent_seed44",
+      "seed": 44
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 19,
+      "metrics": {
+        "depression": {
+          "mf1": 0.7122647072698967,
+          "score": 0.7178769841409549,
+          "uar": 0.7234892610120132
+        },
+        "mean": 0.7371589174518668,
+        "observed_counts": {
+          "depression": 827,
+          "parkinson": 537
+        },
+        "parkinson": {
+          "mf1": 0.7331973421121726,
+          "score": 0.7564408507627787,
+          "uar": 0.7796843594133849
+        },
+        "protocol_count": 1364
+      },
+      "mlflow_run_id": "ff2b0e3033ef4688ab46841585e49bcf",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "protocol": "test_none",
+      "run_name": "task011b_shared_progress_parent_seed45",
+      "seed": 45
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 19,
+      "metrics": {
+        "depression": {
+          "mf1": 0.6956563154886646,
+          "score": 0.7013395926765322,
+          "uar": 0.7070228698643999
+        },
+        "mean": 0.7308932186391428,
+        "observed_counts": {
+          "depression": 710,
+          "parkinson": 498
+        },
+        "parkinson": {
+          "mf1": 0.7377144077246092,
+          "score": 0.7604468446017535,
+          "uar": 0.7831792814788978
+        },
+        "protocol_count": 1208
+      },
+      "mlflow_run_id": "ff2b0e3033ef4688ab46841585e49bcf",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "protocol": "test_soft",
+      "run_name": "task011b_shared_progress_parent_seed45",
+      "seed": 45
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 19,
+      "metrics": {
+        "depression": {
+          "mf1": 0.6905643053226276,
+          "score": 0.6972031566650095,
+          "uar": 0.7038420080073915
+        },
+        "mean": 0.7071151515509813,
+        "observed_counts": {
+          "depression": 654,
+          "parkinson": 360
+        },
+        "parkinson": {
+          "mf1": 0.6954748364726673,
+          "score": 0.717027146436953,
+          "uar": 0.7385794564012387
+        },
+        "protocol_count": 1014
+      },
+      "mlflow_run_id": "ff2b0e3033ef4688ab46841585e49bcf",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "protocol": "test_hard",
+      "run_name": "task011b_shared_progress_parent_seed45",
+      "seed": 45
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 3,
+      "metrics": {
+        "depression": {
+          "mf1": 0.7914625360230547,
+          "score": 0.7932194369230672,
+          "uar": 0.7949763378230797
+        },
+        "mean": 0.8059651736621697,
+        "observed_counts": {
+          "depression": 827,
+          "parkinson": 537
+        },
+        "parkinson": {
+          "mf1": 0.8146997929606625,
+          "score": 0.8187109104012722,
+          "uar": 0.8227220278418819
+        },
+        "protocol_count": 1364
+      },
+      "mlflow_run_id": "aa76a8669b09431ba9c6fbe3f4f98b0c",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "protocol": "test_none",
+      "run_name": "task011b_shared_progress_parent_seed46",
+      "seed": 46
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 3,
+      "metrics": {
+        "depression": {
+          "mf1": 0.7898416812665499,
+          "score": 0.7922290778322225,
+          "uar": 0.7946164743978952
+        },
+        "mean": 0.8057217386518032,
+        "observed_counts": {
+          "depression": 710,
+          "parkinson": 498
+        },
+        "parkinson": {
+          "mf1": 0.8174486803519061,
+          "score": 0.8192143994713839,
+          "uar": 0.8209801185908616
+        },
+        "protocol_count": 1208
+      },
+      "mlflow_run_id": "aa76a8669b09431ba9c6fbe3f4f98b0c",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "protocol": "test_soft",
+      "run_name": "task011b_shared_progress_parent_seed46",
+      "seed": 46
+    },
+    {
+      "autocast_enabled": true,
+      "device": "cuda",
+      "epoch": 3,
+      "metrics": {
+        "depression": {
+          "mf1": 0.8002637391775789,
+          "score": 0.8035330860963349,
+          "uar": 0.8068024330150909
+        },
+        "mean": 0.8005364593527229,
+        "observed_counts": {
+          "depression": 654,
+          "parkinson": 360
+        },
+        "parkinson": {
+          "mf1": 0.7943800971919213,
+          "score": 0.797539832609111,
+          "uar": 0.8006995680263007
+        },
+        "protocol_count": 1014
+      },
+      "mlflow_run_id": "aa76a8669b09431ba9c6fbe3f4f98b0c",
+      "model_dtype": "torch.float32",
+      "output_accumulation_dtype": "torch.float32",
+      "protocol": "test_hard",
+      "run_name": "task011b_shared_progress_parent_seed46",
+      "seed": 46
+    }
+  ],
+  "runtime": {
+    "cuda": "12.8",
+    "cudnn": 91002,
+    "numpy": "2.5.1",
+    "python": "3.12.3",
+    "torch": "2.10.0+cu128"
+  },
+  "schema": "task012a-test-v1",
+  "test_iteration": true
+}
+```
+
+### Appendix C — complete original `test_invocation.marker` bytes
+
+```text
+{"status": "COMPLETED", "evaluation_count": 15}
+```

@@ -12,9 +12,9 @@ Stage 7: **COMPLETE — FIVE-SEED DEV + ONE-SHOT FINAL TEST EVIDENCE FROZEN**.
 
 Final Test authorized: **completed once under TASK-007C; no further Test invocation authorized**.
 
-Current atomic task: **TASK-012A COMPLETE — manager review pending**.
+Current atomic task: **TASK-012A-C1 COMPLETE WITH DOCUMENTED HISTORICAL GUARD LIMITATIONS — manager review pending**.
 
-Expected Codex branch: `codex/task-011a-progress-optuna-shared-r4`.
+Expected Codex branch: `codex/task-012a-shared-progress-postclosure-test`.
 
 `TASK-007C` is accepted and merged. Exact result: `STAGE-7 FINAL TEST EVALUATION COMPLETE`. Stage 7 remains COMPLETE. Shared fusion remains the primary parsimonious paper candidate, full R4 the secondary multimodal reference, and temporal audio the baseline. T1 remains standalone text evidence only; T2 remains blocked before implementation/training. TASK-007D completed the final ledger at [FINAL_RESEARCH_LEDGER_EN.md](FINAL_RESEARCH_LEDGER_EN.md). TASK-010A is an explicit manager-authorized, DEV-only post-closure extension; it does not revise a frozen role, ledger, paper, or Final-Test result.
 
@@ -26,6 +26,8 @@ Expected Codex branch: `codex/task-011a-progress-optuna-shared-r4`.
 - DEV reconstruction passed all five Score/Mean gates within `0.0005`; maximum absolute difference was `2.02e-7`. Protocol membership was TEST_NONE `1364`, TEST_SOFT `1208`, TEST_HARD `1014`.
 - Exactly one Phase-B invocation completed 15 evaluations (5 seeds × 3 protocols), once each. External artifacts: `logs/task012a_postclosure_shared_progress_test/dev_preflight.json`, `test_results.json`, and `test_invocation.marker`; no raw predictions/logits/probabilities/labels/metadata were retained.
 - Evidence dossier: [POSTCLOSURE_SHARED_PROGRESS_TEST_EXTENSION_EN.md](POSTCLOSURE_SHARED_PROGRESS_TEST_EXTENSION_EN.md). Historical Stage-7 evidence remains unchanged; the TASK-011A raw-summary Test-column exposure caveat is retained and strict quarantine compliance is not claimed. `src/audio` stayed unchanged and Test did not drive any decision.
+- TASK-012A-C1 audit: retained artifacts hash/schema/arithmetic/identity checks passed without inference or dataset access. Original Test results and negative Shared deltas remain unchanged. The original evaluator’s post-evaluation output-overwrite and weak preflight gates are documented; exact historical autocast dtype and UTC command/push timestamps were not retained. A permanent closed-task Test interlock and four synthetic post-evaluation checks were added; no CLI bypass exists.
+- TASK-012A is now locked as a completed comparative extension pending manager review. The original Stage-7 evaluation remains closed; no inference, training, tuning, retry, or further Test pass is authorized.
 
 ## TASK-011A post-closure Progress Optuna extension
 
