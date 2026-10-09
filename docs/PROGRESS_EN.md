@@ -12,11 +12,20 @@ Stage 7: **COMPLETE — FIVE-SEED DEV + ONE-SHOT FINAL TEST EVIDENCE FROZEN**.
 
 Final Test authorized: **completed once under TASK-007C; no further Test invocation authorized**.
 
-Current atomic task: **TASK-011A COMPLETE WITH DOCUMENTED TEST-QUARANTINE PROCEDURAL DEVIATION — manager review pending**.
+Current atomic task: **TASK-012A COMPLETE — manager review pending**.
 
 Expected Codex branch: `codex/task-011a-progress-optuna-shared-r4`.
 
 `TASK-007C` is accepted and merged. Exact result: `STAGE-7 FINAL TEST EVALUATION COMPLETE`. Stage 7 remains COMPLETE. Shared fusion remains the primary parsimonious paper candidate, full R4 the secondary multimodal reference, and temporal audio the baseline. T1 remains standalone text evidence only; T2 remains blocked before implementation/training. TASK-007D completed the final ledger at [FINAL_RESEARCH_LEDGER_EN.md](FINAL_RESEARCH_LEDGER_EN.md). TASK-010A is an explicit manager-authorized, DEV-only post-closure extension; it does not revise a frozen role, ledger, paper, or Final-Test result.
+
+## TASK-012A post-closure Shared + Progress evaluation
+
+- Outcome: complete; this is a post-closure comparative extension, not a pristine first-use Final Test. Candidate recipe/checkpoints were frozen before Test; no Test-based tuning or follow-up run occurred.
+- Branch: `codex/task-012a-shared-progress-postclosure-test`; firewall commit `00e4569d988d6fbd95194d9d4c0e1ff4c20f1a1b` pushed before Test. Final evidence commit is pending manager review.
+- Five frozen seeds were verified with exact config/checkpoint SHA256, model `wsm_av_r3_disease_query_model`, shared fusion, Progress balancing, 552775 trainable parameters, and canonical pseudo cache SHA `17cf5e67e8c244d81b7c21f0842988966a23d83d69e296f7c5a5181376d6b945` (accepted D/P `376/1801`).
+- DEV reconstruction passed all five Score/Mean gates within `0.0005`; maximum absolute difference was `2.02e-7`. Protocol membership was TEST_NONE `1364`, TEST_SOFT `1208`, TEST_HARD `1014`.
+- Exactly one Phase-B invocation completed 15 evaluations (5 seeds × 3 protocols), once each. External artifacts: `logs/task012a_postclosure_shared_progress_test/dev_preflight.json`, `test_results.json`, and `test_invocation.marker`; no raw predictions/logits/probabilities/labels/metadata were retained.
+- Evidence dossier: [POSTCLOSURE_SHARED_PROGRESS_TEST_EXTENSION_EN.md](POSTCLOSURE_SHARED_PROGRESS_TEST_EXTENSION_EN.md). Historical Stage-7 evidence remains unchanged; the TASK-011A raw-summary Test-column exposure caveat is retained and strict quarantine compliance is not claimed. `src/audio` stayed unchanged and Test did not drive any decision.
 
 ## TASK-011A post-closure Progress Optuna extension
 
