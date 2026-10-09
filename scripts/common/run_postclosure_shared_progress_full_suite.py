@@ -356,27 +356,137 @@ def checkpoint(actual_name: str, epoch: int) -> tuple[str|None,str|None,int|None
     return str(p.relative_to(REPO)),digest(p),sum(v.numel() for v in vals.values() if hasattr(v,"numel"))
 
 def write_report(result: list[dict[str,Any]]) -> None:
-    grouped={}
-    for r in result: grouped.setdefault(r["variant"],[]).append(r)
-    frozen={"seed":42,"mean":0.8336994328,"epoch":7,"checkpoint_sha256":"ba02ea341800d8d6330ecca32e8a31dde3afaf61e5fb1e1eca4fd144d1ff0346"}
-    parents=[frozen]+grouped.get("shared_progress_parent",[]); means=[x["mean"] if "mean" in x else x["metrics"]["dev/mean_score"] for x in parents]
-    avg,sd=statistics.mean(means),statistics.stdev(means); ci=T4*sd/math.sqrt(5)
-    lines=["# POST-CLOSURE DEV-ONLY FULL ABLATION/MTL SUITE — NOT PART OF THE FROZEN STAGE-7/FINAL-TEST EVIDENCE","",
-           "This is descriptive DEV-only evidence around TASK-011A Shared+Progress trial-28. It does not revise Stage-7, Final-Test, or paper roles.","",
-           "## Five-seed Shared+Progress parent confirmation","",
-           "Only DEV metric keys were collected."]
-    lines.append("seed42 frozen: epoch 7; Mean 0.8336994328; checkpoint SHA "+frozen["checkpoint_sha256"])
-    for x in parents[1:]:
-        m=x["metrics"]; lines.append(f"seed{x['seed']}: D {m.get('dev/depression/uar')}/{m.get('dev/depression/mf1')}/{m.get('dev/depression/score')}; P {m.get('dev/parkinson/uar')}/{m.get('dev/parkinson/mf1')}/{m.get('dev/parkinson/score')}; Mean {m.get('dev/mean_score')}; epoch {x['selected_epoch']}; checkpoint SHA {x.get('checkpoint_sha256')}")
-    lines.append(f"five-seed Mean mean/std/min/max/range/95% t CI(df=4): {avg:.6f}/{sd:.6f}/{min(means):.6f}/{max(means):.6f}/{max(means)-min(means):.6f}/[{avg-ci:.6f},{avg+ci:.6f}]")
-    lines += ["","## Three-seed suite rows","", "Rows are descriptive same-seed DEV comparisons; balancing and gradient-MTL use the Progress-tuned recipe and are not unbiased global rankings."]
-    pmap={x["seed"]:x for x in parents[1:]}; pmap[42]={"metrics":{"dev/mean_score":frozen["mean"]}}
-    for v,xs in grouped.items():
-        if v=="shared_progress_parent": continue
-        vals=[float(x["metrics"]["dev/mean_score"]) for x in xs]; ds=[vals[i]-float(pmap[xs[i]["seed"]]["metrics"]["dev/mean_score"]) for i in range(len(xs))]
-        lines.append(f"{v}: means {','.join(f'{v:.6f}' for v in vals)}; mean/std {statistics.mean(vals):.6f}/{statistics.stdev(vals):.6f}; paired deltas {','.join(f'{d:+.6f}' for d in ds)}; wins {sum(d>0 for d in ds)}/3.")
-    lines += ["","## Scope and quarantine","", "- DEV-only post-closure evidence; no Test loader, Test metric, mixed summary, or Final-Test artifact was inspected.","- D-only/P-only are not a deployable two-task model and are not averaged into a joint score.","- Online modality removals retain historical offline pseudo evidence.","- No final-method promotion, significance claim, or paper-role revision is authorized."]
-    REPORT.write_text("\n".join(lines)+"\n")
+    grouped: dict[str,list[dict[str,Any]]] = {}
+    for row in result:
+        grouped.setdefault(row["variant"], []).append(row)
+    for value in grouped.values():
+        value.sort(key=lambda row: row["seed"])
+
+    frozen_parent = {
+        42: {"mean": 0.824465, "d_score": 0.765324, "p_score": 0.883606},
+        43: {"mean": 0.771324, "d_score": 0.724496, "p_score": 0.818152},
+        44: {"mean": 0.784910, "d_score": 0.731448, "p_score": 0.838372},
+        45: {"mean": 0.787202, "d_score": 0.739733, "p_score": 0.834672},
+        46: {"mean": 0.786671, "d_score": 0.727451, "p_score": 0.845891},
+    }
+    frozen_seed42 = {
+        "mean": 0.8336994328,
+        "epoch": 7,
+        "checkpoint_sha256": "ba02ea341800d8d6330ecca32e8a31dde3afaf61e5fb1e1eca4fd144d1ff0346",
+        "d_score": 0.749256,
+        "p_score": 0.918143,
+    }
+    parent_rows = {row["seed"]: row for row in grouped["shared_progress_parent"]}
+    tuned_parent = {42: frozen_seed42}
+    for seed, row in parent_rows.items():
+        metrics = row["metrics"]
+        tuned_parent[seed] = {
+            "mean": float(metrics["dev/mean_score"]),
+            "d_score": float(metrics["dev/depression/score"]),
+            "p_score": float(metrics["dev/parkinson/score"]),
+        }
+
+    def f(value: float) -> str:
+        return f"{value:.6f}"
+
+    def paired_stats(values: list[float]) -> tuple[float,float,float,float,int]:
+        mean = statistics.mean(values)
+        sd = statistics.stdev(values)
+        half = T4 * sd / math.sqrt(len(values))
+        return mean, sd, mean - half, mean + half, sum(value > 0 for value in values)
+
+    def task_triplet(row: dict[str,Any], task: str) -> str:
+        prefix = f"dev/{task}/"
+        return "/".join(f(row["metrics"][prefix + key]) for key in ("uar", "mf1", "score"))
+
+    alias_rows = [row for row in result if row.get("alias_run_ids")]
+    referenced_ids = sum(1 + len(row.get("alias_run_ids", [])) for row in result)
+    lines = [
+        "# POST-CLOSURE DEV-ONLY FULL ABLATION/MTL SUITE — NOT PART OF THE FROZEN STAGE-7/FINAL-TEST EVIDENCE",
+        "",
+        "This is descriptive DEV-only evidence around TASK-011A Shared+Progress trial-28. It does not revise Stage-7, Final-Test, or paper roles.",
+        "",
+        "## POST-PRODUCTION REPORTING-ONLY COLLECTION RECOVERY",
+        "",
+        f"Collection integrity: manifest rows {len(result)}/52; scientific production results {len(result)}/52; referenced MLflow run IDs {referenced_ids}; duplicate-alias rows {len(alias_rows)}.",
+        "The accepted resolver uses anchored run-name prefixes, FINISHED status, frozen config/artifact identity, and the lexicographically smallest ID for an equivalent alias set.",
+    ]
+    if len(alias_rows) == 1:
+        alias = alias_rows[0]
+        alias_id = alias["alias_run_ids"][0]
+        metrics = alias["metrics"]
+        lines += [
+            f"Row 34 aliases {alias['run_id']} and {alias_id} were equivalent FINISHED aliases for one frozen result; canonical ID is {alias['run_id']} and alias ID is {alias_id}.",
+            f"Equivalence included config SHA 660cac8293e60e28648c4225edf78486dbb06087a9459d730bb49ada157d5be8, selected epoch {alias['selected_epoch']}, checkpoint SHA {alias['checkpoint_sha256']}, and identical DEV-only selected metrics D {f(metrics['dev/depression/uar'])}/{f(metrics['dev/depression/mf1'])}/{f(metrics['dev/depression/score'])}, P {f(metrics['dev/parkinson/uar'])}/{f(metrics['dev/parkinson/mf1'])}/{f(metrics['dev/parkinson/score'])}, Mean {f(metrics['dev/mean_score'])}.",
+            "Canonicalization is bookkeeping only and does not count the alias as another production run.",
+        ]
+
+    lines += ["", "## 1. Five-seed tuned parent confirmation", "", "Only allowlisted DEV metric keys were collected."]
+    lines.append(f"seed42 frozen tuned parent: D UAR/F1/Score unavailable/unavailable/{f(frozen_seed42['d_score'])}; P UAR/F1/Score unavailable/unavailable/{f(frozen_seed42['p_score'])}; Mean {f(frozen_seed42['mean'])}; epoch {frozen_seed42['epoch']}; checkpoint SHA {frozen_seed42['checkpoint_sha256']}.")
+    for seed in (43, 44, 45, 46):
+        row = parent_rows[seed]
+        lines.append(f"seed{seed}: D {task_triplet(row, 'depression')}; P {task_triplet(row, 'parkinson')}; Mean {f(row['metrics']['dev/mean_score'])}; epoch {row['selected_epoch']}; checkpoint SHA {row['checkpoint_sha256']}.")
+    tuned_means = [tuned_parent[seed]["mean"] for seed in (42,43,44,45,46)]
+    parent_mean, parent_sd, parent_lo, parent_hi, _ = paired_stats(tuned_means)
+    lines.append(f"Tuned parent five-seed Mean mean/std/min/max/range/95% t CI(df=4): {f(parent_mean)}/{f(parent_sd)}/{f(min(tuned_means))}/{f(max(tuned_means))}/{f(max(tuned_means)-min(tuned_means))}/[{f(parent_lo)},{f(parent_hi)}].")
+    lines.append("Frozen Shared trial012 five-seed Mean mean/std/95% t CI(df=4) from committed Stage-7 DEV evidence: 0.790914/0.019857/[0.766258,0.815571].")
+
+    mean_deltas = [tuned_parent[seed]["mean"] - frozen_parent[seed]["mean"] for seed in (42,43,44,45,46)]
+    d_deltas = [tuned_parent[seed]["d_score"] - frozen_parent[seed]["d_score"] for seed in (42,43,44,45,46)]
+    p_deltas = [tuned_parent[seed]["p_score"] - frozen_parent[seed]["p_score"] for seed in (42,43,44,45,46)]
+    mean_delta, mean_delta_sd, mean_lo, mean_hi, mean_wins = paired_stats(mean_deltas)
+    d_delta, _, _, _, d_wins = paired_stats(d_deltas)
+    p_delta, _, _, _, p_wins = paired_stats(p_deltas)
+    lines += [
+        "Tuned-minus-frozen Shared Mean deltas by seed (42/43/44/45/46): " + ", ".join(f"{value:+.10f}" for value in mean_deltas) + ".",
+        f"Paired Mean delta mean/sample SD/95% exploratory t CI(df=4)/wins: {mean_delta:+.10f}/{mean_delta_sd:.10f}/[{mean_lo:+.10f},{mean_hi:+.10f}]/{mean_wins}/5.",
+        f"Parent task-score comparison versus frozen Shared: D Score mean delta {d_delta:+.10f}, wins {d_wins}/5; P Score mean delta {p_delta:+.10f}, wins {p_wins}/5.",
+        "This is descriptive post-closure DEV evidence, not a Final-Test superiority claim.",
+    ]
+
+    parent_by_seed = {seed: tuned_parent[seed]["mean"] for seed in tuned_parent}
+
+    def two_task_rows(variants: list[str]) -> None:
+        for variant in variants:
+            rows_for_variant = grouped[variant]
+            d_uar = statistics.mean(row["metrics"]["dev/depression/uar"] for row in rows_for_variant)
+            d_f1 = statistics.mean(row["metrics"]["dev/depression/mf1"] for row in rows_for_variant)
+            d_score = statistics.mean(row["metrics"]["dev/depression/score"] for row in rows_for_variant)
+            p_uar = statistics.mean(row["metrics"]["dev/parkinson/uar"] for row in rows_for_variant)
+            p_f1 = statistics.mean(row["metrics"]["dev/parkinson/mf1"] for row in rows_for_variant)
+            p_score = statistics.mean(row["metrics"]["dev/parkinson/score"] for row in rows_for_variant)
+            means = [row["metrics"]["dev/mean_score"] for row in rows_for_variant]
+            deltas = [means[i] - parent_by_seed[row["seed"]] for i, row in enumerate(rows_for_variant)]
+            lines.append(
+                f"{variant}: D UAR/F1/Score mean {f(d_uar)}/{f(d_f1)}/{f(d_score)}; P UAR/F1/Score mean {f(p_uar)}/{f(p_f1)}/{f(p_score)}; Mean mean/sample SD {f(statistics.mean(means))}/{f(statistics.stdev(means))}; paired Mean deltas (42/43/44) "
+                + ", ".join(f"{value:+.6f}" for value in deltas)
+                + f"; wins {sum(value > 0 for value in deltas)}/3."
+            )
+
+    lines += ["", "## 2. Core component ablations", "", "Each row reports three-seed DEV task-level aggregates and paired Mean deltas against the same-seed tuned Shared+Progress parent."]
+    two_task_rows(["no_direct_pseudo", "uniform_reliability", "no_semantic_depression", "no_video_online", "no_audio_online"])
+
+    lines += ["", "## 3. Architecture and shuffled-pseudo controls", ""]
+    two_task_rows(["task_aware_r4_progress", "shuffled_pseudo"])
+
+    lines += ["", "## 4. Single-task vs joint-MTL controls", "", "Single-task controls report only their selected task metrics; joint Mean is not reported or used for these comparisons."]
+    for variant, task, label in (("depression_only", "depression", "D"), ("parkinson_only", "parkinson", "P")):
+        rows_for_variant = grouped[variant]
+        key = f"dev/{task}/score"
+        scores = [row["metrics"][key] for row in rows_for_variant]
+        deltas = [scores[i] - tuned_parent[row["seed"]]["d_score" if task == "depression" else "p_score"] for i, row in enumerate(rows_for_variant)]
+        mean, sd, _, _, _ = paired_stats(scores)
+        wins = sum(value > 0 for value in deltas)
+        lines.append(f"{variant}: selected {label} UAR/F1/Score by seed (42/43/44): " + ", ".join(task_triplet(row, task) for row in rows_for_variant) + f"; {label} Score mean/sample SD {f(mean)}/{f(sd)}; paired {label}-only {label} Score minus joint-parent {label} Score deltas " + ", ".join(f"{value:+.6f}" for value in deltas) + f"; wins {wins}/3; joint Mean —.")
+
+    lines += ["", "## 5. Scalarization / balancing substitutions", ""]
+    two_task_rows(["equal", "static_stch", "ra_stch"])
+
+    lines += ["", "## 6. Gradient-MTL substitutions", "", "Common hyperparameters were tuned under Progress. These are frozen-recipe substitution audits, not equal-budget globally tuned rankings of balancing/gradient-MTL methods.", ""]
+    two_task_rows(["gradnorm", "pcgrad", "cagrad", "dbmtl"])
+
+    lines += ["", "## 7. Scope / limitations / Test quarantine", "", "- All reported metrics and comparisons are DEV-only; checkpoint selection remains by each run's configured DEV selector.", "- No Test loader, Test metric, mixed raw summary, or Final-Test artifact was read by this collection or synthesis.", "- D-only/P-only are not deployable two-task models; their joint Mean is deliberately absent and no fake Mean comparison is made.", "- Common Progress-tuned hyperparameters make Groups F/G frozen-recipe audits, not globally tuned rankings.", "- Online modality removals retain historical offline pseudo evidence.", "- All three-seed statistics and any paired t intervals are descriptive/exploratory; no multiplicity-corrected significance or universal usefulness/uselessness claim is authorized.", "- No final-method promotion, demotion, or paper-role revision is authorized."]
+    REPORT.write_text("\n".join(lines) + "\n")
 
 def collect() -> None:
     m=manifest()
